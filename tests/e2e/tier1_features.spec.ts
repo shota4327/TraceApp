@@ -235,16 +235,16 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     expect(initialBox).not.toBeNull();
 
     if (initialBox) {
-      // マウスドラッグで下方向に50px移動
+      // マウスドラッグで上方向に50px移動（標準出力エリアを広げる）
       await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y + initialBox.height / 2);
       await page.mouse.down();
-      await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y + 50);
+      await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y - 50);
       await page.mouse.up();
 
       const newBox = await resizer.boundingBox();
       expect(newBox).not.toBeNull();
       if (newBox) {
-        expect(newBox.y).toBeGreaterThan(initialBox.y);
+        expect(newBox.y).toBeLessThan(initialBox.y);
       }
     }
   });

@@ -20,7 +20,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   stdout = '',
 }) => {
   const { containerRef, topRatio, isDragging, handlePointerDown } = useVerticalResize({
-    initialRatio: 0.6,
+    initialRatio: 0.8,
     minRatio: 0.2,
     maxRatio: 0.8,
   });
