@@ -73,7 +73,7 @@ describe('Challenger M4 Stress & Edge Case Tests (限界・エッジケーステ
 
       const nodes = generateFlowchartNodes(code);
       const loopNodes = nodes.filter((n) => n.type === 'loop');
-      expect(loopNodes.length).toBe(8);
+      expect(loopNodes.length).toBe(16); // 8個のループ開始ノード + 8個のループ終了ノード
 
       const { container } = render(<FlowchartViewer nodes={nodes} activeLine={5} />);
       expect(container.querySelectorAll('.flowchart-node').length).toBe(nodes.length);

@@ -107,6 +107,27 @@ function parseValidLines(code: string): ParsedLineInfo[] {
   return validLines;
 }
 
+/** ループ終了ノードを生成 */
+function createLoopEndNode(headerId: string, yPos: number): FlowchartNode {
+  const id = `node-loop-end-${headerId}`;
+  const label = 'ループ終了';
+  const xmlStyle = getMxStyleForType('loop');
+  const escaped = escapeXml(label);
+  const xmlSnippet = `<mxCell id="${id}" value="${escaped}" style="${xmlStyle}" vertex="1" parent="1"><mxGeometry x="100" y="${yPos}" width="180" height="50" as="geometry"/></mxCell>`;
+
+  return {
+    id,
+    type: 'loop',
+    label,
+    lineRange: [1, 1],
+    x: 100,
+    y: yPos,
+    width: 180,
+    height: 50,
+    xmlSnippet,
+  };
+}
+
 interface BlockContext {
   type: 'if' | 'loop';
   headerId: string;
@@ -116,51 +137,90 @@ interface BlockContext {
   isElse?: boolean;
 }
 
-/** ブロック終了時のエッジ生成処理 helper */
-function processPoppedBlock(popped: BlockContext, targetId: string, edges: FlowchartEdge[]): void {
-  if (popped.type === 'loop') {
-    if (popped.bodyLastId) {
-      if (!edges.some((e) => e.sourceId === popped.bodyLastId && e.targetId === targetId)) {
-        edges.push({
-          id: `edge-${popped.bodyLastId}-${targetId}`,
-          sourceId: popped.bodyLastId,
-          targetId,
-          label: 'Next',
-        });
-      }
+/** ループブロック終了時のノードおよびエッジ生成 helper */
+function processPoppedLoopBlock(
+  popped: BlockContext,
+  targetId: string,
+  edges: FlowchartEdge[],
+  nodes: FlowchartNode[]
+): string {
+  const loopEndNode = createLoopEndNode(popped.headerId, nodes.length * 60 + 20);
+  nodes.push(loopEndNode);
+
+  if (popped.bodyLastId) {
+    if (!edges.some((e) => e.sourceId === popped.bodyLastId && e.targetId === loopEndNode.id)) {
       edges.push({
-        id: `edge-loopback-${popped.bodyLastId}-${popped.headerId}`,
+        id: `edge-${popped.bodyLastId}-${loopEndNode.id}`,
         sourceId: popped.bodyLastId,
-        targetId: popped.headerId,
-        label: 'Loop',
+        targetId: loopEndNode.id,
+        label: 'Next',
       });
     }
     edges.push({
-      id: `edge-loop-exit-${popped.headerId}-${targetId}`,
+      id: `edge-loopback-${popped.bodyLastId}-${popped.headerId}`,
+      sourceId: popped.bodyLastId,
+      targetId: popped.headerId,
+      label: 'Loop',
+    });
+  }
+  edges.push({
+    id: `edge-loop-exit-${popped.headerId}-${loopEndNode.id}`,
+    sourceId: popped.headerId,
+    targetId: loopEndNode.id,
+    label: 'False',
+  });
+
+  if (targetId && targetId !== loopEndNode.id && !edges.some((e) => e.sourceId === loopEndNode.id && e.targetId === targetId)) {
+    edges.push({
+      id: `edge-${loopEndNode.id}-${targetId}`,
+      sourceId: loopEndNode.id,
+      targetId,
+      label: 'Next',
+    });
+  }
+  return loopEndNode.id;
+}
+
+/** ifブロック終了時のエッジ生成 helper */
+function processPoppedIfBlock(
+  popped: BlockContext,
+  targetId: string,
+  edges: FlowchartEdge[]
+): void {
+  if (!popped.isElse && !edges.some((e) => e.sourceId === popped.headerId && (e.label === 'False' || e.label === 'Next'))) {
+    edges.push({
+      id: `edge-false-${popped.headerId}-${targetId}`,
       sourceId: popped.headerId,
       targetId,
       label: 'False',
     });
-  } else if (popped.type === 'if') {
-    if (!popped.isElse && !edges.some((e) => e.sourceId === popped.headerId && (e.label === 'False' || e.label === 'Next'))) {
+  }
+  for (const srcId of popped.mergeTargets) {
+    if (srcId !== targetId && !edges.some((e) => e.sourceId === srcId && e.targetId === targetId)) {
       edges.push({
-        id: `edge-false-${popped.headerId}-${targetId}`,
-        sourceId: popped.headerId,
+        id: `edge-if-merge-${srcId}-${targetId}`,
+        sourceId: srcId,
         targetId,
-        label: 'False',
+        label: 'Next',
       });
     }
-    for (const srcId of popped.mergeTargets) {
-      if (srcId !== targetId && !edges.some((e) => e.sourceId === srcId && e.targetId === targetId)) {
-        edges.push({
-          id: `edge-if-merge-${srcId}-${targetId}`,
-          sourceId: srcId,
-          targetId,
-          label: 'Next',
-        });
-      }
-    }
   }
+}
+
+/** ブロック終了時のエッジ生成処理 helper */
+function processPoppedBlock(
+  popped: BlockContext,
+  targetId: string,
+  edges: FlowchartEdge[],
+  nodes: FlowchartNode[]
+): string {
+  if (popped.type === 'loop') {
+    return processPoppedLoopBlock(popped, targetId, edges, nodes);
+  }
+  if (popped.type === 'if') {
+    processPoppedIfBlock(popped, targetId, edges);
+  }
+  return targetId;
 }
 
 /** 単一ノードの制御分岐エッジ生成 helper */
@@ -221,12 +281,14 @@ function handleBlockStackUnwind(
   line: ParsedLineInfo,
   nodeId: string,
   blockStack: BlockContext[],
-  edges: FlowchartEdge[]
-): string[] {
+  edges: FlowchartEdge[],
+  nodes: FlowchartNode[]
+): { inheritedMergeTargets: string[]; lastPoppedId?: string } {
   const isElif = line.text.startsWith('elif ');
   const isElse = line.text.startsWith('else:');
   const isIfChainContinuation = isElif || isElse;
   let inheritedMergeTargets: string[] = [];
+  let lastPoppedId: string | undefined;
 
   while (blockStack.length > 0 && line.indent <= blockStack[blockStack.length - 1]!.indent) {
     const top = blockStack[blockStack.length - 1]!;
@@ -243,10 +305,10 @@ function handleBlockStackUnwind(
       inheritedMergeTargets = [...popped.mergeTargets];
       break;
     } else {
-      processPoppedBlock(blockStack.pop()!, nodeId, edges);
+      lastPoppedId = processPoppedBlock(blockStack.pop()!, nodeId, edges, nodes);
     }
   }
-  return inheritedMergeTargets;
+  return { inheritedMergeTargets, lastPoppedId };
 }
 
 /** 終了端子ノードの追加と残存ブロックの合流処理 */
@@ -258,12 +320,17 @@ function finalizeFlowchartGraph(
   prevNodeId: string
 ): void {
   const endNode = createTerminalNode('node-end', '終了', code.split('\n').length, nodes.length * 60 + 20);
+
+  let lastPoppedId: string | undefined;
+  while (blockStack.length > 0) {
+    lastPoppedId = processPoppedBlock(blockStack.pop()!, endNode.id, edges, nodes);
+  }
+
   nodes.push(endNode);
 
-  while (blockStack.length > 0) processPoppedBlock(blockStack.pop()!, endNode.id, edges);
-
-  if (!edges.some((e) => e.targetId === endNode.id) && prevNodeId) {
-    edges.push({ id: `edge-${prevNodeId}-${endNode.id}`, sourceId: prevNodeId, targetId: endNode.id, label: 'Next' });
+  const effectivePrevId = lastPoppedId || prevNodeId;
+  if (!edges.some((e) => e.targetId === endNode.id) && effectivePrevId && effectivePrevId !== endNode.id) {
+    edges.push({ id: `edge-${effectivePrevId}-${endNode.id}`, sourceId: effectivePrevId, targetId: endNode.id, label: 'Next' });
   }
 }
 
@@ -284,10 +351,14 @@ export function generateFlowchartGraph(code: string): FlowchartGraph {
 
   for (let i = 0; i < validLines.length; i++) {
     const line = validLines[i]!;
+    const nodeId = `node-${line.lineNo}`;
+
+    const { inheritedMergeTargets, lastPoppedId } = handleBlockStackUnwind(line, nodeId, blockStack, edges, nodes);
+    if (lastPoppedId) prevNodeId = lastPoppedId;
+
     const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20);
     nodes.push(node);
 
-    const inheritedMergeTargets = handleBlockStackUnwind(line, node.id, blockStack, edges);
     processLineNodeEdge(node, prevNodeId, startNode.id, validLines[i + 1], line.indent, blockStack, edges, inheritedMergeTargets);
 
     if (blockStack.length > 0) {

@@ -77,7 +77,7 @@ while i < 3:
 
       const graph = generateFlowchartGraph(code);
       const loopNodes = graph.nodes.filter((n) => n.type === 'loop');
-      expect(loopNodes.length).toBe(2); // while, for の2つのループノード
+      expect(loopNodes.length).toBe(4); // while, for およびそれぞれのループ終了ノード (計4つ)
 
       // エッジのラベル検証
       const edgeLabels = graph.edges.map((e) => e.label);
