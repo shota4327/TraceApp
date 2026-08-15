@@ -216,7 +216,7 @@ function calculateNodeLayouts(
   edges?: FlowchartEdge[],
   defaultGap = 10,
   mergeGap = 45,
-  decisionGap = 28,
+  decisionGap = 20,
   nodeHeight = 50,
   paddingY = 40
 ): { nodeYs: number[]; totalHeight: number } {
@@ -415,7 +415,7 @@ export function renderFlowchartSvg(
   const paddingX = 80;
   const paddingY = 40;
 
-  const { nodeYs, totalHeight } = calculateNodeLayouts(nodes, edges, 10, 45, 28, nodeHeight, paddingY);
+  const { nodeYs, totalHeight } = calculateNodeLayouts(nodes, edges, 10, 45, 20, nodeHeight, paddingY);
   const totalWidth = nodeWidth + paddingX * 2 + 60;
   const x = paddingX;
 
