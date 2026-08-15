@@ -1,5 +1,6 @@
 import { StepSnapshot, VariableSnapshot } from '../types/trace';
 import { FlowchartNode } from '../types/flowchart';
+import { generateFlowchartGraph } from './flowchartGenerator';
 
 export interface TraceExecutionResult {
   snapshots: StepSnapshot[];
@@ -26,33 +27,9 @@ export function executeTrace(code: string): TraceExecutionResult {
     }
   }
 
-  // 2. 流れ図ノードの生成
-  const flowchartNodes: FlowchartNode[] = [
-    { id: 'node-start', type: 'terminal', label: '開始' }
-  ];
-
-  rawLines.forEach((lineText, idx) => {
-    const trimmed = lineText.trim();
-    if (!trimmed || trimmed.startsWith('#')) return;
-
-    let nodeType: FlowchartNode['type'] = 'process';
-    if (trimmed.startsWith('if') || trimmed.startsWith('elif') || trimmed.startsWith('else')) {
-      nodeType = 'decision';
-    } else if (trimmed.startsWith('for') || trimmed.startsWith('while')) {
-      nodeType = 'loop';
-    } else if (trimmed.startsWith('def')) {
-      nodeType = 'subroutine';
-    }
-
-    flowchartNodes.push({
-      id: `node-${idx + 1}`,
-      type: nodeType,
-      label: trimmed,
-      lineRange: [idx + 1, idx + 1]
-    });
-  });
-
-  flowchartNodes.push({ id: 'node-end', type: 'terminal', label: '終了' });
+  // 2. 流れ図ノードの生成 (AST 仕様に完全準拠)
+  const flowchartGraph = generateFlowchartGraph(code);
+  const flowchartNodes = flowchartGraph.nodes;
 
   // 3. トレース実行とスナップショットの生成
   const snapshots: StepSnapshot[] = [

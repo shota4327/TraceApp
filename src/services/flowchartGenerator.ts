@@ -249,7 +249,7 @@ function finalizeFlowchartGraph(
   blockStack: BlockContext[],
   prevNodeId: string
 ): void {
-  const endNode = createTerminalNode('node-end', '終了', code.split('\n').length, (nodes.length + 1) * 60);
+  const endNode = createTerminalNode('node-end', '終了', code.split('\n').length, nodes.length * 60 + 20);
   nodes.push(endNode);
 
   while (blockStack.length > 0) processPoppedBlock(blockStack.pop()!, endNode.id, edges);
@@ -276,7 +276,7 @@ export function generateFlowchartGraph(code: string): FlowchartGraph {
 
   for (let i = 0; i < validLines.length; i++) {
     const line = validLines[i]!;
-    const node = createNodeForLine(line.text, line.lineNo, (nodes.length + 1) * 60);
+    const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20);
     nodes.push(node);
 
     const inheritedMergeTargets = handleBlockStackUnwind(line, node.id, blockStack, edges);

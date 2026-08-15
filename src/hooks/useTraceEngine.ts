@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TraceResult, WorkerRequest, WorkerResponse } from '../types';
 import { executeTrace } from '../services/tracer';
-import { generateFlowchartGraph } from '../services/flowchartGenerator';
+import { generateFlowchartGraph, generateDrawIoXml } from '../services/flowchartGenerator';
 import PyodideWorker from '../worker/pyodideWorker?worker&inline';
 
 export interface UseTraceEngineReturn {
@@ -180,7 +180,7 @@ export function useTraceEngine(): UseTraceEngineReturn {
               stdout: lastSnapshot?.stdoutCumulative || '',
               flowchartNodes: graph.nodes,
               flowchartEdges: graph.edges,
-              flowchartXml: '',
+              flowchartXml: generateDrawIoXml(graph),
               truncated: false,
             };
             setIsTracing(false);
