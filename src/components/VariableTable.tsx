@@ -38,8 +38,8 @@ const VariableTableRow: React.FC<{
     {varNames.map((name) => {
       const isLocal = snapshot.locals[name] !== undefined;
       const val = isLocal ? snapshot.locals[name] : snapshot.globals[name];
-      const isChanged = snapshot.changedVars.includes(name);
-      const isColChanged = currentChangedVars.includes(name);
+      const isChanged = isCurrent && snapshot.changedVars.includes(name);
+      const isColChanged = isCurrent && currentChangedVars.includes(name);
 
       let cellStyle = tdStyle;
       if (isChanged) {
@@ -68,14 +68,15 @@ export const VariableTable: React.FC<VariableTableProps> = ({
   snapshots = [],
   currentStepIndex = 0,
 }) => {
+  const isEnded = snapshots.length > 1 && currentStepIndex === snapshots.length - 1;
   const allVarNames = Array.from(
     new Set(snapshots.flatMap((s) => [...Object.keys(s.globals), ...Object.keys(s.locals)]))
   );
   const activeSnapshots = snapshots
     .slice(0, currentStepIndex + 1)
-    .filter((s) => Object.keys(s.globals).length > 0 || Object.keys(s.locals).length > 0);
+    .filter((s) => s.event !== 'end' && (Object.keys(s.globals).length > 0 || Object.keys(s.locals).length > 0));
   const currentSnapshot = snapshots[currentStepIndex];
-  const currentChangedVars = currentSnapshot?.changedVars ?? [];
+  const currentChangedVars = isEnded ? [] : (currentSnapshot?.changedVars ?? []);
 
   return (
     <div id="variable-table" data-testid="variable-table" style={containerStyle}>
@@ -87,12 +88,12 @@ export const VariableTable: React.FC<VariableTableProps> = ({
           <table style={tableStyle}>
             <VariableTableHeader varNames={allVarNames} changedVars={currentChangedVars} />
             <tbody>
-              {activeSnapshots.map((s, idx) => (
+              {activeSnapshots.map((s) => (
                 <VariableTableRow
                   key={s.stepIndex}
                   snapshot={s}
                   executedLine={snapshots[s.stepIndex - 1]?.line ?? s.line}
-                  isCurrent={s.stepIndex === currentSnapshot?.stepIndex || idx === activeSnapshots.length - 1}
+                  isCurrent={!isEnded && s.stepIndex === currentSnapshot?.stepIndex}
                   varNames={allVarNames}
                   currentChangedVars={currentChangedVars}
                 />
