@@ -181,6 +181,7 @@ const loadingStyle: React.CSSProperties = {
 };
 
 const codeViewerStyle: React.CSSProperties = {
+  display: 'none',
   padding: '8px 12px',
   fontFamily: 'Consolas, Monaco, "Courier New", monospace',
   fontSize: '0.85rem',
