@@ -16,7 +16,7 @@ export type FlowchartNodeType =
 /**
  * 流れ図エッジ（接続線）のラベル型
  */
-export type FlowchartEdgeLabel = 'True' | 'False' | 'Loop' | 'Next';
+export type FlowchartEdgeLabel = 'True' | 'False' | 'Loop' | 'Next' | 'Yes' | 'No';
 
 /**
  * 流れ図エッジ（接続線）構造体
