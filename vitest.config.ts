@@ -13,14 +13,6 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**'],
-    fileParallelism: false,
-    pool: 'forks',
-    poolOptions: {
-      forks: {
-        maxForks: 1,
-        minForks: 1,
-      },
-    },
     testTimeout: 30000,
     hookTimeout: 45000,
     teardownTimeout: 5000,
