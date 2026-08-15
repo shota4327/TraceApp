@@ -24,7 +24,7 @@ const HeaderTitleGroup: React.FC<{ statusText: string }> = ({ statusText }) => {
 
   return (
     <div style={titleGroupStyle}>
-      <h1 style={titleStyle}>TraceApp - Python学習トレース可視化ツール</h1>
+      <h1 style={titleStyle}>PyTrace - トレース学習支援システム</h1>
       <div id="status-indicator" data-testid="status-bar" className={`status-bar ${isReady ? 'ready' : isInitializing ? 'initializing' : 'error'}`} style={dynamicStatusStyle}>
         <span id="status-text" data-testid="status-text" style={dynamicTextStyle}>
           {statusText}
