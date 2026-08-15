@@ -221,12 +221,11 @@ function getNodeBox(
 ): NodeBox | null {
   const index = nodes.findIndex((n) => n.id === nodeId);
   if (index < 0) return null;
-  const n = nodes[index]!;
   return {
-    x: n.x !== undefined ? n.x : x,
-    y: n.y !== undefined ? n.y : paddingY + index * (nodeHeight + verticalGap),
-    w: n.width !== undefined ? n.width : nodeWidth,
-    h: n.height !== undefined ? n.height : nodeHeight,
+    x,
+    y: paddingY + index * (nodeHeight + verticalGap),
+    w: nodeWidth,
+    h: nodeHeight,
     index,
   };
 }
@@ -239,8 +238,7 @@ function getEdgeStyleProps(label?: string, isActive = false) {
   return { stroke: isActive ? '#2563eb' : '#64748b' };
 }
 
-
-/** False 分岐エッジ描画 helper (True 側ノードと重ならず縦線の隙間中央に合流) */
+/** False 分岐エッジ描画 helper (True 側ノード下端よりも十分下の縦線隙間中央に合流) */
 function renderFalseEdgeElement(
   id: string,
   src: NodeBox,
@@ -251,7 +249,8 @@ function renderFalseEdgeElement(
 ): React.ReactNode {
   const startX = src.x + src.w;
   const startY = src.y + src.h / 2;
-  const rightX = Math.max(src.x + src.w, tgt.x + tgt.w) + 45;
+  const rightX = Math.max(src.x + src.w, tgt.x + tgt.w) + 50;
+  // 合流先 tgt の上端と直前ノード下端の間にある縦線の中央位置
   const mergeY = tgt.y - verticalGap / 2;
   const mergeX = tgt.x + tgt.w / 2;
   const pathD = `M ${startX} ${startY} H ${rightX} V ${mergeY} H ${mergeX}`;
@@ -298,7 +297,6 @@ function renderSingleEdge(
     </g>
   );
 }
-
 
 /** エッジ群の描画 */
 function renderFlowchartEdges(
@@ -359,11 +357,8 @@ function renderFlowchartNodeList(
   paddingY: number
 ): React.ReactNode[] {
   return nodes.map((node, i) => {
-    const y = node.y !== undefined ? node.y : paddingY + i * (nodeHeight + verticalGap);
-    const nx = node.x !== undefined ? node.x : x;
-    const nw = node.width !== undefined ? node.width : nodeWidth;
-    const nh = node.height !== undefined ? node.height : nodeHeight;
-    return renderNodeShape(node, nx, y, nw, nh, activeFlags[i]!);
+    const y = paddingY + i * (nodeHeight + verticalGap);
+    return renderNodeShape(node, x, y, nodeWidth, nodeHeight, activeFlags[i]!);
   });
 }
 
@@ -375,7 +370,7 @@ export function renderFlowchartSvg(
   const { activeLine, activeNodeId, edges } = options;
   const nodeWidth = 180;
   const nodeHeight = 50;
-  const verticalGap = 40;
+  const verticalGap = 50;
   const paddingX = 80;
   const paddingY = 40;
 
