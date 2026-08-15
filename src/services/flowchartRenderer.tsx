@@ -240,16 +240,26 @@ function getEdgeStyleProps(label?: string, isActive = false) {
 }
 
 
-/** False 分岐エッジ描画 helper */
-function renderFalseEdgeElement(id: string, src: NodeBox, tgt: NodeBox, stroke: string, isActive: boolean): React.ReactNode {
+/** False 分岐エッジ描画 helper (True 側ノードと重ならず縦線の隙間中央に合流) */
+function renderFalseEdgeElement(
+  id: string,
+  src: NodeBox,
+  tgt: NodeBox,
+  stroke: string,
+  isActive: boolean,
+  verticalGap: number
+): React.ReactNode {
   const startX = src.x + src.w;
   const startY = src.y + src.h / 2;
-  const rightX = startX + 35;
-  const pathD = `M ${startX} ${startY} H ${rightX} V ${tgt.y - 10} H ${tgt.x + tgt.w / 2} V ${tgt.y}`;
+  const rightX = Math.max(src.x + src.w, tgt.x + tgt.w) + 45;
+  const mergeY = tgt.y - verticalGap / 2;
+  const mergeX = tgt.x + tgt.w / 2;
+  const pathD = `M ${startX} ${startY} H ${rightX} V ${mergeY} H ${mergeX}`;
+
   return (
     <g key={id} className="flowchart-edge edge-false">
       <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} />
-      <text x={startX + 8} y={startY - 6} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>False</text>
+      <text x={startX + 8} y={startY - 8} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>False</text>
     </g>
   );
 }
@@ -277,7 +287,7 @@ function renderSingleEdge(
   const isActive = activeFlags[src.index]! && activeFlags[tgt.index]!;
   const { stroke } = getEdgeStyleProps(edge.label, isActive);
 
-  if (edge.label === 'False') return renderFalseEdgeElement(edge.id, src, tgt, stroke, isActive);
+  if (edge.label === 'False') return renderFalseEdgeElement(edge.id, src, tgt, stroke, isActive, verticalGap);
 
   const startX = src.x + src.w / 2;
   const startY = src.y + src.h;
@@ -288,6 +298,7 @@ function renderSingleEdge(
     </g>
   );
 }
+
 
 /** エッジ群の描画 */
 function renderFlowchartEdges(
