@@ -214,7 +214,7 @@ interface NodeBox { x: number; y: number; w: number; h: number; index: number }
 function calculateNodeLayouts(
   nodes: FlowchartNode[],
   edges?: FlowchartEdge[],
-  defaultGap = 20,
+  defaultGap = 10,
   mergeGap = 45,
   nodeHeight = 50,
   paddingY = 40
@@ -405,7 +405,7 @@ export function renderFlowchartSvg(
   const paddingX = 80;
   const paddingY = 40;
 
-  const { nodeYs, totalHeight } = calculateNodeLayouts(nodes, edges, 20, 45, nodeHeight, paddingY);
+  const { nodeYs, totalHeight } = calculateNodeLayouts(nodes, edges, 10, 45, nodeHeight, paddingY);
   const totalWidth = nodeWidth + paddingX * 2 + 60;
   const x = paddingX;
 
