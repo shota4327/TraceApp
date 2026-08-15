@@ -262,28 +262,21 @@ function calculateNodeColumns(nodes: FlowchartNode[], edges?: FlowchartEdge[]): 
   return cols;
 }
 
-/** if-elif-else 分岐チェーンのひし形と処理ブロックを横並び整列する helper */
-function layoutBranchChain(
-  ifIdx: number,
+/** 分岐チェーン内の elif ひし形と各処理ブロックを探索する helper */
+function collectBranchNodes(
+  startDecisionId: string,
   nodes: FlowchartNode[],
   nodeCols: number[],
   edges: FlowchartEdge[] | undefined,
   nodeYs: number[],
   decisionY: number,
-  nodeHeight: number,
-  decisionGap: number
-): number {
-  const ifNode = nodes[ifIdx]!;
-  nodeYs[ifIdx] = decisionY;
-
+  stepY: number
+): { processIndices: number[]; maxDecisionY: number } {
   const processIndices: number[] = [];
-  const trueEdge = edges?.find((e) => e.sourceId === ifNode.id && (e.label === 'True' || e.label === 'Yes'));
-  if (trueEdge) {
-    const tIdx = nodes.findIndex((n) => n.id === trueEdge.targetId);
-    if (tIdx >= 0 && nodeCols[tIdx] === 0) processIndices.push(tIdx);
-  }
+  let currentDecisionId = startDecisionId;
+  let branchDepth = 0;
+  let maxDecisionY = decisionY;
 
-  let currentDecisionId = ifNode.id;
   while (true) {
     const falseEdge = edges?.find(
       (e) => e.sourceId === currentDecisionId && (e.label === 'False' || e.label === 'No' || e.id.includes('edge-false-'))
@@ -293,9 +286,14 @@ function layoutBranchChain(
     if (tgtIdx < 0 || nodeCols[tgtIdx] === 0) break;
 
     const tgtNode = nodes[tgtIdx]!;
+    branchDepth++;
+
     if (tgtNode.type === 'decision') {
-      nodeYs[tgtIdx] = decisionY;
+      const thisDecisionY = decisionY + branchDepth * stepY;
+      nodeYs[tgtIdx] = thisDecisionY;
+      maxDecisionY = Math.max(maxDecisionY, thisDecisionY);
       currentDecisionId = tgtNode.id;
+
       const elifTrue = edges?.find((e) => e.sourceId === tgtNode.id && (e.label === 'True' || e.label === 'Yes'));
       if (elifTrue) {
         const etIdx = nodes.findIndex((n) => n.id === elifTrue.targetId);
@@ -307,7 +305,41 @@ function layoutBranchChain(
     }
   }
 
-  const processY = decisionY + nodeHeight + decisionGap;
+  return { processIndices, maxDecisionY };
+}
+
+/** if-elif-else 分岐チェーンのひし形を階段状にし、処理ブロックを横並び整列する helper */
+function layoutBranchChain(
+  ifIdx: number,
+  nodes: FlowchartNode[],
+  nodeCols: number[],
+  edges: FlowchartEdge[] | undefined,
+  nodeYs: number[],
+  decisionY: number,
+  nodeHeight: number,
+  decisionGap: number,
+  stepY = 25
+): number {
+  const ifNode = nodes[ifIdx]!;
+  nodeYs[ifIdx] = decisionY;
+
+  const trueEdge = edges?.find((e) => e.sourceId === ifNode.id && (e.label === 'True' || e.label === 'Yes'));
+  const firstProcessIdx = trueEdge ? nodes.findIndex((n) => n.id === trueEdge.targetId) : -1;
+
+  const { processIndices, maxDecisionY } = collectBranchNodes(
+    ifNode.id,
+    nodes,
+    nodeCols,
+    edges,
+    nodeYs,
+    decisionY,
+    stepY
+  );
+  if (firstProcessIdx >= 0 && nodeCols[firstProcessIdx] === 0) {
+    processIndices.unshift(firstProcessIdx);
+  }
+
+  const processY = maxDecisionY + nodeHeight + decisionGap;
   for (const pIdx of processIndices) {
     nodeYs[pIdx] = processY;
   }
