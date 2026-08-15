@@ -47,7 +47,7 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
     // テスト1: 順次実行サンプルを選択
     await presetSelect.selectOption('seq');
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // ステップ2: x = 5 が記録される
     await btnNext.click();
@@ -84,7 +84,7 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
     // テスト2: 条件分岐サンプルを選択 (score = 75)
     await presetSelect.selectOption('branch');
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // ステップ進行し、elif score >= 60 が評価され grade = "B" になることを検証
     await btnLast.click();
@@ -107,7 +107,7 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
     // テスト3: ループサンプルを選択
     await presetSelect.selectOption('loop');
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 最終結果 total = 6 に到達することを確認
     await btnLast.click();
@@ -130,7 +130,7 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
     const buggyCode = `total = 0\nfor i in range(1, 3):\n    total = 100 * i\nprint(f"Final: {total}")`;
     await codeInput.fill(buggyCode);
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 2. トレースを実行し最終確認
     await btnLast.click();
@@ -147,7 +147,7 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
 
     // 5. 再度トレース実行
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
     await btnLast.click();
 
     // 正しい結果 `Final: 3` が出力されていることを確認

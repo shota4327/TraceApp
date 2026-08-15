@@ -49,19 +49,19 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
     // print サンプルコードを読み込んで実行
     await presetSelect.selectOption('print');
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 1ステップ目 (未実行): active 行なし
     await expect(codeViewer.locator('.code-line.active')).toHaveCount(0);
 
     // 2ステップ目 (1行目実行後): 1行目がアクティブ
     await btnNext.click();
-    await expect(stepCounter).toContainText('ステップ 2 /');
+    await expect(stepCounter).toContainText('ステップ 1 /');
     const line1Active = await codeViewer.locator('.code-line.active').textContent();
 
     // 3ステップ目 (2行目実行後): 2行目がアクティブ
     await btnNext.click();
-    await expect(stepCounter).toContainText('ステップ 3 /');
+    await expect(stepCounter).toContainText('ステップ 2 /');
     const line2Active = await codeViewer.locator('.code-line.active').textContent();
     const consoleText2 = await consoleOutput.textContent();
 
@@ -149,7 +149,7 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
     const loadedCode = `val1 = 50\nval2 = 150\nresult = val1 + val2`;
     await codeInput.fill(loadedCode);
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 最終ステップへジャンプ
     const btnLast = getEl(page, 'btn-last');

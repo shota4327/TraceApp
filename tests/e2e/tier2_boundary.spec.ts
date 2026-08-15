@@ -75,7 +75,7 @@ test.describe('Tier 2: 境界値・コーナーケーステスト (Boundary & Co
     const nanInfCode = `a = float('nan')\nb = float('inf')\nc = float('-inf')`;
     await codeInput.fill(nanInfCode);
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 最終ステップに移動
     const btnLast = getEl(page, 'btn-last');
@@ -166,7 +166,7 @@ test.describe('Tier 2: 境界値・コーナーケーステスト (Boundary & Co
     }
     await codeInput.fill(manyVarsCode);
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 最終ステップに移動
     const btnLast = getEl(page, 'btn-last');
@@ -199,7 +199,7 @@ if True:
 `;
     await codeInput.fill(nestedCode);
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     const btnLast = getEl(page, 'btn-last');
     await btnLast.click();
@@ -219,7 +219,7 @@ if True:
     const specialPrintCode = `print("Line1\\nLine2\\tTab <script>alert('xss')</script>")`;
     await codeInput.fill(specialPrintCode);
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     const btnLast = getEl(page, 'btn-last');
     await btnLast.click();
@@ -244,7 +244,7 @@ res = fact(3)
 `;
     await codeInput.fill(recursiveCode);
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     const btnLast = getEl(page, 'btn-last');
     await btnLast.click();

@@ -85,7 +85,7 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     // トレース完了後のステップ数を検証
     await expect(stepCounter).not.toHaveText('ステップ 0 / 0');
     const counterText = await stepCounter.textContent();
-    expect(counterText).toMatch(/ステップ 1 \/ \d+/);
+    expect(counterText).toMatch(/ステップ 0 \/ \d+/);
   });
 
   test('T1-04: .py ファイルのアップロード模擬機能検証', async ({ page }) => {
@@ -99,7 +99,7 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
 
     // トレース実行
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 最終ステップへ進行させて print 内容を確認
     const btnLast = getEl(page, 'btn-last');
@@ -118,19 +118,19 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
 
     // 順次実行サンプルでトレース実行
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 「次へ」をクリック
     await btnNext.click();
-    await expect(stepCounter).toContainText('ステップ 2 /');
+    await expect(stepCounter).toContainText('ステップ 1 /');
 
     // 「前へ」をクリック
     await btnPrev.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 「最初 / リセット」をクリック
     await btnFirst.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
   });
 
   test('T1-06: Monaco Editor 実行行デコレーションハイライトの追従', async ({ page }) => {
@@ -140,19 +140,19 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     const stepCounter = getEl(page, 'step-counter');
 
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 1ステップ目 (起動直後・未実行): (未実行) が表示されることを確認
     await expect(monacoEditor).toContainText('実行行: (未実行)');
 
     // 2ステップ目 (次へ押下): 1行目を実行した結果として Line 1 が表示されることを確認
     await btnNext.click();
-    await expect(stepCounter).toContainText('ステップ 2 /');
+    await expect(stepCounter).toContainText('ステップ 1 /');
     await expect(monacoEditor).toContainText('実行行: Line 1');
 
     // 3ステップ目 (次へ押下): 2行目を実行した結果として Line 2 が表示されることを確認
     await btnNext.click();
-    await expect(stepCounter).toContainText('ステップ 3 /');
+    await expect(stepCounter).toContainText('ステップ 2 /');
     await expect(monacoEditor).toContainText('実行行: Line 2');
 
     // 最終ステップまで進める
@@ -168,7 +168,7 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
 
     // トレース実行 (x = 5, y = 3, total = x + y)
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 1 /');
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // ステップ 2 (y = 3 の行) へ進むと、x = 5 が記録される
     await btnNext.click();

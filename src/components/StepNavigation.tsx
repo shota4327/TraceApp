@@ -61,7 +61,7 @@ const StepSlider: React.FC<{
       style={sliderStyle}
     />
     <span id="step-counter" data-testid="step-counter" style={stepLabelStyle}>
-      {totalSteps > 0 ? `ステップ ${currentStep + 1} / ${totalSteps}` : 'ステップ 0 / 0'}
+      {totalSteps > 0 ? `ステップ ${currentStep} / ${maxStep}` : 'ステップ 0 / 0'}
     </span>
   </div>
 );

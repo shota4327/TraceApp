@@ -33,15 +33,15 @@ test('単一 index.html ファイルを直接開いた際の起動およびト�
   // 4. 「次へ」ボタンでステップ進行
   const btnNext = page.locator('#btn-next, [data-testid="btn-next"]').first();
   await btnNext.click();
-  await expect(stepCounter).toContainText('ステップ 2 /');
+  await expect(stepCounter).toContainText('ステップ 1 /');
 
   // 5. 「前へ」ボタンでステップを戻す
   const btnPrev = page.locator('#btn-prev, [data-testid="btn-prev"]').first();
   await btnPrev.click();
-  await expect(stepCounter).toContainText('ステップ 1 /');
+  await expect(stepCounter).toContainText('ステップ 0 /');
 
   // 6. 「トレース実行」ボタンの再実行確認
   const btnRun = page.locator('#btn-run, [data-testid="btn-run"]').first();
   await btnRun.click();
-  await expect(stepCounter).toContainText('ステップ 1 /');
+  await expect(stepCounter).toContainText('ステップ 0 /');
 });
