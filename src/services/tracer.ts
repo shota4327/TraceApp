@@ -55,10 +55,22 @@ export function executeTrace(code: string): TraceExecutionResult {
   flowchartNodes.push({ id: 'node-end', type: 'terminal', label: '終了' });
 
   // 3. トレース実行とスナップショットの生成
-  const snapshots: StepSnapshot[] = [];
+  const snapshots: StepSnapshot[] = [
+    {
+      stepIndex: 0,
+      line: 1,
+      event: 'line',
+      globals: {},
+      locals: {},
+      changedVars: [],
+      stdoutDelta: '',
+      stdoutCumulative: '',
+      astNodeId: 'node-1',
+    },
+  ];
   const currentGlobals: VariableSnapshot = {};
   let cumulativeStdout = '';
-  let stepIndex = 0;
+  let stepIndex = 1;
 
   // 再帰関数サポート用環境
   const functions: Record<string, { params: string[]; body: string[] }> = {};
