@@ -213,7 +213,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(container.querySelector('g')?.getAttribute('data-testid')).toBe('flowchart-node-subroutine');
     });
 
-    it('2.6 エッジの描画: Loop, False, True, Next エッジが正しいカラーとマーカーでレンダリングされること', () => {
+    it('2.6 エッジの描画: Loop, False, True, Next エッジが正しいカラーと直線・折れ線でレンダリングされること', () => {
       const nodes: FlowchartNode[] = [
         { id: 'n1', type: 'decision', label: 'if x > 0', lineRange: [1, 1], x: 100, y: 20, width: 180, height: 50 },
         { id: 'n2', type: 'process', label: 'print("yes")', lineRange: [2, 2], x: 100, y: 100, width: 180, height: 50 },
@@ -235,9 +235,9 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(falseEdge).not.toBeNull();
       expect(loopEdge).not.toBeNull();
 
-      expect(container.innerHTML).toContain('url(#arrowhead-true)');
-      expect(container.innerHTML).toContain('url(#arrowhead-false)');
-      expect(container.innerHTML).toContain('url(#arrowhead-loop)');
+      expect(trueEdge?.querySelector('line')).not.toBeNull();
+      expect(falseEdge?.querySelector('path')).not.toBeNull();
+      expect(loopEdge?.querySelector('path')).not.toBeNull();
     });
   });
 

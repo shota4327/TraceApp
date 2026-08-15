@@ -220,41 +220,41 @@ function getNodeBox(
   };
 }
 
-/** エッジの線色および矢印マーカーを取得 helper */
+/** エッジの線色を取得 helper */
 function getEdgeStyleProps(label?: string, isActive = false) {
-  if (label === 'True') return { stroke: isActive ? '#2563eb' : '#16a34a', marker: isActive ? 'url(#arrowhead-active)' : 'url(#arrowhead-true)' };
-  if (label === 'False') return { stroke: isActive ? '#2563eb' : '#d97706', marker: isActive ? 'url(#arrowhead-active)' : 'url(#arrowhead-false)' };
-  if (label === 'Loop') return { stroke: isActive ? '#2563eb' : '#9333ea', marker: isActive ? 'url(#arrowhead-active)' : 'url(#arrowhead-loop)' };
-  return { stroke: isActive ? '#2563eb' : '#64748b', marker: isActive ? 'url(#arrowhead-active)' : 'url(#arrowhead)' };
+  if (label === 'True') return { stroke: isActive ? '#2563eb' : '#16a34a' };
+  if (label === 'False') return { stroke: isActive ? '#2563eb' : '#d97706' };
+  if (label === 'Loop') return { stroke: isActive ? '#2563eb' : '#9333ea' };
+  return { stroke: isActive ? '#2563eb' : '#64748b' };
 }
 
 /** Loop (LoopBack) エッジ描画 helper */
-function renderLoopBackEdgeElement(id: string, src: NodeBox, tgt: NodeBox, stroke: string, marker: string, isActive: boolean): React.ReactNode {
+function renderLoopBackEdgeElement(id: string, src: NodeBox, tgt: NodeBox, stroke: string, isActive: boolean): React.ReactNode {
   const leftX = Math.min(src.x, tgt.x) - 40;
   const pathD = `M ${src.x} ${src.y + src.h / 2} H ${leftX} V ${tgt.y + tgt.h / 2} H ${tgt.x}`;
   return (
     <g key={id} className="flowchart-edge edge-loop">
-      <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} markerEnd={marker} />
+      <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} />
       <text x={leftX - 5} y={(src.y + tgt.y) / 2} textAnchor="end" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>Loop</text>
     </g>
   );
 }
 
 /** False 分岐エッジ描画 helper */
-function renderFalseEdgeElement(id: string, src: NodeBox, tgt: NodeBox, stroke: string, marker: string, isActive: boolean): React.ReactNode {
+function renderFalseEdgeElement(id: string, src: NodeBox, tgt: NodeBox, stroke: string, isActive: boolean): React.ReactNode {
   const startX = src.x + src.w;
   const startY = src.y + src.h / 2;
   const rightX = startX + 35;
   const pathD = `M ${startX} ${startY} H ${rightX} V ${tgt.y - 10} H ${tgt.x + tgt.w / 2} V ${tgt.y}`;
   return (
     <g key={id} className="flowchart-edge edge-false">
-      <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} markerEnd={marker} />
+      <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} />
       <text x={startX + 8} y={startY - 6} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>False</text>
     </g>
   );
 }
 
-/** 単一エッジ (接続矢印) の描画 */
+/** 単一エッジ (接続直線) の描画 */
 function renderSingleEdge(
   edge: FlowchartEdge,
   nodes: FlowchartNode[],
@@ -270,16 +270,16 @@ function renderSingleEdge(
   if (!src || !tgt) return null;
 
   const isActive = activeFlags[src.index]! && activeFlags[tgt.index]!;
-  const { stroke, marker } = getEdgeStyleProps(edge.label, isActive);
+  const { stroke } = getEdgeStyleProps(edge.label, isActive);
 
-  if (edge.label === 'Loop') return renderLoopBackEdgeElement(edge.id, src, tgt, stroke, marker, isActive);
-  if (edge.label === 'False') return renderFalseEdgeElement(edge.id, src, tgt, stroke, marker, isActive);
+  if (edge.label === 'Loop') return renderLoopBackEdgeElement(edge.id, src, tgt, stroke, isActive);
+  if (edge.label === 'False') return renderFalseEdgeElement(edge.id, src, tgt, stroke, isActive);
 
   const startX = src.x + src.w / 2;
   const startY = src.y + src.h;
   return (
     <g key={edge.id} className={`flowchart-edge edge-${edge.label || 'next'}`}>
-      <line x1={startX} y1={startY} x2={tgt.x + tgt.w / 2} y2={tgt.y} stroke={stroke} strokeWidth={isActive ? 3 : 2} markerEnd={marker} />
+      <line x1={startX} y1={startY} x2={tgt.x + tgt.w / 2} y2={tgt.y} stroke={stroke} strokeWidth={isActive ? 3 : 2} />
       {edge.label === 'True' && <text x={startX + 8} y={(startY + tgt.y) / 2} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>True</text>}
     </g>
   );
@@ -327,7 +327,6 @@ function renderFlowchartConnections(
         y2={nextY}
         stroke={lineIsActive ? '#2563eb' : '#94a3b8'}
         strokeWidth={lineIsActive ? 3 : 2}
-        markerEnd={lineIsActive ? 'url(#arrowhead-active)' : 'url(#arrowhead)'}
       />
     );
   }
