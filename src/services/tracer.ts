@@ -56,7 +56,6 @@ export function executeTrace(code: string): TraceExecutionResult {
 
   // 3. トレース実行とスナップショットの生成
   const snapshots: StepSnapshot[] = [];
-  const currentLocals: VariableSnapshot = {};
   const currentGlobals: VariableSnapshot = {};
   let cumulativeStdout = '';
   let stepIndex = 0;
@@ -179,7 +178,7 @@ export function executeTrace(code: string): TraceExecutionResult {
     // print 文
     if (line.startsWith('print(')) {
       const inner = line.slice(6, line.length - 1);
-      const val = evalExpr(inner, currentLocals);
+      const val = evalExpr(inner, currentGlobals);
       const outputStr = String(val) + '\n';
       cumulativeStdout += outputStr;
 
@@ -188,7 +187,7 @@ export function executeTrace(code: string): TraceExecutionResult {
         line: lineNum,
         event: 'line',
         globals: { ...currentGlobals },
-        locals: { ...currentLocals },
+        locals: {},
         changedVars: [],
         stdoutDelta: outputStr,
         stdoutCumulative: cumulativeStdout,
@@ -201,13 +200,13 @@ export function executeTrace(code: string): TraceExecutionResult {
     // if / elif / else ブロック
     if (line.startsWith('if ')) {
       const condExpr = line.slice(3, line.length - 1);
-      const condResult = Boolean(evalExpr(condExpr, currentLocals));
+      const condResult = Boolean(evalExpr(condExpr, currentGlobals));
       snapshots.push({
         stepIndex: stepIndex++,
         line: lineNum,
         event: 'line',
         globals: { ...currentGlobals },
-        locals: { ...currentLocals },
+        locals: {},
         changedVars: [],
         stdoutDelta: '',
         stdoutCumulative: cumulativeStdout,
@@ -233,13 +232,13 @@ export function executeTrace(code: string): TraceExecutionResult {
 
     if (line.startsWith('elif ')) {
       const condExpr = line.slice(5, line.length - 1);
-      const condResult = Boolean(evalExpr(condExpr, currentLocals));
+      const condResult = Boolean(evalExpr(condExpr, currentGlobals));
       snapshots.push({
         stepIndex: stepIndex++,
         line: lineNum,
         event: 'line',
         globals: { ...currentGlobals },
-        locals: { ...currentLocals },
+        locals: {},
         changedVars: [],
         stdoutDelta: '',
         stdoutCumulative: cumulativeStdout,
@@ -268,7 +267,7 @@ export function executeTrace(code: string): TraceExecutionResult {
         line: lineNum,
         event: 'line',
         globals: { ...currentGlobals },
-        locals: { ...currentLocals },
+        locals: {},
         changedVars: [],
         stdoutDelta: '',
         stdoutCumulative: cumulativeStdout,
@@ -295,13 +294,13 @@ export function executeTrace(code: string): TraceExecutionResult {
       }
 
       for (let i = start; i < end; i++) {
-        currentLocals[iterVar] = i;
+        currentGlobals[iterVar] = i;
         snapshots.push({
           stepIndex: stepIndex++,
           line: lineNum,
           event: 'line',
           globals: { ...currentGlobals },
-          locals: { ...currentLocals },
+          locals: {},
           changedVars: [iterVar],
           stdoutDelta: '',
           stdoutCumulative: cumulativeStdout,
@@ -315,14 +314,14 @@ export function executeTrace(code: string): TraceExecutionResult {
           if (bodyTrimmed.includes('=')) {
             const [vName, vExpr] = bodyTrimmed.split('=').map(s => s.trim());
             if (vName && vExpr) {
-              const val = evalExpr(vExpr, currentLocals);
-              currentLocals[vName] = val;
+              const val = evalExpr(vExpr, currentGlobals);
+              currentGlobals[vName] = val;
               snapshots.push({
                 stepIndex: stepIndex++,
                 line: bodyLineNum,
                 event: 'line',
                 globals: { ...currentGlobals },
-                locals: { ...currentLocals },
+                locals: {},
                 changedVars: [vName],
                 stdoutDelta: '',
                 stdoutCumulative: cumulativeStdout,
@@ -347,7 +346,7 @@ export function executeTrace(code: string): TraceExecutionResult {
         j++;
       }
 
-      while (Boolean(evalExpr(condExpr, currentLocals))) {
+      while (Boolean(evalExpr(condExpr, currentGlobals))) {
         if (stepIndex > 2000) {
           throw new Error('TraceLimitExceeded: 10,000ステップ上限超過ガード');
         }
@@ -356,7 +355,7 @@ export function executeTrace(code: string): TraceExecutionResult {
           line: lineNum,
           event: 'line',
           globals: { ...currentGlobals },
-          locals: { ...currentLocals },
+          locals: {},
           changedVars: [],
           stdoutDelta: '',
           stdoutCumulative: cumulativeStdout,
@@ -369,14 +368,14 @@ export function executeTrace(code: string): TraceExecutionResult {
           if (bodyTrimmed.includes('+=')) {
             const [vName, vExpr] = bodyTrimmed.split('+=').map(s => s.trim());
             if (vName && vExpr) {
-              const inc = evalExpr(vExpr, currentLocals);
-              currentLocals[vName] = (currentLocals[vName] || 0) + Number(inc);
+              const inc = evalExpr(vExpr, currentGlobals);
+              currentGlobals[vName] = (currentGlobals[vName] || 0) + Number(inc);
               snapshots.push({
                 stepIndex: stepIndex++,
                 line: bodyLineNum,
                 event: 'line',
                 globals: { ...currentGlobals },
-                locals: { ...currentLocals },
+                locals: {},
                 changedVars: [vName!],
                 stdoutDelta: '',
                 stdoutCumulative: cumulativeStdout,
@@ -394,14 +393,14 @@ export function executeTrace(code: string): TraceExecutionResult {
     if (line.includes('=')) {
       const [vName, vExpr] = line.split('=').map(s => s.trim());
       if (vName && vExpr) {
-        const val = evalExpr(vExpr, currentLocals);
-        currentLocals[vName] = val;
+        const val = evalExpr(vExpr, currentGlobals);
+        currentGlobals[vName] = val;
         snapshots.push({
           stepIndex: stepIndex++,
           line: lineNum,
           event: 'line',
           globals: { ...currentGlobals },
-          locals: { ...currentLocals },
+          locals: {},
           changedVars: [vName],
           stdoutDelta: '',
           stdoutCumulative: cumulativeStdout,

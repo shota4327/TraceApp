@@ -24,9 +24,11 @@ test('単一 index.html ファイルを直接開いた際の起動およびト�
   await expect(variableTable).toBeVisible();
   await expect(consoleOutput).toBeVisible();
 
-  // 3. 初期状態のステップカウンター確認
+  // 3. 初期状態のステップカウンター確認 & 変数履歴表に不要な [L] バッジがないことの確認
   const stepCounter = page.locator('#step-counter, [data-testid="step-counter"]').first();
   await expect(stepCounter).toBeVisible();
+  const localBadges = variableTable.locator('span:text-is("L")');
+  await expect(localBadges).toHaveCount(0);
 
   // 4. 「次へ」ボタンでステップ進行
   const btnNext = page.locator('#btn-next, [data-testid="btn-next"]').first();
