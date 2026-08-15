@@ -224,4 +224,26 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     await expect(codeInput).toBeVisible();
   });
 
+  test('T1-11: 右パネル（変数履歴表と標準出力コンソール）の上下ドラッグリサイズ', async ({ page }) => {
+    const resizer = getEl(page, 'right-panel-resizer');
+    await expect(resizer).toBeVisible();
+
+    const initialBox = await resizer.boundingBox();
+    expect(initialBox).not.toBeNull();
+
+    if (initialBox) {
+      // マウスドラッグで下方向に50px移動
+      await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y + initialBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y + 50);
+      await page.mouse.up();
+
+      const newBox = await resizer.boundingBox();
+      expect(newBox).not.toBeNull();
+      if (newBox) {
+        expect(newBox.y).toBeGreaterThan(initialBox.y);
+      }
+    }
+  });
+
 });
