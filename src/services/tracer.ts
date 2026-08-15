@@ -72,6 +72,17 @@ export function executeTrace(code: string): TraceExecutionResult {
   let cumulativeStdout = '';
   let stepIndex = 1;
 
+  // 次の有効コード行番号を取得するヘルパー
+  const findNextLineNum = (fromIdx: number): number => {
+    for (let i = fromIdx; i < rawLines.length; i++) {
+      const l = rawLines[i]?.trim();
+      if (l && !l.startsWith('#')) {
+        return i + 1;
+      }
+    }
+    return rawLines.length;
+  };
+
   // 再帰関数サポート用環境
   const functions: Record<string, { params: string[]; body: string[] }> = {};
 
@@ -193,17 +204,18 @@ export function executeTrace(code: string): TraceExecutionResult {
       const val = evalExpr(inner, currentGlobals);
       const outputStr = String(val) + '\n';
       cumulativeStdout += outputStr;
+      const nextLineNum = findNextLineNum(lineIdx + 1);
 
       snapshots.push({
         stepIndex: stepIndex++,
-        line: lineNum,
+        line: nextLineNum,
         event: 'line',
         globals: { ...currentGlobals },
         locals: {},
         changedVars: [],
         stdoutDelta: outputStr,
         stdoutCumulative: cumulativeStdout,
-        astNodeId: `node-${lineNum}`,
+        astNodeId: `node-${nextLineNum}`,
       });
       lineIdx++;
       continue;
@@ -407,16 +419,17 @@ export function executeTrace(code: string): TraceExecutionResult {
       if (vName && vExpr) {
         const val = evalExpr(vExpr, currentGlobals);
         currentGlobals[vName] = val;
+        const nextLineNum = findNextLineNum(lineIdx + 1);
         snapshots.push({
           stepIndex: stepIndex++,
-          line: lineNum,
+          line: nextLineNum,
           event: 'line',
           globals: { ...currentGlobals },
           locals: {},
           changedVars: [vName],
           stdoutDelta: '',
           stdoutCumulative: cumulativeStdout,
-          astNodeId: `node-${lineNum}`,
+          astNodeId: `node-${nextLineNum}`,
         });
       }
       lineIdx++;
