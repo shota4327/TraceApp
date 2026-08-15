@@ -210,26 +210,34 @@ function renderSvgDefs(): React.ReactNode {
 
 interface NodeBox { x: number; y: number; w: number; h: number; col: number; index: number }
 
-/** 各ノードの所属カラム (0: メイン, 1: elif1, 2: elif2...) を算出 */
+/** 各ノードの所属カラム (0: メイン, 1: elif1/else, 2: elif2/else...) を算出 */
 function calculateNodeColumns(nodes: FlowchartNode[], edges?: FlowchartEdge[]): number[] {
   const cols = new Array(nodes.length).fill(0);
   if (!edges || edges.length === 0) return cols;
 
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]!;
-    // elif 判定ノード (親 if からの False エッジ接続)
-    if (node.type === 'decision' && node.label.startsWith('elif ')) {
-      const inFalse = edges.find((e) => e.targetId === node.id && (e.label === 'False' || e.id.includes('edge-false-')));
-      if (inFalse) {
-        const srcIdx = nodes.findIndex((n) => n.id === inFalse.sourceId);
-        if (srcIdx >= 0) cols[i] = cols[srcIdx]! + 1;
-      } else {
-        cols[i] = 1;
+    if (node.id === 'node-end' || node.label.includes('終了')) continue;
+
+    // False / No エッジで入ってくるノード (elif または else)
+    const inFalse = edges.find(
+      (e) => e.targetId === node.id && (e.label === 'False' || e.label === 'No' || e.id.includes('edge-false-'))
+    );
+    if (inFalse) {
+      const srcIdx = nodes.findIndex((n) => n.id === inFalse.sourceId);
+      if (srcIdx >= 0) {
+        // True側の末尾からもこのノードに合流エッジが入っている場合は、else ではなく単一 if の合流先 (col=0)
+        const isMergeTarget = edges.some(
+          (e) => e.targetId === node.id && (e.id.includes('merge') || e.id.includes('join'))
+        );
+        if (!isMergeTarget || node.type === 'decision' || node.label.startsWith('elif ') || node.label.startsWith('else')) {
+          cols[i] = cols[srcIdx]! + 1;
+        }
       }
     }
   }
 
-  // elif の True 配下や else ブロックのノードにカラムを伝播
+  // elif / else 配下のノードにカラムを伝播
   for (let i = 1; i < nodes.length; i++) {
     const node = nodes[i]!;
     if (cols[i] === 0 && !node.label.includes('終了') && node.id !== 'node-end') {
@@ -238,7 +246,9 @@ function calculateNodeColumns(nodes: FlowchartNode[], edges?: FlowchartEdge[]): 
         const srcIdx = nodes.findIndex((n) => n.id === inTrue.sourceId);
         if (srcIdx >= 0 && cols[srcIdx]! > 0) cols[i] = cols[srcIdx]!;
       } else {
-        const inNext = edges.find((e) => e.targetId === node.id && (e.label === 'Next' || !e.label) && !e.id.includes('merge') && !e.id.includes('join'));
+        const inNext = edges.find(
+          (e) => e.targetId === node.id && (e.label === 'Next' || !e.label) && !e.id.includes('merge') && !e.id.includes('join')
+        );
         if (inNext) {
           const srcIdx = nodes.findIndex((n) => n.id === inNext.sourceId);
           if (srcIdx >= 0 && cols[srcIdx]! > 0 && !edges.some((e) => e.id.includes('merge') && e.targetId === node.id)) {
