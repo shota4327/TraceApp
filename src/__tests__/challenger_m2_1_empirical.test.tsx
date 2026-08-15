@@ -100,11 +100,11 @@ while i < 3:
         expect(edgeEl.getAttribute('target')).toBeTruthy();
       });
 
-      // SVG レンダリング
+      // SVG レンダリング (JISループ仕様: ループ記号の Loop/False 表記は非表示)
       const svgElement = renderFlowchartSvg(graph.nodes, { edges: graph.edges });
       const { container } = render(<>{svgElement}</>);
-      expect(container.querySelectorAll('.edge-loop').length).toBeGreaterThan(0);
-      expect(container.querySelectorAll('.edge-false').length).toBeGreaterThan(0);
+      expect(container.querySelectorAll('.flowchart-edge').length).toBeGreaterThan(0);
+      expect(container.querySelectorAll('.edge-loop').length).toBe(0);
     });
   });
 

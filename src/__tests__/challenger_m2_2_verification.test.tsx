@@ -213,7 +213,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(container.querySelector('g')?.getAttribute('data-testid')).toBe('flowchart-node-subroutine');
     });
 
-    it('2.6 エッジの描画: Loop, False, True, Next エッジが正しいカラーと直線・折れ線でレンダリングされること', () => {
+    it('2.6 エッジの描画: False, True, Next エッジが正しいカラーと直線・折れ線でレンダリングされること', () => {
       const nodes: FlowchartNode[] = [
         { id: 'n1', type: 'decision', label: 'if x > 0', lineRange: [1, 1], x: 100, y: 20, width: 180, height: 50 },
         { id: 'n2', type: 'process', label: 'print("yes")', lineRange: [2, 2], x: 100, y: 100, width: 180, height: 50 },
@@ -222,22 +222,22 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       const edges: FlowchartEdge[] = [
         { id: 'e-true', sourceId: 'n1', targetId: 'n2', label: 'True' },
         { id: 'e-false', sourceId: 'n1', targetId: 'n3', label: 'False' },
-        { id: 'e-loop', sourceId: 'n2', targetId: 'n1', label: 'Loop' },
+        { id: 'e-next', sourceId: 'n2', targetId: 'n3', label: 'Next' },
       ];
 
       const { container } = render(<>{renderFlowchartSvg(nodes, { edges })}</>);
       
       const trueEdge = container.querySelector('.edge-True') || container.querySelector('.edge-true');
       const falseEdge = container.querySelector('.edge-false');
-      const loopEdge = container.querySelector('.edge-loop');
+      const nextEdge = container.querySelector('.edge-next') || container.querySelector('.edge-Next');
 
       expect(trueEdge).not.toBeNull();
       expect(falseEdge).not.toBeNull();
-      expect(loopEdge).not.toBeNull();
+      expect(nextEdge).not.toBeNull();
 
       expect(trueEdge?.querySelector('line')).not.toBeNull();
       expect(falseEdge?.querySelector('path')).not.toBeNull();
-      expect(loopEdge?.querySelector('path')).not.toBeNull();
+      expect(nextEdge?.querySelector('line')).not.toBeNull();
     });
   });
 

@@ -239,17 +239,6 @@ function getEdgeStyleProps(label?: string, isActive = false) {
   return { stroke: isActive ? '#2563eb' : '#64748b' };
 }
 
-/** Loop (LoopBack) エッジ描画 helper */
-function renderLoopBackEdgeElement(id: string, src: NodeBox, tgt: NodeBox, stroke: string, isActive: boolean): React.ReactNode {
-  const leftX = Math.min(src.x, tgt.x) - 40;
-  const pathD = `M ${src.x} ${src.y + src.h / 2} H ${leftX} V ${tgt.y + tgt.h / 2} H ${tgt.x}`;
-  return (
-    <g key={id} className="flowchart-edge edge-loop">
-      <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} />
-      <text x={leftX - 5} y={(src.y + tgt.y) / 2} textAnchor="end" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>Loop</text>
-    </g>
-  );
-}
 
 /** False 分岐エッジ描画 helper */
 function renderFalseEdgeElement(id: string, src: NodeBox, tgt: NodeBox, stroke: string, isActive: boolean): React.ReactNode {
@@ -276,6 +265,11 @@ function renderSingleEdge(
   verticalGap: number,
   paddingY: number
 ): React.ReactNode {
+  // ループ記号に付随する Loop 迂回エッジ・ループ脱出エッジは描画しない（JIS 規格の直列反復表現）
+  if (edge.label === 'Loop' || edge.id.includes('loopback') || edge.id.includes('loop-exit')) {
+    return null;
+  }
+
   const src = getNodeBox(edge.sourceId, nodes, x, nodeWidth, nodeHeight, verticalGap, paddingY);
   const tgt = getNodeBox(edge.targetId, nodes, x, nodeWidth, nodeHeight, verticalGap, paddingY);
   if (!src || !tgt) return null;
@@ -283,7 +277,6 @@ function renderSingleEdge(
   const isActive = activeFlags[src.index]! && activeFlags[tgt.index]!;
   const { stroke } = getEdgeStyleProps(edge.label, isActive);
 
-  if (edge.label === 'Loop') return renderLoopBackEdgeElement(edge.id, src, tgt, stroke, isActive);
   if (edge.label === 'False') return renderFalseEdgeElement(edge.id, src, tgt, stroke, isActive);
 
   const startX = src.x + src.w / 2;
