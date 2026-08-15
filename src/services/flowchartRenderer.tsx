@@ -87,7 +87,7 @@ export function renderDecisionNode(
   );
 }
 
-/** ループノード (Loop Node) の描画 */
+/** ループノード (Loop Node) の描画 (JIS X 0121 規格: 開始は上部角カット、終了は下部角カット) */
 export function renderLoopNode(
   node: FlowchartNode,
   x: number,
@@ -97,10 +97,21 @@ export function renderLoopNode(
   isActive: boolean,
   commonProps: React.HTMLAttributes<SVGGElement>,
   textElement: React.ReactNode,
-  cy: number
+  _cy: number
 ): React.ReactNode {
-  const offset = 20;
-  const points = `${x + offset},${y} ${x + width - offset},${y} ${x + width},${cy} ${x + width - offset},${y + height} ${x + offset},${y + height} ${x},${cy}`;
+  const offsetX = 18;
+  const cutY = 14;
+  const isLoopEnd = node.label.includes('ループ終了') || node.id.includes('loop-end');
+
+  let points: string;
+  if (isLoopEnd) {
+    // ループ終了（下部左右の角を斜めにカット）
+    points = `${x},${y} ${x + width},${y} ${x + width},${y + height - cutY} ${x + width - offsetX},${y + height} ${x + offsetX},${y + height} ${x},${y + height - cutY}`;
+  } else {
+    // ループ開始（上部左右の角を斜めにカット）
+    points = `${x + offsetX},${y} ${x + width - offsetX},${y} ${x + width},${y + cutY} ${x + width},${y + height} ${x},${y + height} ${x},${y + cutY}`;
+  }
+
   return (
     <g key={node.id} {...commonProps} className={`flowchart-node ${isActive ? 'active' : ''}`}>
       <polygon points={points} fill={isActive ? '#f3e8ff' : '#faf5ff'} stroke={isActive ? '#9333ea' : '#a855f7'} strokeWidth={isActive ? 3 : 2} />
