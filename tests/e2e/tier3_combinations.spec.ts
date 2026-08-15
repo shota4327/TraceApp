@@ -51,11 +51,17 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
     await btnRun.click();
     await expect(stepCounter).toContainText('ステップ 1 /');
 
-    // 1行目のアクティブテキストを取得
+    // 1ステップ目 (未実行): active 行なし
+    await expect(codeViewer.locator('.code-line.active')).toHaveCount(0);
+
+    // 2ステップ目 (1行目実行後): 1行目がアクティブ
+    await btnNext.click();
+    await expect(stepCounter).toContainText('ステップ 2 /');
     const line1Active = await codeViewer.locator('.code-line.active').textContent();
 
-    // 2ステップ目を進める
+    // 3ステップ目 (2行目実行後): 2行目がアクティブ
     await btnNext.click();
+    await expect(stepCounter).toContainText('ステップ 3 /');
     const line2Active = await codeViewer.locator('.code-line.active').textContent();
     const consoleText2 = await consoleOutput.textContent();
 
