@@ -318,7 +318,7 @@ function layoutBranchChain(
   decisionY: number,
   nodeHeight: number,
   decisionGap: number,
-  stepY = 25
+  stepY = 35
 ): number {
   const ifNode = nodes[ifIdx]!;
   nodeYs[ifIdx] = decisionY;
