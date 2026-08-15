@@ -142,8 +142,8 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     await btnRun.click();
     await expect(stepCounter).toContainText('ステップ 1 /');
 
-    // 1ステップ目 (起動直後・未実行): Line 0 (未実行) が表示されることを確認
-    await expect(monacoEditor).toContainText('実行行: Line 0');
+    // 1ステップ目 (起動直後・未実行): (未実行) が表示されることを確認
+    await expect(monacoEditor).toContainText('実行行: (未実行)');
 
     // 2ステップ目 (次へ押下): 1行目を実行した結果として Line 1 が表示されることを確認
     await btnNext.click();
@@ -154,6 +154,11 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     await btnNext.click();
     await expect(stepCounter).toContainText('ステップ 3 /');
     await expect(monacoEditor).toContainText('実行行: Line 2');
+
+    // 最終ステップまで進める
+    const btnLast = getEl(page, 'btn-last');
+    await btnLast.click();
+    await expect(monacoEditor).toContainText('実行行: (実行終了)');
   });
 
   test('T1-07: スプレッドシート型変数履歴表の描画と更新', async ({ page }) => {

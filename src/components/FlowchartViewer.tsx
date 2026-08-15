@@ -42,7 +42,7 @@ export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
     <div id="flowchart-viewer" data-testid="flowchart-viewer" role="tabpanel" aria-labelledby="tab-flowchart" style={containerStyle}>
       <div style={headerStyle}>
         <span>流れ図</span>
-        {activeLine !== undefined && <span style={activeStyle}>アクティブ行: Line {activeLine}</span>}
+        {activeLine !== undefined && activeLine > 0 && <span style={activeStyle}>アクティブ行: Line {activeLine}</span>}
       </div>
       <div style={contentStyle}>{svgContent}</div>
     </div>

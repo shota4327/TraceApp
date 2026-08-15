@@ -86,10 +86,24 @@ export const App: React.FC = () => {
     if (!isInitializing) runTrace(newCode);
   };
 
-  // currentStep === 0 は未実行状態（Line 0, 開始ノード, 変数履歴なし）
-  // currentStep >= 1 は直前の行を実行した結果（実行行 = snapshots[currentStep - 1].line, 変数 = snapshots[currentStep]）
-  const activeLine = currentStep === 0 ? 0 : (snapshots[currentStep - 1]?.line ?? 0);
-  const activeNodeId = currentStep === 0 ? 'node-start' : (snapshots[currentStep - 1]?.astNodeId ?? 'node-start');
+  // 実行状態の計算:
+  // currentStep === 0: 未実行状態（Line 0, 開始ノード, 変数履歴なし）
+  // currentStep === snapshots.length - 1 (かつ snapshots.length > 1): 全行実行終了（ハイライトなし, 終了ノード）
+  // 1 <= currentStep < snapshots.length - 1: ステップ実行中（直前の行を実行した結果）
+  const isEnded = snapshots.length > 1 && currentStep === snapshots.length - 1;
+  const isNotStarted = currentStep === 0;
+  const executionStatus: 'not_started' | 'running' | 'ended' = isNotStarted
+    ? 'not_started'
+    : isEnded
+    ? 'ended'
+    : 'running';
+
+  const activeLine = isNotStarted || isEnded ? 0 : (snapshots[currentStep - 1]?.line ?? 0);
+  const activeNodeId = isNotStarted
+    ? 'node-start'
+    : isEnded
+    ? 'node-end'
+    : (snapshots[currentStep - 1]?.astNodeId ?? 'node-start');
   const activeSnapshot = snapshots[currentStep];
 
   return (
@@ -112,6 +126,7 @@ export const App: React.FC = () => {
             flowchartNodes={flowchartNodes}
             flowchartEdges={flowchartEdges}
             isTracing={isTracing || isInitializing}
+            executionStatus={executionStatus}
           />
         </div>
         <div style={rightPanelWrapperStyle}>

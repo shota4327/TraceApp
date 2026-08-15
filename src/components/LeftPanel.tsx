@@ -19,6 +19,7 @@ interface LeftPanelProps {
   flowchartNodes?: FlowchartNode[];
   flowchartEdges?: FlowchartEdge[];
   isTracing?: boolean;
+  executionStatus?: 'not_started' | 'running' | 'ended';
 }
 
 /** 左パネルのコード/流れ図タブバー */
@@ -70,6 +71,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   flowchartNodes,
   flowchartEdges,
   isTracing = false,
+  executionStatus,
 }) => {
   const [activeTab, setActiveTab] = useState<'code' | 'flowchart'>('code');
 
@@ -85,7 +87,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       <LeftPanelTabBar activeTab={activeTab} onSelectTab={setActiveTab} />
       <div style={contentStyle}>
         <div id="panel-code" role="tabpanel" aria-labelledby="tab-code" style={{ height: '100%', display: activeTab === 'code' ? 'block' : 'none' }}>
-          <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} />
+          <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} executionStatus={executionStatus} />
         </div>
         <div style={{ height: '100%', display: activeTab === 'flowchart' ? 'block' : 'none' }}>
           <FlowchartViewer nodes={memoizedGraph.nodes} edges={memoizedGraph.edges} activeLine={activeLine} activeNodeId={activeNodeId} code={code} />

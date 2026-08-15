@@ -9,17 +9,31 @@ interface MonacoEditorProps {
   onChange: (value: string) => void;
   /** ハイライト表示する現在の実行行番号 (1-indexed) */
   highlightLine?: number;
+  /** 実行状態 ('not_started' | 'running' | 'ended') */
+  executionStatus?: 'not_started' | 'running' | 'ended';
 }
 
 /** エディタヘッダーサブコンポーネント */
-const EditorHeader: React.FC<{ highlightLine?: number }> = ({ highlightLine }) => (
-  <div style={headerInfoStyle}>
-    <span>Python ソースコードエディタ (.pyファイルドロップ可能)</span>
-    <span style={highlightBadgeStyle}>
-      {highlightLine && highlightLine > 0 ? `実行行: Line ${highlightLine}` : '実行行: Line 0 (未実行)'}
-    </span>
-  </div>
-);
+const EditorHeader: React.FC<{ highlightLine?: number; executionStatus?: 'not_started' | 'running' | 'ended' }> = ({
+  highlightLine,
+  executionStatus,
+}) => {
+  let badgeText = '実行行: (未実行)';
+  if (executionStatus === 'ended') {
+    badgeText = '実行行: (実行終了)';
+  } else if (executionStatus === 'running' || (highlightLine !== undefined && highlightLine > 0)) {
+    badgeText = `実行行: Line ${highlightLine}`;
+  } else {
+    badgeText = '実行行: (未実行)';
+  }
+
+  return (
+    <div style={headerInfoStyle}>
+      <span>Python ソースコードエディタ (.pyファイルドロップ可能)</span>
+      <span style={highlightBadgeStyle}>{badgeText}</span>
+    </div>
+  );
+};
 
 /** E2E テスト・フォールバック用コードビューア */
 const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number }> = ({ lines, highlightLine }) => (
@@ -27,7 +41,7 @@ const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number }> = ({ lin
     <div style={codeViewerTitleStyle}>実行行デコレーションプレビュー</div>
     {lines.map((lineText, idx) => {
       const lineNum = idx + 1;
-      const isActive = highlightLine === lineNum;
+      const isActive = Boolean(highlightLine && highlightLine > 0 && highlightLine === lineNum);
       return (
         <div key={idx} className={`code-line ${isActive ? 'active' : ''}`} style={isActive ? activeLineStyle : lineStyle}>
           <span style={lineNumStyle}>{lineNum}</span>
@@ -42,7 +56,7 @@ const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number }> = ({ lin
  * Monaco Editor 表示コンポーネント
  * Python コード編集、実行行デコレーションハイライト、および .py ファイルドロップ機能を提供
  */
-export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, highlightLine }) => {
+export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, highlightLine, executionStatus }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
@@ -85,7 +99,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, high
 
   return (
     <div id="monaco-editor" data-testid="monaco-editor" onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }} onDrop={handleDrop} style={containerStyle}>
-      <EditorHeader highlightLine={highlightLine} />
+      <EditorHeader highlightLine={highlightLine} executionStatus={executionStatus} />
       <div style={editorWrapperStyle}>
         <Editor
           height="100%"
