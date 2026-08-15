@@ -527,7 +527,7 @@ function renderSingleEdge(
   return (
     <g key={edge.id} className={`flowchart-edge ${isYes ? 'edge-true edge-yes' : 'edge-next'}`}>
       <line x1={startX} y1={startY} x2={tgt.x + tgt.w / 2} y2={tgt.y} stroke={stroke} strokeWidth={isActive ? 3 : 2} />
-      {isYes && <text x={startX + 8} y={(startY + tgt.y) / 2} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>Yes</text>}
+      {isYes && <text x={startX + 8} y={startY + 10} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>Yes</text>}
     </g>
   );
 }
