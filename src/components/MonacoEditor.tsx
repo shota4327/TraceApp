@@ -15,7 +15,9 @@ interface MonacoEditorProps {
 const EditorHeader: React.FC<{ highlightLine?: number }> = ({ highlightLine }) => (
   <div style={headerInfoStyle}>
     <span>Python ソースコードエディタ (.pyファイルドロップ可能)</span>
-    {highlightLine ? <span style={highlightBadgeStyle}>実行行: Line {highlightLine}</span> : null}
+    <span style={highlightBadgeStyle}>
+      {highlightLine && highlightLine > 0 ? `実行行: Line ${highlightLine}` : '実行行: Line 0 (未実行)'}
+    </span>
   </div>
 );
 

@@ -27,13 +27,14 @@ const VariableTableHeader: React.FC<{
 /** テーブル本体行コンポーネント */
 const VariableTableRow: React.FC<{
   snapshot: StepSnapshot;
+  executedLine: number;
   isCurrent: boolean;
   varNames: string[];
   currentChangedVars: string[];
-}> = ({ snapshot, isCurrent, varNames, currentChangedVars }) => (
+}> = ({ snapshot, executedLine, isCurrent, varNames, currentChangedVars }) => (
   <tr style={isCurrent ? activeRowStyle : trStyle}>
-    <td style={tdStyle}>{snapshot.stepIndex + 1}</td>
-    <td style={tdStyle}>{snapshot.line}</td>
+    <td style={tdStyle}>{snapshot.stepIndex}</td>
+    <td style={tdStyle}>{executedLine}</td>
     {varNames.map((name) => {
       const isLocal = snapshot.locals[name] !== undefined;
       const val = isLocal ? snapshot.locals[name] : snapshot.globals[name];
@@ -70,7 +71,9 @@ export const VariableTable: React.FC<VariableTableProps> = ({
   const allVarNames = Array.from(
     new Set(snapshots.flatMap((s) => [...Object.keys(s.globals), ...Object.keys(s.locals)]))
   );
-  const activeSnapshots = snapshots.slice(0, currentStepIndex + 1);
+  const activeSnapshots = snapshots
+    .slice(0, currentStepIndex + 1)
+    .filter((s) => Object.keys(s.globals).length > 0 || Object.keys(s.locals).length > 0);
   const currentSnapshot = snapshots[currentStepIndex];
   const currentChangedVars = currentSnapshot?.changedVars ?? [];
 
@@ -78,7 +81,7 @@ export const VariableTable: React.FC<VariableTableProps> = ({
     <div id="variable-table" data-testid="variable-table" style={containerStyle}>
       <div style={headerTitleStyle}>変数履歴表 (Variable History Table)</div>
       <div id="locals-table-body" data-testid="locals-table-body" style={tableWrapperStyle}>
-        {allVarNames.length === 0 ? (
+        {allVarNames.length === 0 || activeSnapshots.length === 0 ? (
           <div style={emptyStyle}>表示する変数の履歴がありません</div>
         ) : (
           <table style={tableStyle}>
@@ -88,7 +91,8 @@ export const VariableTable: React.FC<VariableTableProps> = ({
                 <VariableTableRow
                   key={s.stepIndex}
                   snapshot={s}
-                  isCurrent={idx === currentStepIndex}
+                  executedLine={snapshots[s.stepIndex - 1]?.line ?? s.line}
+                  isCurrent={s.stepIndex === currentSnapshot?.stepIndex || idx === activeSnapshots.length - 1}
                   varNames={allVarNames}
                   currentChangedVars={currentChangedVars}
                 />

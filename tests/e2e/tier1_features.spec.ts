@@ -142,14 +142,17 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     await btnRun.click();
     await expect(stepCounter).toContainText('ステップ 1 /');
 
-    // 1ステップ目: 1行目の実行中バッジが表示されることを確認
-    await expect(monacoEditor).toContainText('実行行: Line 1');
+    // 1ステップ目 (起動直後・未実行): Line 0 (未実行) が表示されることを確認
+    await expect(monacoEditor).toContainText('実行行: Line 0');
 
-    // 2ステップ目へ移動
+    // 2ステップ目 (次へ押下): 1行目を実行した結果として Line 1 が表示されることを確認
     await btnNext.click();
     await expect(stepCounter).toContainText('ステップ 2 /');
+    await expect(monacoEditor).toContainText('実行行: Line 1');
 
-    // 2行目の実行中バッジが表示されることを確認
+    // 3ステップ目 (次へ押下): 2行目を実行した結果として Line 2 が表示されることを確認
+    await btnNext.click();
+    await expect(stepCounter).toContainText('ステップ 3 /');
     await expect(monacoEditor).toContainText('実行行: Line 2');
   });
 

@@ -86,6 +86,10 @@ export const App: React.FC = () => {
     if (!isInitializing) runTrace(newCode);
   };
 
+  // currentStep === 0 は未実行状態（Line 0, 開始ノード, 変数履歴なし）
+  // currentStep >= 1 は直前の行を実行した結果（実行行 = snapshots[currentStep - 1].line, 変数 = snapshots[currentStep]）
+  const activeLine = currentStep === 0 ? 0 : (snapshots[currentStep - 1]?.line ?? 0);
+  const activeNodeId = currentStep === 0 ? 'node-start' : (snapshots[currentStep - 1]?.astNodeId ?? 'node-start');
   const activeSnapshot = snapshots[currentStep];
 
   return (
@@ -103,8 +107,8 @@ export const App: React.FC = () => {
             onReset={() => setCurrentStep(0)}
             onRun={() => runTrace(code)}
             onLast={() => snapshots.length > 0 && setCurrentStep(snapshots.length - 1)}
-            activeLine={activeSnapshot?.line ?? 1}
-            activeNodeId={activeSnapshot?.astNodeId}
+            activeLine={activeLine}
+            activeNodeId={activeNodeId}
             flowchartNodes={flowchartNodes}
             flowchartEdges={flowchartEdges}
             isTracing={isTracing || isInitializing}

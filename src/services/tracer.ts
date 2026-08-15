@@ -414,18 +414,19 @@ export function executeTrace(code: string): TraceExecutionResult {
     lineIdx++;
   }
 
-  // 空コードの場合の最低限のスナップショット
-  if (snapshots.length === 0) {
+  // 終了スナップショットの追加 (Pyodide の add_end_snapshot と同一)
+  if (snapshots.length > 0) {
+    const lastLine = snapshots[snapshots.length - 1]!.line;
     snapshots.push({
-      stepIndex: 0,
-      line: 1,
-      event: 'line',
-      globals: {},
+      stepIndex: stepIndex++,
+      line: lastLine,
+      event: 'end',
+      globals: { ...currentGlobals },
       locals: {},
       changedVars: [],
       stdoutDelta: '',
-      stdoutCumulative: '',
-      astNodeId: 'node-1',
+      stdoutCumulative: cumulativeStdout,
+      astNodeId: 'node-end',
     });
   }
 
