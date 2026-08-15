@@ -38,7 +38,7 @@ const VariableTableRow: React.FC<{
     {varNames.map((name) => {
       const isLocal = snapshot.locals[name] !== undefined;
       const val = isLocal ? snapshot.locals[name] : snapshot.globals[name];
-      const isChanged = isCurrent && snapshot.changedVars.includes(name);
+      const isChanged = snapshot.changedVars.includes(name);
       const isColChanged = isCurrent && currentChangedVars.includes(name);
 
       let cellStyle = tdStyle;
