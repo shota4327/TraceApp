@@ -385,6 +385,8 @@ def generate_ast_flowchart(code_str):
             body_last_id = self.prev_node_id
 
             end_id = self._add("loop", "ループ終了", el, el, custom_id=f"node-loop-end-{el}")
+            if body_last_id and body_last_id != end_id and not any(e['sourceId'] == body_last_id and e['targetId'] == end_id for e in edges):
+                edges.append({"id": f"edge-{body_last_id}-{end_id}", "sourceId": body_last_id, "targetId": end_id, "label": "Next"})
             edges.append({"id": f"edge-loopback-{body_last_id}-{loop_id}", "sourceId": body_last_id, "targetId": loop_id, "label": "Loop"})
             edges.append({"id": f"edge-loop-exit-{loop_id}-{end_id}", "sourceId": loop_id, "targetId": end_id, "label": "False"})
             self.prev_node_id = end_id
@@ -404,6 +406,8 @@ def generate_ast_flowchart(code_str):
             body_last_id = self.prev_node_id
 
             end_id = self._add("loop", "ループ終了", el, el, custom_id=f"node-loop-end-{el}")
+            if body_last_id and body_last_id != end_id and not any(e['sourceId'] == body_last_id and e['targetId'] == end_id for e in edges):
+                edges.append({"id": f"edge-{body_last_id}-{end_id}", "sourceId": body_last_id, "targetId": end_id, "label": "Next"})
             edges.append({"id": f"edge-loopback-{body_last_id}-{loop_id}", "sourceId": body_last_id, "targetId": loop_id, "label": "Loop"})
             edges.append({"id": f"edge-loop-exit-{loop_id}-{end_id}", "sourceId": loop_id, "targetId": end_id, "label": "False"})
             self.prev_node_id = end_id

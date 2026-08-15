@@ -374,7 +374,15 @@ function calculateNodeLayouts(
       if (i > 0) currentY += defaultGap;
       currentY = layoutBranchChain(i, nodes, nodeCols, edges, nodeYs, currentY, nodeHeight, decisionGap);
     } else {
-      const isMerge = edges?.some((e) => e.targetId === node.id && (e.id.includes('merge') || e.id.includes('join') || e.label === 'False'));
+      const isMerge =
+        !node.id.includes('loop-end') &&
+        !node.label.includes('ループ終了') &&
+        edges?.some(
+          (e) =>
+            e.targetId === node.id &&
+            !e.id.includes('loop-exit') &&
+            (e.id.includes('merge') || e.id.includes('join') || (e.label === 'False' && !e.id.includes('loop')))
+        );
       if (i > 0) {
         currentY += isMerge ? mergeGap : defaultGap;
       }

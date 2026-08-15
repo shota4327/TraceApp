@@ -120,6 +120,14 @@ interface BlockContext {
 function processPoppedBlock(popped: BlockContext, targetId: string, edges: FlowchartEdge[]): void {
   if (popped.type === 'loop') {
     if (popped.bodyLastId) {
+      if (!edges.some((e) => e.sourceId === popped.bodyLastId && e.targetId === targetId)) {
+        edges.push({
+          id: `edge-${popped.bodyLastId}-${targetId}`,
+          sourceId: popped.bodyLastId,
+          targetId,
+          label: 'Next',
+        });
+      }
       edges.push({
         id: `edge-loopback-${popped.bodyLastId}-${popped.headerId}`,
         sourceId: popped.bodyLastId,
