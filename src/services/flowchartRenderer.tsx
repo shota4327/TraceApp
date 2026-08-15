@@ -210,12 +210,13 @@ function renderSvgDefs(): React.ReactNode {
 
 interface NodeBox { x: number; y: number; w: number; h: number; index: number }
 
-/** 各ノードの Y 座標と全体の高さを算出 (False合流箇所のみ縦余白を拡張) */
+/** 各ノードの Y 座標と全体の高さを算出 (False合流箇所およびTrue分岐直後のみ縦余白を調整) */
 function calculateNodeLayouts(
   nodes: FlowchartNode[],
   edges?: FlowchartEdge[],
   defaultGap = 10,
   mergeGap = 45,
+  decisionGap = 28,
   nodeHeight = 50,
   paddingY = 40
 ): { nodeYs: number[]; totalHeight: number } {
@@ -233,8 +234,17 @@ function calculateNodeLayouts(
 
   for (let i = 0; i < nodes.length; i++) {
     if (i > 0) {
+      const prevNode = nodes[i - 1]!;
       const isMerge = mergeTargetIds.has(nodes[i]!.id);
-      currentY += isMerge ? mergeGap : defaultGap;
+      const isAfterDecision = prevNode.type === 'decision';
+
+      if (isMerge) {
+        currentY += mergeGap;
+      } else if (isAfterDecision) {
+        currentY += decisionGap;
+      } else {
+        currentY += defaultGap;
+      }
     }
     nodeYs.push(currentY);
     currentY += nodeHeight;
@@ -405,7 +415,7 @@ export function renderFlowchartSvg(
   const paddingX = 80;
   const paddingY = 40;
 
-  const { nodeYs, totalHeight } = calculateNodeLayouts(nodes, edges, 10, 45, nodeHeight, paddingY);
+  const { nodeYs, totalHeight } = calculateNodeLayouts(nodes, edges, 10, 45, 28, nodeHeight, paddingY);
   const totalWidth = nodeWidth + paddingX * 2 + 60;
   const x = paddingX;
 
