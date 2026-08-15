@@ -10,7 +10,7 @@ interface OutputConsoleProps {
 export const OutputConsole: React.FC<OutputConsoleProps> = ({ stdout }) => {
   return (
     <div id="output-console" data-testid="output-console" style={containerStyle}>
-      <div style={headerStyle}>標準出力 (Console Output)</div>
+      <div style={headerStyle}>標準出力</div>
       <pre id="console-output" data-testid="console-output" style={consoleAreaStyle}>
         {stdout || (
           <span style={{ color: '#94a3b8' }}>

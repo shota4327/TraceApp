@@ -199,8 +199,8 @@ describe('Challenger M4 Fix: Comprehensive Edge Case & Stress Verification Suite
       const tablist = screen.getByRole('tablist', { name: '表示モード切り替え' });
       expect(tablist).toBeDefined();
 
-      const codeTab = screen.getByRole('tab', { name: 'コード (Code)' });
-      const flowchartTab = screen.getByRole('tab', { name: '流れ図 (Flowchart)' });
+      const codeTab = screen.getByRole('tab', { name: 'コード' });
+      const flowchartTab = screen.getByRole('tab', { name: '流れ図' });
 
       expect(codeTab.getAttribute('aria-selected')).toBe('true');
       expect(codeTab.getAttribute('aria-controls')).toBe('panel-code');
@@ -214,7 +214,7 @@ describe('Challenger M4 Fix: Comprehensive Edge Case & Stress Verification Suite
       expect(flowchartTab.getAttribute('aria-selected')).toBe('true');
       expect(codeTab.getAttribute('aria-selected')).toBe('false');
 
-      const flowchartViewer = screen.getByRole('tabpanel', { name: '流れ図 (Flowchart)' });
+      const flowchartViewer = screen.getByRole('tabpanel', { name: '流れ図' });
       expect(flowchartViewer).toBeDefined();
       expect(flowchartViewer.getAttribute('aria-labelledby')).toBe('tab-flowchart');
     });

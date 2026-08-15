@@ -36,7 +36,7 @@ const LeftPanelTabBar: React.FC<{
       onClick={() => onSelectTab('code')}
       style={activeTab === 'code' ? activeTabStyle : tabStyle}
     >
-      コード (Code)
+      コード
     </button>
     <button
       id="tab-flowchart"
@@ -47,7 +47,7 @@ const LeftPanelTabBar: React.FC<{
       onClick={() => onSelectTab('flowchart')}
       style={activeTab === 'flowchart' ? activeTabStyle : tabStyle}
     >
-      流れ図 (Flowchart)
+      流れ図
     </button>
   </div>
 );

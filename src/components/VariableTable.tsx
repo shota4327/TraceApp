@@ -79,7 +79,7 @@ export const VariableTable: React.FC<VariableTableProps> = ({
 
   return (
     <div id="variable-table" data-testid="variable-table" style={containerStyle}>
-      <div style={headerTitleStyle}>変数履歴表 (Variable History Table)</div>
+      <div style={headerTitleStyle}>変数履歴表</div>
       <div id="locals-table-body" data-testid="locals-table-body" style={tableWrapperStyle}>
         {allVarNames.length === 0 || activeSnapshots.length === 0 ? (
           <div style={emptyStyle}>表示する変数の履歴がありません</div>
