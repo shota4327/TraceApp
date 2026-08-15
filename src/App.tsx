@@ -1,0 +1,183 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Header } from './components/Header';
+import { LeftPanel } from './components/LeftPanel';
+import { RightPanel } from './components/RightPanel';
+import { SAMPLE_PROGRAMS, DEFAULT_SAMPLE } from './services/samplePrograms';
+import { StepSnapshot } from './types/trace';
+import { FlowchartNode, FlowchartEdge } from './types/flowchart';
+import { generateFlowchartGraph } from './services/flowchartGenerator';
+import { useTraceEngine } from './hooks/useTraceEngine';
+
+/** Pyodide 初期化中ローディングオーバーレイ */
+const LoadingOverlay: React.FC = () => (
+  <div id="loading-overlay" data-testid="loading-overlay" style={overlayStyle}>
+    <div style={overlayContentStyle}>
+      <div style={spinnerStyle} />
+      <span style={loadingTextStyle}>Pyodide (WebAssembly Python) ランタイム初期化中...</span>
+    </div>
+  </div>
+);
+
+/**
+ * メインアプリケーションコンポーネント
+ * アプリ全体のレイアウト構築、Pyodide Worker接続および状態管理を統括
+ */
+export const App: React.FC = () => {
+  const [selectedSampleId, setSelectedSampleId] = useState<string>(DEFAULT_SAMPLE.id);
+  const [code, setCode] = useState<string>(DEFAULT_SAMPLE.code);
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  const [snapshots, setSnapshots] = useState<StepSnapshot[]>([]);
+  const [flowchartNodes, setFlowchartNodes] = useState<FlowchartNode[]>([]);
+  const [flowchartEdges, setFlowchartEdges] = useState<FlowchartEdge[]>([]);
+  const [statusText, setStatusText] = useState<string>('Pyodide初期化中...');
+
+  const { isInitializing, initError, isTracing, runTrace: executeTraceEngine } = useTraceEngine();
+  const isInitializedRef = useRef<boolean>(false);
+
+  const runTrace = useCallback(
+    async (targetCode: string) => {
+      if (isInitializing) return;
+      setStatusText('トレース実行中...');
+      try {
+        const result = await executeTraceEngine(targetCode);
+        setSnapshots(result.snapshots || []);
+        if (result.flowchartNodes && result.flowchartNodes.length > 0) {
+          setFlowchartNodes(result.flowchartNodes);
+          setFlowchartEdges(result.flowchartEdges || []);
+        } else {
+          const graph = generateFlowchartGraph(targetCode);
+          setFlowchartNodes(graph.nodes);
+          setFlowchartEdges(graph.edges);
+        }
+        setCurrentStep(0);
+        setStatusText(result.truncated ? `警告: ${result.error || 'ステップ数上限を超過しました。'}` : '準備完了 (ready)');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setStatusText(msg);
+        if (typeof window !== 'undefined' && window.alert) window.alert(msg);
+      }
+    },
+    [isInitializing, executeTraceEngine]
+  );
+
+  useEffect(() => {
+    if (!isInitializing && !initError && !isInitializedRef.current) {
+      isInitializedRef.current = true;
+      runTrace(code);
+    }
+  }, [isInitializing, initError, code, runTrace]);
+
+  useEffect(() => {
+    if (initError) setStatusText(`Pyodide初期化エラー: ${initError}`);
+  }, [initError]);
+
+  const handleSelectSample = (id: string) => {
+    setSelectedSampleId(id);
+    const target = SAMPLE_PROGRAMS.find((s) => s.id === id);
+    if (target) {
+      setCode(target.code);
+      if (!isInitializing) runTrace(target.code);
+    }
+  };
+
+  const handleFileUpload = (newCode: string) => {
+    setCode(newCode);
+    setSelectedSampleId('custom');
+    if (!isInitializing) runTrace(newCode);
+  };
+
+  const activeSnapshot = snapshots[currentStep];
+
+  return (
+    <div style={appContainerStyle}>
+      {isInitializing && <LoadingOverlay />}
+      <Header selectedSampleId={selectedSampleId} onSelectSample={handleSelectSample} onFileUpload={handleFileUpload} statusText={statusText} />
+      <main style={mainContentStyle}>
+        <div style={leftPanelWrapperStyle}>
+          <LeftPanel
+            code={code}
+            onChangeCode={setCode}
+            currentStep={currentStep}
+            totalSteps={snapshots.length}
+            onStepChange={setCurrentStep}
+            onReset={() => setCurrentStep(0)}
+            onRun={() => runTrace(code)}
+            onLast={() => snapshots.length > 0 && setCurrentStep(snapshots.length - 1)}
+            activeLine={activeSnapshot?.line ?? 1}
+            activeNodeId={activeSnapshot?.astNodeId}
+            flowchartNodes={flowchartNodes}
+            flowchartEdges={flowchartEdges}
+            isTracing={isTracing || isInitializing}
+          />
+        </div>
+        <div style={rightPanelWrapperStyle}>
+          <RightPanel snapshots={snapshots} currentStepIndex={currentStep} stdout={activeSnapshot?.stdoutCumulative ?? ''} />
+        </div>
+      </main>
+    </div>
+  );
+};
+
+const appContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100vh',
+  overflow: 'hidden',
+  position: 'relative',
+};
+
+const mainContentStyle: React.CSSProperties = {
+  display: 'flex',
+  flex: 1,
+  overflow: 'hidden',
+};
+
+const leftPanelWrapperStyle: React.CSSProperties = {
+  flex: 1,
+  height: '100%',
+};
+
+const rightPanelWrapperStyle: React.CSSProperties = {
+  flex: 1,
+  height: '100%',
+};
+
+const overlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(255, 255, 255, 0.85)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 9999,
+};
+
+const overlayContentStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '16px',
+  padding: '24px 36px',
+  backgroundColor: '#ffffff',
+  borderRadius: '8px',
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12)',
+  border: '1px solid #e2e8f0',
+};
+
+const spinnerStyle: React.CSSProperties = {
+  width: '36px',
+  height: '36px',
+  border: '4px solid #e2e8f0',
+  borderTop: '4px solid #2563eb',
+  borderRadius: '50%',
+  animation: 'spin 1s linear infinite',
+};
+
+const loadingTextStyle: React.CSSProperties = {
+  fontSize: '0.95rem',
+  fontWeight: 600,
+  color: '#1e293b',
+};

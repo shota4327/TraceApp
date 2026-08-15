@@ -1,0 +1,271 @@
+{
+  "results": [
+    {
+      "name": "Empty & Complex Variables",
+      "pass": true
+    },
+    {
+      "name": "Special Floats (NaN/Inf)",
+      "pass": true
+    },
+    {
+      "name": "Circular Reference Handling",
+      "pass": true
+    },
+    {
+      "name": "Nested Loops",
+      "pass": true
+    },
+    {
+      "name": "Functions Calling Functions",
+      "pass": true
+    },
+    {
+      "name": "Print without newline (end='')",
+      "pass": true
+    },
+    {
+      "name": "max_steps Limit Standard Guard",
+      "pass": true
+    },
+    {
+      "name": "max_steps in try...except",
+      "pass": true
+    },
+    {
+      "name": "test_runner.html Real Tracer Verification",
+      "pass": true
+    }
+  ],
+  "testResults": {
+    "success": true,
+    "total": 10,
+    "passed": 10,
+    "failed": 0,
+    "elapsedTime": 773,
+    "details": [
+      {
+        "id": "R1",
+        "name": "Pyodide初期化と基本Pythonコード実行",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "Python評価式 5 + 3 == 8 (取得結果: 8)"
+          }
+        ]
+      },
+      {
+        "id": "R2-1",
+        "name": "順次実行トレース (x = 5, y = 3, total = x + y)",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "エラーなく実行が完了すること"
+          },
+          {
+            "condition": true,
+            "message": "Lineイベントが3個発生すること (取得数: 3)"
+          },
+          {
+            "condition": true,
+            "message": "行番号が [1, 2, 3] であること (取得: [1,2,3])"
+          },
+          {
+            "condition": true,
+            "message": "変数 x == 5 (取得: 5)"
+          },
+          {
+            "condition": true,
+            "message": "変数 y == 3 (取得: 3)"
+          },
+          {
+            "condition": true,
+            "message": "変数 total == 8 (取得: 8)"
+          }
+        ]
+      },
+      {
+        "id": "R2-2",
+        "name": "条件分岐トレース (score = 75, elif パスのみ実行)",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "エラーなく実行が完了すること"
+          },
+          {
+            "condition": true,
+            "message": "if ブロック内の Line 3 (grade = \"A\") がトレースに含まれないこと"
+          },
+          {
+            "condition": true,
+            "message": "else ブロック内の Line 7 (grade = \"C\") がトレースに含まれないこと"
+          },
+          {
+            "condition": true,
+            "message": "elif 判定行 Line 4 および 実行行 Line 5 がトレースに含まれること"
+          },
+          {
+            "condition": true,
+            "message": "変数 score == 75 (取得: 75)"
+          },
+          {
+            "condition": true,
+            "message": "変数 grade == \"B\" (取得: B)"
+          }
+        ]
+      },
+      {
+        "id": "R2-3",
+        "name": "ループ実行トレース (for i in range(1, 4): total += i)",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "エラーなく実行が完了すること"
+          },
+          {
+            "condition": true,
+            "message": "ループ内 Line 3 の実行ステップが 3 回発生すること (取得: 3)"
+          },
+          {
+            "condition": true,
+            "message": "各イテレーションの i が [1, 2, 3] と推移すること (取得: [1,2,3])"
+          },
+          {
+            "condition": true,
+            "message": "最終累積値 total == 6 (取得: 6)"
+          }
+        ]
+      },
+      {
+        "id": "R2-4",
+        "name": "関数定義と呼び出しトレース (add(3, 4) ローカル/グローバルスコープ分離)",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "エラーなく実行が完了すること"
+          },
+          {
+            "condition": true,
+            "message": "関数 add 内で複数ステップがトレースされること"
+          },
+          {
+            "condition": true,
+            "message": "関数からの return イベントが記録されること"
+          },
+          {
+            "condition": true,
+            "message": "add 関数ローカル変数: a=3, b=4, result=7 (取得: {\"a\":3,\"b\":4,\"result\":7})"
+          },
+          {
+            "condition": true,
+            "message": "グローバル変数 answer == 7 (取得: 7)"
+          },
+          {
+            "condition": true,
+            "message": "関数のローカル変数 (a, b, result) がグローバルスコープに漏洩していないこと"
+          }
+        ]
+      },
+      {
+        "id": "R3-1",
+        "name": "単一 print 出力キャプチャ (print(\"Hello\"))",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "エラーなく実行が完了すること"
+          },
+          {
+            "condition": true,
+            "message": "sys.stdout キャプチャ結果が \"Hello\\n\" であること (取得: \"Hello\\n\")"
+          }
+        ]
+      },
+      {
+        "id": "R3-2",
+        "name": "複数順次 print 出力キャプチャ (順序保持およびステップ紐付け)",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "エラーなく実行が完了すること"
+          },
+          {
+            "condition": true,
+            "message": "累積 stdout 出力が順序通り \"Line 1\\nLine 2\\nLine 3\\n\" であること (取得: \"Line 1\\nLine 2\\nLine 3\\n\")"
+          },
+          {
+            "condition": true,
+            "message": "Line 1 ステップの出力差分 == \"Line 1\\n\" (取得: \"Line 1\\n\")"
+          },
+          {
+            "condition": true,
+            "message": "Line 2 ステップの出力差分 == \"Line 2\\n\" (取得: \"Line 2\\n\")"
+          },
+          {
+            "condition": true,
+            "message": "Line 3 ステップの出力差分 == \"Line 3\\n\" (取得: \"Line 3\\n\")"
+          }
+        ]
+      },
+      {
+        "id": "EDGE-1",
+        "name": "特殊浮動小数点数の要素抽出 (NaN / Inf)",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "エラーなく実行が完了すること"
+          },
+          {
+            "condition": true,
+            "message": "nan_val が \"NaN\" であること (取得: NaN)"
+          },
+          {
+            "condition": true,
+            "message": "inf_val が \"Infinity\" であること (取得: Infinity)"
+          },
+          {
+            "condition": true,
+            "message": "ninf_val が \"-Infinity\" であること (取得: -Infinity)"
+          }
+        ]
+      },
+      {
+        "id": "EDGE-2",
+        "name": "循環参照オブジェクトの安全な文字列化 (ValueError 回避)",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "エラーなく実行が完了すること"
+          },
+          {
+            "condition": true,
+            "message": "循環参照オブジェクト a が repr 文字列化されていること (取得: [[...]])"
+          }
+        ]
+      },
+      {
+        "id": "EDGE-3",
+        "name": "try...except Exception ブロックによる max_steps ガード回避防止",
+        "passed": true,
+        "logs": [
+          {
+            "condition": true,
+            "message": "ユーザーコードの except Exception をすり抜けて success: false になること"
+          },
+          {
+            "condition": true,
+            "message": "エラーメッセージにステップ数上限が含まれること (取得: ステップ数上限 (10) を超過しました。)"
+          }
+        ]
+      }
+    ]
+  }
+}
