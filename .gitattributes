@@ -1,0 +1,10 @@
+# リポジトリ全体でテキストファイルの改行コードを LF に統一
+* text=auto eol=lf
+
+# バイナリファイル
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.wasm binary
