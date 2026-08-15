@@ -228,8 +228,8 @@ finally:
       
       const svg = container.querySelector('svg');
       expect(svg).not.toBeNull();
-      // 高さがノード数に応じてスケールされていること (502ノード * 90 - 40 + 80 = 45220)
-      expect(Number(svg?.getAttribute('height'))).toBeGreaterThan(40000);
+      // 高さがノード数に応じてスケールされていること (502ノード * 70 = 35140)
+      expect(Number(svg?.getAttribute('height'))).toBeGreaterThan(30000);
     });
 
     it('activeLine が境界外（0, 境界外の大規模数値, マイナス数値, NaN）でも安全に処理されること', () => {

@@ -210,20 +210,53 @@ function renderSvgDefs(): React.ReactNode {
 
 interface NodeBox { x: number; y: number; w: number; h: number; index: number }
 
+/** 各ノードの Y 座標と全体の高さを算出 (False合流箇所のみ縦余白を拡張) */
+function calculateNodeLayouts(
+  nodes: FlowchartNode[],
+  edges?: FlowchartEdge[],
+  defaultGap = 20,
+  mergeGap = 45,
+  nodeHeight = 50,
+  paddingY = 40
+): { nodeYs: number[]; totalHeight: number } {
+  const mergeTargetIds = new Set<string>();
+  if (edges) {
+    for (const e of edges) {
+      if (e.label === 'False' || e.id.includes('edge-false-')) {
+        mergeTargetIds.add(e.targetId);
+      }
+    }
+  }
+
+  const nodeYs: number[] = [];
+  let currentY = paddingY;
+
+  for (let i = 0; i < nodes.length; i++) {
+    if (i > 0) {
+      const isMerge = mergeTargetIds.has(nodes[i]!.id);
+      currentY += isMerge ? mergeGap : defaultGap;
+    }
+    nodeYs.push(currentY);
+    currentY += nodeHeight;
+  }
+
+  const totalHeight = currentY + paddingY;
+  return { nodeYs, totalHeight };
+}
+
 function getNodeBox(
   nodeId: string,
   nodes: FlowchartNode[],
+  nodeYs: number[],
   x: number,
   nodeWidth: number,
-  nodeHeight: number,
-  verticalGap: number,
-  paddingY: number
+  nodeHeight: number
 ): NodeBox | null {
   const index = nodes.findIndex((n) => n.id === nodeId);
   if (index < 0) return null;
   return {
     x,
-    y: paddingY + index * (nodeHeight + verticalGap),
+    y: nodeYs[index] ?? 0,
     w: nodeWidth,
     h: nodeHeight,
     index,
@@ -238,20 +271,23 @@ function getEdgeStyleProps(label?: string, isActive = false) {
   return { stroke: isActive ? '#2563eb' : '#64748b' };
 }
 
-/** False 分岐エッジ描画 helper (True 側ノード下端よりも十分下の縦線隙間中央に合流) */
+/** False 分岐エッジ描画 helper (True 側ノード下端と合流先上端の縦線中央に合流) */
 function renderFalseEdgeElement(
   id: string,
   src: NodeBox,
   tgt: NodeBox,
+  nodeYs: number[],
+  nodeHeight: number,
   stroke: string,
-  isActive: boolean,
-  verticalGap: number
+  isActive: boolean
 ): React.ReactNode {
   const startX = src.x + src.w;
   const startY = src.y + src.h / 2;
   const rightX = Math.max(src.x + src.w, tgt.x + tgt.w) + 50;
-  // 合流先 tgt の上端と直前ノード下端の間にある縦線の中央位置
-  const mergeY = tgt.y - verticalGap / 2;
+  
+  // 合流先 tgt の直前のノードの下端
+  const prevBottom = tgt.index > 0 ? (nodeYs[tgt.index - 1]! + nodeHeight) : (src.y + src.h);
+  const mergeY = prevBottom + (tgt.y - prevBottom) / 2;
   const mergeX = tgt.x + tgt.w / 2;
   const pathD = `M ${startX} ${startY} H ${rightX} V ${mergeY} H ${mergeX}`;
 
@@ -267,26 +303,25 @@ function renderFalseEdgeElement(
 function renderSingleEdge(
   edge: FlowchartEdge,
   nodes: FlowchartNode[],
+  nodeYs: number[],
   activeFlags: boolean[],
   x: number,
   nodeWidth: number,
-  nodeHeight: number,
-  verticalGap: number,
-  paddingY: number
+  nodeHeight: number
 ): React.ReactNode {
   // ループ記号に付随する Loop 迂回エッジ・ループ脱出エッジは描画しない（JIS 規格の直列反復表現）
   if (edge.label === 'Loop' || edge.id.includes('loopback') || edge.id.includes('loop-exit')) {
     return null;
   }
 
-  const src = getNodeBox(edge.sourceId, nodes, x, nodeWidth, nodeHeight, verticalGap, paddingY);
-  const tgt = getNodeBox(edge.targetId, nodes, x, nodeWidth, nodeHeight, verticalGap, paddingY);
+  const src = getNodeBox(edge.sourceId, nodes, nodeYs, x, nodeWidth, nodeHeight);
+  const tgt = getNodeBox(edge.targetId, nodes, nodeYs, x, nodeWidth, nodeHeight);
   if (!src || !tgt) return null;
 
   const isActive = activeFlags[src.index]! && activeFlags[tgt.index]!;
   const { stroke } = getEdgeStyleProps(edge.label, isActive);
 
-  if (edge.label === 'False') return renderFalseEdgeElement(edge.id, src, tgt, stroke, isActive, verticalGap);
+  if (edge.label === 'False') return renderFalseEdgeElement(edge.id, src, tgt, nodeYs, nodeHeight, stroke, isActive);
 
   const startX = src.x + src.w / 2;
   const startY = src.y + src.h;
@@ -302,33 +337,31 @@ function renderSingleEdge(
 function renderFlowchartEdges(
   edges: FlowchartEdge[],
   nodes: FlowchartNode[],
+  nodeYs: number[],
   activeFlags: boolean[],
   x: number,
   nodeWidth: number,
-  nodeHeight: number,
-  verticalGap: number,
-  paddingY: number
+  nodeHeight: number
 ): React.ReactNode[] {
   return edges
-    .map((e) => renderSingleEdge(e, nodes, activeFlags, x, nodeWidth, nodeHeight, verticalGap, paddingY))
+    .map((e) => renderSingleEdge(e, nodes, nodeYs, activeFlags, x, nodeWidth, nodeHeight))
     .filter(Boolean);
 }
 
 /** 接続線（フォールバック）の描画 */
 function renderFlowchartConnections(
   nodes: FlowchartNode[],
+  nodeYs: number[],
   activeFlags: boolean[],
   x: number,
   nodeWidth: number,
-  nodeHeight: number,
-  verticalGap: number,
-  paddingY: number
+  nodeHeight: number
 ): React.ReactNode[] {
   const elements: React.ReactNode[] = [];
   for (let i = 0; i < nodes.length - 1; i++) {
     const node = nodes[i]!;
-    const currentY = paddingY + i * (nodeHeight + verticalGap);
-    const nextY = paddingY + (i + 1) * (nodeHeight + verticalGap);
+    const currentY = nodeYs[i]!;
+    const nextY = nodeYs[i + 1]!;
     const lineIsActive = activeFlags[i]! && activeFlags[i + 1]!;
     const startX = x + nodeWidth / 2;
     elements.push(
@@ -349,15 +382,14 @@ function renderFlowchartConnections(
 /** ノード群の描画 */
 function renderFlowchartNodeList(
   nodes: FlowchartNode[],
+  nodeYs: number[],
   activeFlags: boolean[],
   x: number,
   nodeWidth: number,
-  nodeHeight: number,
-  verticalGap: number,
-  paddingY: number
+  nodeHeight: number
 ): React.ReactNode[] {
   return nodes.map((node, i) => {
-    const y = paddingY + i * (nodeHeight + verticalGap);
+    const y = nodeYs[i]!;
     return renderNodeShape(node, x, y, nodeWidth, nodeHeight, activeFlags[i]!);
   });
 }
@@ -370,12 +402,11 @@ export function renderFlowchartSvg(
   const { activeLine, activeNodeId, edges } = options;
   const nodeWidth = 180;
   const nodeHeight = 50;
-  const verticalGap = 50;
   const paddingX = 80;
   const paddingY = 40;
 
+  const { nodeYs, totalHeight } = calculateNodeLayouts(nodes, edges, 20, 45, nodeHeight, paddingY);
   const totalWidth = nodeWidth + paddingX * 2 + 60;
-  const totalHeight = nodes.length * (nodeHeight + verticalGap) - verticalGap + paddingY * 2;
   const x = paddingX;
 
   const activeFlags = nodes.map((n) => isNodeActive(n, activeLine, activeNodeId));
@@ -391,9 +422,9 @@ export function renderFlowchartSvg(
     >
       {renderSvgDefs()}
       {edges && edges.length > 0
-        ? renderFlowchartEdges(edges, nodes, activeFlags, x, nodeWidth, nodeHeight, verticalGap, paddingY)
-        : renderFlowchartConnections(nodes, activeFlags, x, nodeWidth, nodeHeight, verticalGap, paddingY)}
-      {renderFlowchartNodeList(nodes, activeFlags, x, nodeWidth, nodeHeight, verticalGap, paddingY)}
+        ? renderFlowchartEdges(edges, nodes, nodeYs, activeFlags, x, nodeWidth, nodeHeight)
+        : renderFlowchartConnections(nodes, nodeYs, activeFlags, x, nodeWidth, nodeHeight)}
+      {renderFlowchartNodeList(nodes, nodeYs, activeFlags, x, nodeWidth, nodeHeight)}
     </svg>
   );
 }
