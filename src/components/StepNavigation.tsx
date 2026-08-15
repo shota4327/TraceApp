@@ -13,26 +13,26 @@ interface StepNavigationProps {
 /** ナビゲーションボタン群サブコンポーネント */
 const NavButtons: React.FC<{
   onRun?: () => void;
+  onReset: () => void;
   onPrev: () => void;
   onNext: () => void;
-  onReset: () => void;
   onLast: () => void;
   canPrev: boolean;
   canNext: boolean;
   isTracing: boolean;
-}> = ({ onRun, onPrev, onNext, onReset, onLast, canPrev, canNext, isTracing }) => (
+}> = ({ onRun, onReset, onPrev, onNext, onLast, canPrev, canNext, isTracing }) => (
   <div style={buttonGroupStyle}>
     <button id="btn-run" data-testid="btn-run" onClick={onRun} disabled={isTracing} style={primaryButtonStyle}>
-      トレース実行
+      トレース準備
+    </button>
+    <button id="btn-reset" data-testid="btn-first" onClick={onReset} disabled={isTracing} style={buttonStyle}>
+      最初
     </button>
     <button id="btn-prev" data-testid="btn-prev" onClick={onPrev} disabled={!canPrev || isTracing} style={buttonStyle}>
       前へ
     </button>
     <button id="btn-next" data-testid="btn-next" onClick={onNext} disabled={!canNext || isTracing} style={buttonStyle}>
       次へ
-    </button>
-    <button id="btn-reset" data-testid="btn-first" onClick={onReset} disabled={isTracing} style={buttonStyle}>
-      最初 / リセット
     </button>
     <button id="btn-last" data-testid="btn-last" onClick={onLast} disabled={!canNext || isTracing} style={buttonStyle}>
       最後
