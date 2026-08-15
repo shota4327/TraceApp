@@ -262,6 +262,58 @@ function calculateNodeColumns(nodes: FlowchartNode[], edges?: FlowchartEdge[]): 
   return cols;
 }
 
+/** if-elif-else 分岐チェーンのひし形と処理ブロックを横並び整列する helper */
+function layoutBranchChain(
+  ifIdx: number,
+  nodes: FlowchartNode[],
+  nodeCols: number[],
+  edges: FlowchartEdge[] | undefined,
+  nodeYs: number[],
+  decisionY: number,
+  nodeHeight: number,
+  decisionGap: number
+): number {
+  const ifNode = nodes[ifIdx]!;
+  nodeYs[ifIdx] = decisionY;
+
+  const processIndices: number[] = [];
+  const trueEdge = edges?.find((e) => e.sourceId === ifNode.id && (e.label === 'True' || e.label === 'Yes'));
+  if (trueEdge) {
+    const tIdx = nodes.findIndex((n) => n.id === trueEdge.targetId);
+    if (tIdx >= 0 && nodeCols[tIdx] === 0) processIndices.push(tIdx);
+  }
+
+  let currentDecisionId = ifNode.id;
+  while (true) {
+    const falseEdge = edges?.find(
+      (e) => e.sourceId === currentDecisionId && (e.label === 'False' || e.label === 'No' || e.id.includes('edge-false-'))
+    );
+    if (!falseEdge) break;
+    const tgtIdx = nodes.findIndex((n) => n.id === falseEdge.targetId);
+    if (tgtIdx < 0 || nodeCols[tgtIdx] === 0) break;
+
+    const tgtNode = nodes[tgtIdx]!;
+    if (tgtNode.type === 'decision') {
+      nodeYs[tgtIdx] = decisionY;
+      currentDecisionId = tgtNode.id;
+      const elifTrue = edges?.find((e) => e.sourceId === tgtNode.id && (e.label === 'True' || e.label === 'Yes'));
+      if (elifTrue) {
+        const etIdx = nodes.findIndex((n) => n.id === elifTrue.targetId);
+        if (etIdx >= 0) processIndices.push(etIdx);
+      }
+    } else {
+      processIndices.push(tgtIdx);
+      break;
+    }
+  }
+
+  const processY = decisionY + nodeHeight + decisionGap;
+  for (const pIdx of processIndices) {
+    nodeYs[pIdx] = processY;
+  }
+  return processY + nodeHeight;
+}
+
 /** 各ノードの X, Y 座標と全体のサイズを算出 */
 function calculateNodeLayouts(
   nodes: FlowchartNode[],
@@ -276,39 +328,32 @@ function calculateNodeLayouts(
   paddingY = 40
 ): { nodeXs: number[]; nodeYs: number[]; nodeCols: number[]; totalWidth: number; totalHeight: number } {
   const nodeCols = calculateNodeColumns(nodes, edges);
-  const mergeTargetIds = new Set<string>();
-  if (edges) {
-    for (const e of edges) {
-      if (e.label === 'False' || e.id.includes('edge-false-') || e.id.includes('merge')) {
-        mergeTargetIds.add(e.targetId);
-      }
-    }
-  }
-
-  const nodeXs: number[] = [];
-  const nodeYs: number[] = [];
+  const nodeXs = nodeCols.map((col) => paddingX + col * (nodeWidth + colGap));
+  const nodeYs = new Array<number>(nodes.length).fill(0);
   let currentY = paddingY;
 
   for (let i = 0; i < nodes.length; i++) {
+    if (nodeYs[i] !== 0) continue;
+
+    const node = nodes[i]!;
     const col = nodeCols[i]!;
-    nodeXs.push(paddingX + col * (nodeWidth + colGap));
 
-    if (i > 0) {
-      const prevNode = nodes[i - 1]!;
-      const isMerge = mergeTargetIds.has(nodes[i]!.id) && col === 0;
-      const isAfterDecision = prevNode.type === 'decision' && col === nodeCols[i - 1]!;
-
-      if (isMerge) currentY += mergeGap;
-      else if (isAfterDecision) currentY += decisionGap;
-      else currentY += defaultGap;
+    if (node.type === 'decision' && col === 0 && edges?.some((e) => e.sourceId === node.id && (e.label === 'False' || e.id.includes('edge-false-')) && nodeCols[nodes.findIndex((n) => n.id === e.targetId)]! > 0)) {
+      if (i > 0) currentY += defaultGap;
+      currentY = layoutBranchChain(i, nodes, nodeCols, edges, nodeYs, currentY, nodeHeight, decisionGap);
+    } else {
+      const isMerge = edges?.some((e) => e.targetId === node.id && (e.id.includes('merge') || e.id.includes('join') || e.label === 'False'));
+      if (i > 0) {
+        currentY += isMerge ? mergeGap : defaultGap;
+      }
+      nodeYs[i] = currentY;
+      currentY += nodeHeight;
     }
-    nodeYs.push(currentY);
-    currentY += nodeHeight;
   }
 
   const maxCol = Math.max(0, ...nodeCols);
   const totalWidth = Math.max((maxCol + 1) * (nodeWidth + colGap) - colGap + paddingX * 2 + 40, nodeWidth + paddingX * 2 + 60);
-  const totalHeight = currentY + paddingY;
+  const totalHeight = Math.max(currentY + paddingY, Math.max(...nodeYs) + nodeHeight + paddingY);
 
   return { nodeXs, nodeYs, nodeCols, totalWidth, totalHeight };
 }

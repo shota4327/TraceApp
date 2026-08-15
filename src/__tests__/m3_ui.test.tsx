@@ -21,9 +21,9 @@ class MockWorker {
 
   postMessage = vi.fn((msg: any) => {
     if (msg.type === 'INIT') {
-      setTimeout(() => {
+      queueMicrotask(() => {
         this.onmessage?.({ data: { type: 'INIT_COMPLETE' } } as MessageEvent);
-      }, 10);
+      });
     }
   });
 
