@@ -44,6 +44,7 @@ export function useTraceEngine(): UseTraceEngineReturn {
   const isFallbackModeRef = useRef<boolean>(false);
   const initErrorRef = useRef<string | null>(null);
   const isInitializingRef = useRef<boolean>(true);
+  const currentCodeRef = useRef<string>('');
 
   useEffect(() => {
     // 動作環境に応じた Web Worker のインスタンス化
@@ -96,19 +97,27 @@ export function useTraceEngine(): UseTraceEngineReturn {
             req.reject(new Error(`Pyodide初期化エラー: ${response.error}`));
           }
           break;
-        case 'TRACE_SUCCESS':
+        case 'TRACE_SUCCESS': {
           setIsTracing(false);
-          setTraceResult(response.result);
-          if (response.result.truncated) {
-            setError(response.result.error || 'ステップ数上限を超過しました。');
+          const graph = generateFlowchartGraph(currentCodeRef.current);
+          const enrichedResult: TraceResult = {
+            ...response.result,
+            flowchartNodes: graph.nodes,
+            flowchartEdges: graph.edges,
+            flowchartXml: generateDrawIoXml(graph),
+          };
+          setTraceResult(enrichedResult);
+          if (enrichedResult.truncated) {
+            setError(enrichedResult.error || 'ステップ数上限を超過しました。');
           } else {
             setError(null);
           }
           if (pendingRequestRef.current) {
-            pendingRequestRef.current.resolve(response.result);
+            pendingRequestRef.current.resolve(enrichedResult);
             pendingRequestRef.current = null;
           }
           break;
+        }
         case 'TRACE_ERROR':
           setIsTracing(false);
           setError(response.error);
@@ -195,6 +204,7 @@ export function useTraceEngine(): UseTraceEngineReturn {
           return;
         }
 
+        currentCodeRef.current = code;
         setIsTracing(true);
         setError(null);
         pendingRequestRef.current = { resolve, reject };

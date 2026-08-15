@@ -242,49 +242,38 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
   });
 
   /* -------------------------------------------------------------------
-   * 3. pythonTracer.ts (Pyodide Python AST) 流れ図生成検証
+   * 3. 一本化された流れ図生成エンジン (generateFlowchartGraph) 実用動作検証
    * ------------------------------------------------------------------- */
-  describe('3. pythonTracer.ts (Pyodide AST generator) 実用動作検証', () => {
-    it('3.1 順次・代入プログラムを Pyodide で実行し AST ノードとエッジを取得できること', () => {
-      const runTracePy = pyodide.globals.get('run_trace');
-      const resultJson = runTracePy(PROGRAM_1_SEQ, 10000);
-      const result = JSON.parse(resultJson);
+  describe('3. 一本化された流れ図生成エンジン (generateFlowchartGraph) 実用動作検証', () => {
+    it('3.1 順次・代入プログラムから AST ノードとエッジを取得できること', () => {
+      const graph = generateFlowchartGraph(PROGRAM_1_SEQ);
 
-      expect(result.success).toBe(true);
-      expect(result.flowchartNodes).toBeDefined();
-      expect(result.flowchartNodes.length).toBeGreaterThan(0);
+      expect(graph.nodes).toBeDefined();
+      expect(graph.nodes.length).toBeGreaterThan(0);
 
-      const types = result.flowchartNodes.map((n: any) => n.type);
+      const types = graph.nodes.map((n) => n.type);
       expect(types).toContain('terminal');
       expect(types).toContain('process');
     });
 
-    it('3.2 条件分岐プログラムを Pyodide で実行し decision ノードと True/False エッジを取得できること', () => {
-      const runTracePy = pyodide.globals.get('run_trace');
-      const resultJson = runTracePy(PROGRAM_2_BRANCH, 10000);
-      const result = JSON.parse(resultJson);
-
-      expect(result.success).toBe(true);
-      const types = result.flowchartNodes.map((n: any) => n.type);
+    it('3.2 条件分岐プログラムから decision ノードと True/False エッジを取得できること', () => {
+      const graph = generateFlowchartGraph(PROGRAM_2_BRANCH);
+      const types = graph.nodes.map((n) => n.type);
       expect(types).toContain('decision');
 
-      const edgeLabels = result.flowchartEdges.map((e: any) => e.label);
+      const edgeLabels = graph.edges.map((e) => e.label);
       expect(edgeLabels).toContain('True');
       expect(edgeLabels).toContain('False');
     });
 
-    it('3.3 ループと関数プログラムを Pyodide で実行し subroutine / loop ノードと Loop エッジを取得できること', () => {
-      const runTracePy = pyodide.globals.get('run_trace');
-      const resultJson = runTracePy(PROGRAM_3_LOOP_FUNC, 10000);
-      const result = JSON.parse(resultJson);
+    it('3.3 ループと関数プログラムから subroutine / loop ノードと Loop エッジを取得できること', () => {
+      const graph = generateFlowchartGraph(PROGRAM_3_LOOP_FUNC);
 
-      expect(result.success).toBe(true);
-
-      const types = result.flowchartNodes.map((n: any) => n.type);
+      const types = graph.nodes.map((n) => n.type);
       expect(types).toContain('subroutine');
       expect(types).toContain('loop');
 
-      const edgeLabels = result.flowchartEdges.map((e: any) => e.label);
+      const edgeLabels = graph.edges.map((e) => e.label);
       expect(edgeLabels).toContain('Loop');
       expect(edgeLabels).toContain('False');
     });
