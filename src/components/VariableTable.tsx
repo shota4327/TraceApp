@@ -158,6 +158,9 @@ const tableStyle: React.CSSProperties = {
 };
 
 const metaThStyle: React.CSSProperties = {
+  position: 'sticky',
+  top: 0,
+  zIndex: 2,
   border: '1px solid #cbd5e1',
   padding: '6px 10px',
   backgroundColor: '#f1f5f9',
@@ -189,6 +192,9 @@ const lineTdStyle: React.CSSProperties = {
 };
 
 const thStyle: React.CSSProperties = {
+  position: 'sticky',
+  top: 0,
+  zIndex: 2,
   border: '1px solid #cbd5e1',
   padding: '6px 12px',
   backgroundColor: '#ffffff',

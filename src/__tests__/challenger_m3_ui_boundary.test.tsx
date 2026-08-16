@@ -61,6 +61,32 @@ describe('Challenger M3 UI Edge Cases & Boundary Verification', () => {
       expect(container.textContent).toContain('Infinity');
       expect(container.textContent).toContain('1,2,3');
     });
+
+    it('1.3. 変数履歴表の列ヘッダー（th）がスクロール時に固定表示（position: sticky, top: 0）されること', () => {
+      const snapshots: StepSnapshot[] = [
+        {
+          stepIndex: 0,
+          line: 1,
+          event: 'line',
+          globals: { a: 10, b: 20 },
+          locals: {},
+          changedVars: ['a', 'b'],
+          stdoutDelta: '',
+          stdoutCumulative: '',
+        },
+      ];
+
+      const { container } = render(
+        <VariableTable snapshots={snapshots} currentStepIndex={0} />
+      );
+
+      const thElements = container.querySelectorAll('th');
+      expect(thElements.length).toBeGreaterThan(0);
+      thElements.forEach((th) => {
+        expect(th.style.position).toBe('sticky');
+        expect(th.style.top).toBe('0px');
+      });
+    });
   });
 
   describe('2. StepNavigation 境界値テスト', () => {
