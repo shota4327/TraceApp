@@ -30,8 +30,8 @@ const VariableTableRow: React.FC<{
   executedLine: number;
   isCurrent: boolean;
   varNames: string[];
-  currentChangedVars: string[];
-}> = ({ snapshot, executedLine, isCurrent, varNames, currentChangedVars }) => (
+  latestChangedStepByVar: Record<string, number>;
+}> = ({ snapshot, executedLine, isCurrent, varNames, latestChangedStepByVar }) => (
   <tr style={isCurrent ? activeRowStyle : trStyle}>
     <td style={metaTdStyle}>{snapshot.stepIndex}</td>
     <td style={lineTdStyle}>{executedLine}</td>
@@ -39,15 +39,11 @@ const VariableTableRow: React.FC<{
       const isLocal = snapshot.locals[name] !== undefined;
       const val = isLocal ? snapshot.locals[name] : snapshot.globals[name];
       const isChanged = snapshot.changedVars.includes(name);
-      const isColChanged = isCurrent && currentChangedVars.includes(name);
+      const isLatestChanged = latestChangedStepByVar[name] === snapshot.stepIndex;
 
       let cellStyle = tdStyle;
-      if (isChanged) {
+      if (isLatestChanged) {
         cellStyle = changedTdStyle;
-      } else if (isLocal) {
-        cellStyle = localTdStyle;
-      } else if (isColChanged) {
-        cellStyle = colChangedTdStyle;
       }
 
       return (
@@ -78,6 +74,14 @@ export const VariableTable: React.FC<VariableTableProps> = ({
   const currentSnapshot = snapshots[currentStepIndex];
   const currentChangedVars = isEnded ? [] : (currentSnapshot?.changedVars ?? []);
 
+  // 各変数が最後に書き換わった最新ステップを計算
+  const latestChangedStepByVar: Record<string, number> = {};
+  for (const s of activeSnapshots) {
+    for (const v of s.changedVars) {
+      latestChangedStepByVar[v] = s.stepIndex;
+    }
+  }
+
   return (
     <div id="variable-table" data-testid="variable-table" style={containerStyle}>
       <div style={headerTitleStyle}>変数履歴表</div>
@@ -95,7 +99,7 @@ export const VariableTable: React.FC<VariableTableProps> = ({
                   executedLine={snapshots[s.stepIndex - 1]?.line ?? s.line}
                   isCurrent={!isEnded && s.stepIndex === currentSnapshot?.stepIndex}
                   varNames={allVarNames}
-                  currentChangedVars={currentChangedVars}
+                  latestChangedStepByVar={latestChangedStepByVar}
                 />
               ))}
             </tbody>
@@ -213,21 +217,10 @@ const tdStyle: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-const colChangedTdStyle: React.CSSProperties = {
-  ...tdStyle,
-  backgroundColor: '#fefce8',
-};
-
 const changedTdStyle: React.CSSProperties = {
   ...tdStyle,
   backgroundColor: '#fef08a',
   fontWeight: 600,
-};
-
-const localTdStyle: React.CSSProperties = {
-  ...tdStyle,
-  backgroundColor: '#ecfdf5',
-  color: '#065f46',
 };
 
 const localBadgeStyle: React.CSSProperties = {
