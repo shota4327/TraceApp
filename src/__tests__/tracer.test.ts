@@ -98,6 +98,11 @@ print(total)
     const firstFuncSnap = funcSnaps[0];
     expect(firstFuncSnap.locals.a).toBeDefined();
     expect(firstFuncSnap.locals.b).toBeDefined();
+
+    // globals に関数オブジェクト (add) が含まれないこと
+    for (const snap of result.snapshots) {
+      expect(snap.globals.add).toBeUndefined();
+    }
   });
 
   it('4. ステップ数上限ガード (10,000ステップ) が発動し、TraceLimitExceeded で停止すること', () => {

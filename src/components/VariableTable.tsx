@@ -60,6 +60,27 @@ const VariableTableRow: React.FC<{
   </tr>
 );
 
+/** 値が関数・モジュールオブジェクトであるかを判定 */
+function isFunctionValue(val: unknown): boolean {
+  if (typeof val === 'function') return true;
+  if (typeof val === 'string' && (val.startsWith('<function ') || val.startsWith('<module ') || val.startsWith('<built-in '))) {
+    return true;
+  }
+  return false;
+}
+
+/** スナップショットから関数名を除外した変数名一覧を抽出 */
+function extractAllVarNames(snapshots: StepSnapshot[]): string[] {
+  return Array.from(
+    new Set(
+      snapshots.flatMap((s) => [
+        ...Object.keys(s.globals).filter((k) => !isFunctionValue(s.globals[k])),
+        ...Object.keys(s.locals).filter((k) => !isFunctionValue(s.locals[k])),
+      ])
+    )
+  );
+}
+
 /**
  * スプレッドシート型変数履歴表コンポーネント
  * 変数名を横軸、ステップ実行履歴を縦軸として各ステップの変数変化を表示
@@ -69,9 +90,7 @@ export const VariableTable: React.FC<VariableTableProps> = ({
   currentStepIndex = 0,
 }) => {
   const isEnded = snapshots.length > 1 && currentStepIndex === snapshots.length - 1;
-  const allVarNames = Array.from(
-    new Set(snapshots.flatMap((s) => [...Object.keys(s.globals), ...Object.keys(s.locals)]))
-  );
+  const allVarNames = extractAllVarNames(snapshots);
   const activeSnapshots = snapshots
     .slice(0, currentStepIndex + 1)
     .filter((s) => s.event !== 'end' && (Object.keys(s.globals).length > 0 || Object.keys(s.locals).length > 0));

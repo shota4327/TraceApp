@@ -9,6 +9,7 @@ import sys
 import io
 import math
 import json
+import types
 
 class TraceLimitExceeded(BaseException):
     """
@@ -137,11 +138,13 @@ class PyodideTracer:
 
     def _sanitize_scope(self, scope_dict):
         """
-        スコープ辞書から内部予約変数やモジュール名を除外し、数値をサニタイズします。
+        スコープ辞書から内部予約変数やモジュール名、関数オブジェクトを除外し、数値をサニタイズします。
         """
         clean = {}
         for k, v in scope_dict.items():
             if k in self.EXCLUDED_NAMES or k.startswith('__tracer_') or k.startswith('_pyodide_'):
+                continue
+            if callable(v) or isinstance(v, (types.FunctionType, types.BuiltinFunctionType, types.MethodType, types.ModuleType)):
                 continue
             clean[k] = self._sanitize_value(v)
         return clean
