@@ -65,6 +65,8 @@ class PyodideTracer:
         self.prev_func = None
         self.stdout_writer = StepStdoutWriter()
         self.toplevel_def_lines = set(toplevel_def_lines or [])
+        self.last_executed_line = None
+        self.call_caller_lines = []
 
     def _safe_repr(self, v):
         """
@@ -176,8 +178,6 @@ class PyodideTracer:
                 self.limit_exceeded = True
                 raise TraceLimitExceeded(f"ステップ数上限 ({self.max_steps}) を超過しました。")
 
-            line_no = frame.f_code.co_firstlineno if event == 'call' else frame.f_lineno
-
             if func_name == "<module>":
                 globals_snap = self._sanitize_scope(frame.f_globals)
                 locals_snap = {}
@@ -186,6 +186,21 @@ class PyodideTracer:
                 globals_snap = self._sanitize_scope(frame.f_globals)
                 locals_snap = self._sanitize_scope(frame.f_locals)
                 display_func_name = func_name
+
+            if event == 'call':
+                line_no = frame.f_code.co_firstlineno
+                caller_line = self.last_executed_line
+                self.call_caller_lines.append(caller_line)
+                executed_line = line_no
+            else:
+                line_no = frame.f_lineno
+                if self.prev_func is not None and display_func_name is None:
+                    # 関数から戻ってきた直後の行: 呼び出し元代入行を実行完了行とする
+                    executed_line = self.call_caller_lines.pop() if self.call_caller_lines else self.last_executed_line
+                else:
+                    executed_line = self.last_executed_line if self.last_executed_line is not None else line_no
+
+            self.last_executed_line = line_no
 
             changed_vars = []
 
@@ -212,6 +227,7 @@ class PyodideTracer:
             snapshot = {
                 "stepIndex": len(self.snapshots),
                 "line": line_no,
+                "executedLine": executed_line,
                 "event": event,
                 "functionName": display_func_name,
                 "globals": globals_snap,
@@ -230,6 +246,7 @@ class PyodideTracer:
         スクリプト全行実行完了後に最終状態を反映する event: 'end' のスナップショットを追加します。
         """
         last_line = self.snapshots[-1]["line"] if self.snapshots else 1
+        executed_line = self.last_executed_line if self.last_executed_line is not None else last_line
         globals_snap = self._sanitize_scope(final_globals)
         locals_snap = {}
 
@@ -244,6 +261,7 @@ class PyodideTracer:
         snapshot = {
             "stepIndex": len(self.snapshots),
             "line": last_line,
+            "executedLine": executed_line,
             "event": "end",
             "functionName": None,
             "globals": globals_snap,

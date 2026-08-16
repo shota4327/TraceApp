@@ -17,6 +17,8 @@ export interface StepSnapshot {
   stepIndex: number;
   /** 実行中のPythonコード行番号（1始まり） */
   line: number;
+  /** このステップの変数を生み出した直前実行行番号（1始まり） */
+  executedLine?: number;
   /** トレースイベント（'init' | 'line' | 'call' | 'return' | 'end'） */
   event: 'init' | 'line' | 'call' | 'return' | 'end';
   /** 関数実行中の場合の関数名 */

@@ -119,7 +119,7 @@ export const VariableTable: React.FC<VariableTableProps> = ({
                 <VariableTableRow
                   key={s.stepIndex}
                   snapshot={s}
-                  executedLine={s.line}
+                  executedLine={s.executedLine ?? s.line}
                   isCurrent={!isEnded && s.stepIndex === currentSnapshot?.stepIndex}
                   varNames={allVarNames}
                   currentChangedVars={currentChangedVars}

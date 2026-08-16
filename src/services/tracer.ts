@@ -36,6 +36,7 @@ export function executeTrace(code: string): TraceExecutionResult {
     {
       stepIndex: 0,
       line: 1,
+      executedLine: 1,
       event: 'line',
       globals: {},
       locals: {},

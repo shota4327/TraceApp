@@ -74,16 +74,14 @@ print(grade)
   });
 
   it('3. ループと関数定義・呼び出しでローカル・グローバルスコープが分離されること (テスト3)', () => {
-    const code = `
-def add(a, b):
+    const code = `def add(a, b):
     result = a + b
     return result
 
 total = 0
 for i in range(1, 4):
     total = add(total, i)
-print(total)
-`;
+print(total)`;
     const runTracePy = pyodide.globals.get('run_trace');
     const resultJson = runTracePy(code, 10000);
     const result = JSON.parse(resultJson);
@@ -94,10 +92,11 @@ print(total)
     // 関数 add 実行中のスナップショットを抽出
     const funcSnaps = result.snapshots.filter((s: any) => s.functionName === 'add');
     expect(funcSnaps.length).toBeGreaterThan(0);
-    // 関数内では locals に a, b が含まれる
+    // 関数内では locals に a, b が含まれ、def 行 (Line 1) が executedLine となること
     const firstFuncSnap = funcSnaps[0];
     expect(firstFuncSnap.locals.a).toBeDefined();
     expect(firstFuncSnap.locals.b).toBeDefined();
+    expect(firstFuncSnap.executedLine).toBe(1);
 
     // globals に関数オブジェクト (add) が含まれないこと
     for (const snap of result.snapshots) {
