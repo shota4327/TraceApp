@@ -140,7 +140,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       // ループのノード種別
       const loopNode = graph.nodes.find((n) => n.type === 'loop');
       expect(loopNode).toBeDefined();
-      expect(loopNode!.label).toContain('for i in range');
+      expect(loopNode!.label).toContain('iは1から1ずつ増やしてi≦3の間');
 
       // Loop バックエッジおよび Loop エグジット (False) エッジの確認
       const edgeLabels = graph.edges.map((e) => e.label);

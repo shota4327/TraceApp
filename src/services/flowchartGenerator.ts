@@ -113,6 +113,70 @@ export function formatProcessLabel(trimmed: string): string {
   return trimmed;
 }
 
+/** 比較演算子を教科書的な数学記号に置換 */
+function replaceMathOperators(expr: string): string {
+  return expr
+    .replace(/<=/g, '≦')
+    .replace(/>=/g, '≧')
+    .replace(/!=/g, '≠')
+    .replace(/==/g, '=');
+}
+
+/** while文のラベル整形 */
+function formatWhileLabel(trimmed: string): string {
+  const cond = trimmed.replace(/^while\s+/, '').replace(/:$/, '').trim();
+  const mathCond = replaceMathOperators(cond);
+  return `ループ\n${mathCond}の間`;
+}
+
+/** for文のrange引数解析とラベル整形 */
+function formatForRange(varName: string, rangeContent: string): string {
+  const args = rangeContent.split(',').map((s) => s.trim()).filter(Boolean);
+  const startStr = args.length >= 2 ? args[0]! : '0';
+  const stopStr = args.length === 1 ? args[0]! : (args[1] || '0');
+  const stepStr = args.length >= 3 ? args[2]! : '1';
+
+  const stopNum = Number(stopStr);
+  const stepNum = Number(stepStr);
+
+  if (!isNaN(stopNum)) {
+    if (!isNaN(stepNum) && stepNum < 0) {
+      const actualEnd = stopNum + 1;
+      const absStep = Math.abs(stepNum);
+      return `ループ\n${varName}は${startStr}から${absStep}ずつ減らして${varName}≧${actualEnd}の間`;
+    }
+    const actualEnd = stopNum - 1;
+    const stepVal = !isNaN(stepNum) ? stepNum : stepStr;
+    return `ループ\n${varName}は${startStr}から${stepVal}ずつ増やして${varName}≦${actualEnd}の間`;
+  }
+  return `ループ\n${varName}は${startStr}から${stepStr}ずつ増やして${varName}≦${stopStr}-1の間`;
+}
+
+/** for文のラベル整形 */
+function formatForLabel(trimmed: string): string {
+  const forMatch = trimmed.match(/^for\s+([a-zA-Z_]\w*)\s+in\s+range\s*\(([\s\S]*)\)\s*:?$/);
+  if (forMatch && forMatch[1] && forMatch[2] !== undefined) {
+    return formatForRange(forMatch[1], forMatch[2].trim());
+  }
+  const genericMatch = trimmed.match(/^for\s+([a-zA-Z_]\w*)\s+in\s+([^:]+):?$/);
+  if (genericMatch && genericMatch[1] && genericMatch[2]) {
+    return `ループ\n${genericMatch[1]}を${genericMatch[2].trim()}から順に取り出す間`;
+  }
+  const raw = trimmed.replace(/:$/, '').trim();
+  return `ループ\n${raw}の間`;
+}
+
+/** ループ文（for / while）のラベル生成 */
+export function formatLoopLabel(trimmed: string): string {
+  if (trimmed.startsWith('while ')) {
+    return formatWhileLabel(trimmed);
+  }
+  if (trimmed.startsWith('for ')) {
+    return formatForLabel(trimmed);
+  }
+  return trimmed;
+}
+
 /** 1行のコード文字列からノード種別とラベルを決定 */
 function classifyLine(trimmed: string): { type: FlowchartNodeType; label: string } {
   if (trimmed.startsWith('def ')) {
@@ -128,7 +192,7 @@ function classifyLine(trimmed: string): { type: FlowchartNodeType; label: string
     return { type: 'decision', label: 'else' };
   }
   if (trimmed.startsWith('for ') || trimmed.startsWith('while ')) {
-    return { type: 'loop', label: trimmed.replace(/:$/, '') };
+    return { type: 'loop', label: formatLoopLabel(trimmed) };
   }
   return { type: 'process', label: formatProcessLabel(trimmed) };
 }
@@ -177,7 +241,7 @@ function parseValidLines(code: string): ParsedLineInfo[] {
 /** ループ終了ノードを生成 */
 function createLoopEndNode(headerId: string, yPos: number): FlowchartNode {
   const id = `node-loop-end-${headerId}`;
-  const label = 'ループ終了';
+  const label = 'ループ';
   const xmlStyle = getMxStyleForType('loop');
   const escaped = escapeXml(label);
   const xmlSnippet = `<mxCell id="${id}" value="${escaped}" style="${xmlStyle}" vertex="1" parent="1"><mxGeometry x="100" y="${yPos}" width="180" height="50" as="geometry"/></mxCell>`;

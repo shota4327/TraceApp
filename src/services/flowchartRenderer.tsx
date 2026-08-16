@@ -16,7 +16,7 @@ export function isNodeActive(
   activeNodeId?: string
 ): boolean {
   if (activeNodeId && node.id === activeNodeId) return true;
-  if (node.type === 'terminal' || node.label === 'ループ終了' || node.label.includes('ループ終了')) return false;
+  if (node.type === 'terminal' || node.id.includes('loop-end')) return false;
   if (
     activeLine !== undefined &&
     node.lineRange &&
@@ -101,7 +101,7 @@ export function renderLoopNode(
 ): React.ReactNode {
   const offsetX = 18;
   const cutY = 14;
-  const isLoopEnd = node.label.includes('ループ終了') || node.id.includes('loop-end');
+  const isLoopEnd = node.id.includes('loop-end');
 
   let points: string;
   if (isLoopEnd) {
@@ -160,32 +160,39 @@ export function renderDefaultNode(
   );
 }
 
-/** テキストの幅換算単位（全角=1, 半角=0.55）に基づき行分割 */
+/** 改行コードおよび文字幅換算単位（全角=1, 半角=0.55）に基づき行分割 */
 export function wrapProcessLabel(text: string, maxUnitsPerLine = 9.5): string[] {
   if (!text) return [''];
-  const lines: string[] = [];
-  let currentLine = '';
-  let currentUnits = 0;
+  const rawLines = text.split('\n');
+  const allLines: string[] = [];
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]!;
-    const unit = char.charCodeAt(0) <= 0x7e ? 0.55 : 1.0;
-    if (currentUnits + unit > maxUnitsPerLine && currentLine.length > 0) {
-      lines.push(currentLine);
-      currentLine = char;
-      currentUnits = unit;
-    } else {
-      currentLine += char;
-      currentUnits += unit;
+  for (const rawLine of rawLines) {
+    if (!rawLine) {
+      allLines.push('');
+      continue;
     }
+    let currentLine = '';
+    let currentUnits = 0;
+    for (let i = 0; i < rawLine.length; i++) {
+      const char = rawLine[i]!;
+      const unit = char.charCodeAt(0) <= 0x7e ? 0.55 : 1.0;
+      if (currentUnits + unit > maxUnitsPerLine && currentLine.length > 0) {
+        allLines.push(currentLine);
+        currentLine = char;
+        currentUnits = unit;
+      } else {
+        currentLine += char;
+        currentUnits += unit;
+      }
+    }
+    if (currentLine.length > 0) allLines.push(currentLine);
   }
-  if (currentLine.length > 0) lines.push(currentLine);
-  return lines;
+  return allLines;
 }
 
 /** ノードの必要高さを計算（複数行の場合は高さを自動拡大） */
 export function calculateNodeHeight(node: FlowchartNode, baseHeight = 50): number {
-  if (node.type === 'process') {
+  if (node.type === 'process' || node.type === 'loop' || node.label.includes('\n')) {
     const lines = wrapProcessLabel(node.label);
     if (lines.length > 1) {
       return Math.max(baseHeight, 16 + lines.length * 20);
@@ -209,7 +216,7 @@ function createNodeTextElement(
   const fill = isActive ? '#1e293b' : '#334155';
   const fontWeight = isActive ? 700 : 500;
 
-  if (node.type === 'process') {
+  if (node.type === 'process' || node.type === 'loop' || node.label.includes('\n')) {
     const lines = wrapProcessLabel(node.label);
     if (lines.length > 1) {
       const lineHeight = 20;
