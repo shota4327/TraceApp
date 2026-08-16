@@ -195,10 +195,32 @@ class PyodideTracer:
             else:
                 line_no = frame.f_lineno
                 if self.prev_func is not None and display_func_name is None:
-                    # 関数から戻ってきた直後の行: 呼び出し元代入行を実行完了行とする
-                    executed_line = self.call_caller_lines.pop() if self.call_caller_lines else self.last_executed_line
-                else:
-                    executed_line = self.last_executed_line if self.last_executed_line is not None else line_no
+                    # 関数から戻ってきた直後: 呼び出し元行（例: Line 7）への復帰・代入スナップショットを挿入
+                    caller_line = self.call_caller_lines.pop() if self.call_caller_lines else self.last_executed_line
+                    return_changed_vars = []
+                    for k, v in globals_snap.items():
+                        if k not in self.prev_globals or self.prev_globals[k] != v:
+                            return_changed_vars.append(k)
+
+                    return_snapshot = {
+                        "stepIndex": len(self.snapshots),
+                        "line": caller_line,
+                        "executedLine": caller_line,
+                        "event": "line",
+                        "functionName": None,
+                        "globals": globals_snap.copy(),
+                        "locals": {},
+                        "changedVars": return_changed_vars,
+                        "stdoutDelta": self.stdout_writer.get_delta(),
+                        "stdoutCumulative": self.stdout_writer.get_cumulative(),
+                        "astNodeId": f"node-{caller_line}"
+                    }
+                    self.snapshots.append(return_snapshot)
+                    self.prev_globals = globals_snap.copy()
+                    self.prev_locals = {}
+                    self.prev_func = None
+
+                executed_line = line_no
 
             self.last_executed_line = line_no
 

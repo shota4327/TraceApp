@@ -98,6 +98,13 @@ print(total)`;
     expect(firstFuncSnap.locals.b).toBeDefined();
     expect(firstFuncSnap.executedLine).toBe(1);
 
+    // Line の実行フローが 5 → 6 → 7 → 1 → 2 → 3 → 7 → 6 → 7 → 1 → 2 → 3 → 7 → 6 → 7 → 1 → 2 → 3 → 7 → 6 → 8 と一致すること
+    const nonEndSnaps = result.snapshots.filter((s: any) => s.event !== 'end');
+    const lineFlow = nonEndSnaps.map((s: any) => s.line);
+    expect(lineFlow).toEqual([
+      5, 6, 7, 1, 2, 3, 7, 6, 7, 1, 2, 3, 7, 6, 7, 1, 2, 3, 7, 6, 8
+    ]);
+
     // globals に関数オブジェクト (add) が含まれないこと
     for (const snap of result.snapshots) {
       expect(snap.globals.add).toBeUndefined();
