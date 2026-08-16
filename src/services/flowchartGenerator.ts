@@ -68,8 +68,11 @@ function classifyLine(trimmed: string): { type: FlowchartNodeType; label: string
   if (trimmed.startsWith('def ')) {
     return { type: 'subroutine', label: trimmed.replace(/:$/, '') };
   }
-  if (trimmed.startsWith('if ') || trimmed.startsWith('elif ')) {
-    return { type: 'decision', label: trimmed.replace(/:$/, '') };
+  if (trimmed.startsWith('if ')) {
+    return { type: 'decision', label: trimmed.replace(/^if\s+/, '').replace(/:$/, '').trim() };
+  }
+  if (trimmed.startsWith('elif ')) {
+    return { type: 'decision', label: trimmed.replace(/^elif\s+/, '').replace(/:$/, '').trim() };
   }
   if (trimmed.startsWith('else:')) {
     return { type: 'decision', label: 'else' };
@@ -297,17 +300,19 @@ function handleBlockStackUnwind(
   blockStack: BlockContext[],
   edges: FlowchartEdge[],
   nodes: FlowchartNode[]
-): { inheritedMergeTargets: string[]; lastPoppedId?: string } {
+): { inheritedMergeTargets: string[]; lastPoppedId?: string; poppedHeaderId?: string } {
   const isElif = line.text.startsWith('elif ');
   const isElse = line.text.startsWith('else:');
   const isIfChainContinuation = isElif || isElse;
   let inheritedMergeTargets: string[] = [];
   let lastPoppedId: string | undefined;
+  let poppedHeaderId: string | undefined;
 
   while (blockStack.length > 0 && line.indent <= blockStack[blockStack.length - 1]!.indent) {
     const top = blockStack[blockStack.length - 1]!;
     if (isIfChainContinuation && top.type === 'if' && line.indent === top.indent) {
       const popped = blockStack.pop()!;
+      poppedHeaderId = popped.headerId;
       if (!edges.some((e) => e.sourceId === popped.headerId && e.label === 'False')) {
         edges.push({
           id: `edge-false-${popped.headerId}-${nodeId}`,
@@ -322,7 +327,7 @@ function handleBlockStackUnwind(
       lastPoppedId = processPoppedBlock(blockStack.pop()!, nodeId, edges, nodes);
     }
   }
-  return { inheritedMergeTargets, lastPoppedId };
+  return { inheritedMergeTargets, lastPoppedId, poppedHeaderId };
 }
 
 /** 終了端子ノードの追加と残存ブロックの合流処理 */
@@ -348,6 +353,53 @@ function finalizeFlowchartGraph(
   }
 }
 
+/** else行の処理 helper */
+function handleElseLine(
+  line: ParsedLineInfo,
+  nextLine: ParsedLineInfo | undefined,
+  blockStack: BlockContext[],
+  edges: FlowchartEdge[],
+  nodes: FlowchartNode[]
+): void {
+  const nextTargetId = nextLine ? `node-${nextLine.lineNo}` : 'node-end';
+  const { inheritedMergeTargets, poppedHeaderId } = handleBlockStackUnwind(line, nextTargetId, blockStack, edges, nodes);
+  if (poppedHeaderId) {
+    blockStack.push({
+      type: 'if',
+      headerId: poppedHeaderId,
+      indent: line.indent,
+      mergeTargets: inheritedMergeTargets,
+      isElse: true,
+    });
+  }
+}
+
+/** 通常行のノードおよびエッジ追加 helper */
+function processRegularLine(
+  line: ParsedLineInfo,
+  nextLine: ParsedLineInfo | undefined,
+  prevNodeId: string,
+  startNodeId: string,
+  blockStack: BlockContext[],
+  edges: FlowchartEdge[],
+  nodes: FlowchartNode[]
+): string {
+  const { inheritedMergeTargets, lastPoppedId } = handleBlockStackUnwind(line, `node-${line.lineNo}`, blockStack, edges, nodes);
+  const effectivePrevId = lastPoppedId || prevNodeId;
+  const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20);
+  nodes.push(node);
+  processLineNodeEdge(node, effectivePrevId, startNodeId, nextLine, line.indent, blockStack, edges, inheritedMergeTargets);
+
+  if (blockStack.length > 0) {
+    const top = blockStack[blockStack.length - 1]!;
+    top.bodyLastId = node.id;
+    if (top.type === 'if' && node.type !== 'decision' && !top.mergeTargets.includes(node.id)) {
+      top.mergeTargets.push(node.id);
+    }
+  }
+  return node.id;
+}
+
 /**
  * Pythonコードから FlowchartGraph (ノード・エッジ構造) を自動生成
  */
@@ -365,24 +417,11 @@ export function generateFlowchartGraph(code: string): FlowchartGraph {
 
   for (let i = 0; i < validLines.length; i++) {
     const line = validLines[i]!;
-    const nodeId = `node-${line.lineNo}`;
-
-    const { inheritedMergeTargets, lastPoppedId } = handleBlockStackUnwind(line, nodeId, blockStack, edges, nodes);
-    if (lastPoppedId) prevNodeId = lastPoppedId;
-
-    const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20);
-    nodes.push(node);
-
-    processLineNodeEdge(node, prevNodeId, startNode.id, validLines[i + 1], line.indent, blockStack, edges, inheritedMergeTargets);
-
-    if (blockStack.length > 0) {
-      const top = blockStack[blockStack.length - 1]!;
-      top.bodyLastId = node.id;
-      if (top.type === 'if' && node.type !== 'decision' && !top.mergeTargets.includes(node.id)) {
-        top.mergeTargets.push(node.id);
-      }
+    if (line.text.startsWith('else:')) {
+      handleElseLine(line, validLines[i + 1], blockStack, edges, nodes);
+    } else {
+      prevNodeId = processRegularLine(line, validLines[i + 1], prevNodeId, startNode.id, blockStack, edges, nodes);
     }
-    prevNodeId = node.id;
   }
 
   finalizeFlowchartGraph(code, nodes, edges, blockStack, prevNodeId);

@@ -109,10 +109,10 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(nodeTypes).toContain('process');
       expect(nodeTypes).toContain('decision');
 
-      // if / elif / else ノードが decision 種別であること
       const decisionNodes = graph.nodes.filter((n) => n.type === 'decision');
       expect(decisionNodes.length).toBeGreaterThanOrEqual(2);
-      expect(decisionNodes[0]!.label).toContain('if score >= 80');
+      expect(decisionNodes[0]!.label).toBe('score >= 80');
+      expect(decisionNodes[1]!.label).toBe('score >= 60');
 
       // エッジラベルに True が含まれること
       const edgeLabels = graph.edges.map((e) => e.label);

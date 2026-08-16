@@ -9,7 +9,7 @@ describe('Challenger M2-3: Empirical Verification for CFG & False Edges', () => 
 print("done")`;
 
       const graph = generateFlowchartGraph(code);
-      const decisionNode = graph.nodes.find((n) => n.type === 'decision' && n.label.includes('if x > 0'));
+      const decisionNode = graph.nodes.find((n) => n.type === 'decision' && n.label === 'x > 0');
       const printXNode = graph.nodes.find((n) => n.label.includes('print(x)'));
       const printDoneNode = graph.nodes.find((n) => n.label.includes('print("done")'));
 
@@ -39,7 +39,7 @@ print("done")`;
     print(x)`;
 
       const graph = generateFlowchartGraph(code);
-      const decisionNode = graph.nodes.find((n) => n.type === 'decision' && n.label.includes('if x > 0'));
+      const decisionNode = graph.nodes.find((n) => n.type === 'decision' && n.label === 'x > 0');
       const printXNode = graph.nodes.find((n) => n.label.includes('print(x)'));
       const endNode = graph.nodes.find((n) => n.type === 'terminal' && n.label === '終了');
 
@@ -69,8 +69,8 @@ print("done")`;
 
       const graph = generateFlowchartGraph(code);
 
-      const outerIf = graph.nodes.find((n) => n.label.includes('if x > 0'));
-      const innerIf = graph.nodes.find((n) => n.label.includes('if x > 5'));
+      const outerIf = graph.nodes.find((n) => n.label === 'x > 0');
+      const innerIf = graph.nodes.find((n) => n.label === 'x > 5');
       const printLarge = graph.nodes.find((n) => n.label.includes('print("large")'));
       const printPositive = graph.nodes.find((n) => n.label.includes('print("positive")'));
       const printDone = graph.nodes.find((n) => n.label.includes('print("done")'));
@@ -106,8 +106,8 @@ print("done")`;
 
       const graph = generateFlowchartGraph(code);
 
-      const outerIf = graph.nodes.find((n) => n.label.includes('if a > 0'));
-      const innerIf = graph.nodes.find((n) => n.label.includes('if b > 0'));
+      const outerIf = graph.nodes.find((n) => n.label === 'a > 0');
+      const innerIf = graph.nodes.find((n) => n.label === 'b > 0');
       const endNode = graph.nodes.find((n) => n.type === 'terminal' && n.label === '終了');
 
       expect(outerIf).toBeDefined();
@@ -139,14 +139,14 @@ print(grade)`;
 
       const graph = generateFlowchartGraph(code);
 
-      const ifNode = graph.nodes.find((n) => n.label.includes('if score >= 80'));
-      const elifNode = graph.nodes.find((n) => n.label.includes('elif score >= 60'));
-      const elseNode = graph.nodes.find((n) => n.label === 'else');
+      const ifNode = graph.nodes.find((n) => n.label === 'score >= 80');
+      const elifNode = graph.nodes.find((n) => n.label === 'score >= 60');
+      const elseGradeNode = graph.nodes.find((n) => n.label.includes('grade'));
       const printGradeNode = graph.nodes.find((n) => n.label.includes('print(grade)'));
 
       expect(ifNode).toBeDefined();
       expect(elifNode).toBeDefined();
-      expect(elseNode).toBeDefined();
+      expect(elseGradeNode).toBeDefined();
       expect(printGradeNode).toBeDefined();
 
       // if の False edge -> elifNode
@@ -154,10 +154,10 @@ print(grade)`;
       expect(ifFalseEdge).toBeDefined();
       expect(ifFalseEdge!.targetId).toBe(elifNode!.id);
 
-      // elif の False edge -> elseNode
+      // elif の False edge -> else 内の最初の処理ノード (node-7: "C" → grade)
       const elifFalseEdge = graph.edges.find((e) => e.sourceId === elifNode!.id && e.label === 'False');
       expect(elifFalseEdge).toBeDefined();
-      expect(elifFalseEdge!.targetId).toBe(elseNode!.id);
+      expect(elifFalseEdge!.targetId).toBe('node-7');
 
       // draw.io XML の検証
       const xml = generateDrawIoXml(graph);

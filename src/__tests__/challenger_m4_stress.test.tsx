@@ -54,7 +54,7 @@ describe('Challenger M4 Stress & Edge Case Tests (限界・エッジケーステ
       expect(xml).not.toContain('<test');
 
       const { container } = render(<FlowchartViewer nodes={nodes} activeLine={1} />);
-      expect(container.textContent).toContain('if a < 10 and b > 20');
+      expect(container.textContent).toContain('a < 10 and b > 20');
     });
   });
 
