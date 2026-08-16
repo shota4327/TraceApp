@@ -8,6 +8,8 @@ interface StepNavigationProps {
   onRun?: () => void;
   onLast?: () => void;
   isTracing?: boolean;
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
 }
 
 /** ナビゲーションボタン群サブコンポーネント */
@@ -40,35 +42,34 @@ const NavButtons: React.FC<{
   </div>
 );
 
-/** ステップスライダーサブコンポーネント */
-const StepSlider: React.FC<{
-  currentStep: number;
-  totalSteps: number;
-  maxStep: number;
-  isTracing: boolean;
-  onStepChange: (step: number) => void;
-}> = ({ currentStep, totalSteps, maxStep, isTracing, onStepChange }) => (
+/** ズームスライダーサブコンポーネント */
+const ZoomSlider: React.FC<{
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
+}> = ({ zoom, onZoomChange }) => (
   <div style={sliderContainerStyle}>
+    <span style={zoomIconLabelStyle}>拡大率:</span>
     <input
-      id="step-slider"
-      data-testid="step-slider"
+      id="zoom-slider"
+      data-testid="zoom-slider"
       type="range"
-      min={0}
-      max={maxStep}
-      value={currentStep}
-      onChange={(e) => onStepChange(Number(e.target.value))}
-      disabled={totalSteps <= 0 || isTracing}
+      min={50}
+      max={400}
+      step={5}
+      value={zoom}
+      onChange={(e) => onZoomChange(Number(e.target.value))}
       style={sliderStyle}
+      aria-label="拡大率スライダー"
     />
-    <span id="step-counter" data-testid="step-counter" style={stepLabelStyle}>
-      {totalSteps > 0 ? `ステップ ${currentStep} / ${maxStep}` : 'ステップ 0 / 0'}
+    <span id="zoom-counter" data-testid="zoom-counter" style={zoomLabelStyle}>
+      {`${zoom}%`}
     </span>
   </div>
 );
 
 /**
  * ステップナビゲーションコンポーネント
- * 前へ・次へ・リセット・最後・実行ボタンおよびステップスライダーを提供
+ * 前へ・次へ・リセット・最後・実行ボタンおよびズーム設定スライダーを提供
  */
 export const StepNavigation: React.FC<StepNavigationProps> = ({
   currentStep,
@@ -78,6 +79,8 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
   onRun,
   onLast,
   isTracing = false,
+  zoom = 100,
+  onZoomChange,
 }) => {
   const maxStep = Math.max(0, totalSteps - 1);
   const handleLast = () => (onLast ? onLast() : totalSteps > 0 && onStepChange(maxStep));
@@ -94,13 +97,7 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
         canNext={totalSteps > 0 && currentStep < maxStep}
         isTracing={isTracing}
       />
-      <StepSlider
-        currentStep={currentStep}
-        totalSteps={totalSteps}
-        maxStep={maxStep}
-        isTracing={isTracing}
-        onStepChange={onStepChange}
-      />
+      {onZoomChange && <ZoomSlider zoom={zoom} onZoomChange={onZoomChange} />}
     </div>
   );
 };
@@ -141,19 +138,30 @@ const primaryButtonStyle: React.CSSProperties = {
 const sliderContainerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '12px',
+  gap: '10px',
   flex: 1,
-  maxWidth: '320px',
+  maxWidth: '280px',
+  justifyContent: 'flex-end',
 };
 
 const sliderStyle: React.CSSProperties = {
   flex: 1,
   cursor: 'pointer',
+  minWidth: '100px',
+  maxWidth: '160px',
 };
 
-const stepLabelStyle: React.CSSProperties = {
+const zoomIconLabelStyle: React.CSSProperties = {
   fontSize: '0.85rem',
-  color: '#475569',
+  color: '#64748b',
   whiteSpace: 'nowrap',
-  minWidth: '80px',
+};
+
+const zoomLabelStyle: React.CSSProperties = {
+  fontSize: '0.85rem',
+  color: '#334155',
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  minWidth: '45px',
+  textAlign: 'right',
 };

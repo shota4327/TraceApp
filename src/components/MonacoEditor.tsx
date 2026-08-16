@@ -9,11 +9,17 @@ interface MonacoEditorProps {
   onChange: (value: string) => void;
   /** ハイライト表示する現在の実行行番号 (1-indexed) */
   highlightLine?: number;
+  /** 拡大率 (50〜400, デフォルト 100) */
+  zoom?: number;
 }
 
 /** E2E テスト・フォールバック用コードビューア */
-const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number }> = ({ lines, highlightLine }) => (
-  <div id="code-viewer" data-testid="code-viewer" style={codeViewerStyle}>
+const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number; fontSize?: number }> = ({
+  lines,
+  highlightLine,
+  fontSize = 14,
+}) => (
+  <div id="code-viewer" data-testid="code-viewer" style={{ ...codeViewerStyle, fontSize: `${fontSize}px` }}>
     <div style={codeViewerTitleStyle}>実行行デコレーションプレビュー</div>
     {lines.map((lineText, idx) => {
       const lineNum = idx + 1;
@@ -30,12 +36,13 @@ const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number }> = ({ lin
 
 /**
  * Monaco Editor 表示コンポーネント
- * Python コード編集、実行行デコレーションハイライト、および .py ファイルドロップ機能を提供
+ * Python コード編集、実行行デコレーションハイライト、ズーム連動および .py ファイルドロップ機能を提供
  */
-export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, highlightLine }) => {
+export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, highlightLine, zoom = 100 }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
+  const calculatedFontSize = Math.round(14 * (zoom / 100));
 
   const applyLineHighlight = (line?: number) => {
     if (!editorRef.current || !monacoRef.current) return;
@@ -56,6 +63,12 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, high
   useEffect(() => {
     applyLineHighlight(highlightLine);
   }, [highlightLine]);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.updateOptions({ fontSize: calculatedFontSize });
+    }
+  }, [calculatedFontSize]);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -87,7 +100,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, high
             monacoRef.current = monacoInstance;
             applyLineHighlight(highlightLine);
           }}
-          options={{ fontSize: 14, minimap: { enabled: false }, scrollBeyondLastLine: false, lineNumbers: 'on', automaticLayout: true, tabSize: 4 }}
+          options={{ fontSize: calculatedFontSize, minimap: { enabled: false }, scrollBeyondLastLine: false, lineNumbers: 'on', automaticLayout: true, tabSize: 4 }}
           loading={<div style={loadingStyle}>Monaco Editor を読み込んでいます...</div>}
         />
         <textarea
@@ -112,7 +125,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, high
           spellCheck={false}
         />
       </div>
-      <CodeViewer lines={lines} highlightLine={highlightLine} />
+      <CodeViewer lines={lines} highlightLine={highlightLine} fontSize={calculatedFontSize} />
     </div>
   );
 };
@@ -138,58 +151,59 @@ const hiddenTextareaStyle: React.CSSProperties = {
   top: 0,
   left: 0,
   width: '100%',
-  height: '1px',
-  opacity: 0.01,
-  zIndex: 1,
-  border: 'none',
-  outline: 'none',
-  resize: 'none',
+  height: '100%',
+  opacity: 0,
+  pointerEvents: 'none',
+  zIndex: -1,
 };
 
 const loadingStyle: React.CSSProperties = {
-  padding: '16px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '100%',
   color: '#64748b',
   fontSize: '0.875rem',
 };
 
 const codeViewerStyle: React.CSSProperties = {
   display: 'none',
-  padding: '8px 12px',
-  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-  fontSize: '0.85rem',
-  lineHeight: '1.4',
+  padding: '8px',
+  fontFamily: 'monospace',
   backgroundColor: '#f8fafc',
-  maxHeight: '100px',
-  overflowY: 'auto',
   borderTop: '1px solid #e2e8f0',
+  maxHeight: '200px',
+  overflowY: 'auto',
 };
 
 const codeViewerTitleStyle: React.CSSProperties = {
   fontSize: '0.75rem',
-  color: '#94a3b8',
+  color: '#64748b',
   marginBottom: '4px',
+  fontWeight: 600,
 };
 
 const lineStyle: React.CSSProperties = {
   display: 'flex',
-  gap: '12px',
-  padding: '1px 4px',
-  borderRadius: '2px',
+  lineHeight: '1.5',
+  color: '#334155',
 };
 
 const activeLineStyle: React.CSSProperties = {
   ...lineStyle,
   backgroundColor: '#fef08a',
-  color: '#854d0e',
   fontWeight: 600,
 };
 
 const lineNumStyle: React.CSSProperties = {
-  width: '20px',
-  color: '#64748b',
+  width: '32px',
+  color: '#94a3b8',
   textAlign: 'right',
+  marginRight: '12px',
+  userSelect: 'none',
 };
 
 const lineContentStyle: React.CSSProperties = {
+  flex: 1,
   whiteSpace: 'pre',
 };

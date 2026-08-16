@@ -283,5 +283,19 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     }
   });
 
+  test('T1-13: ズームスライダー（50%〜400%）による拡大率変更と表示更新', async ({ page }) => {
+    const zoomSlider = getEl(page, 'zoom-slider');
+    const zoomCounter = getEl(page, 'zoom-counter');
+
+    await expect(zoomSlider).toBeVisible();
+    await expect(zoomCounter).toBeVisible();
+    await expect(zoomCounter).toHaveText('100%');
+
+    // 拡大率を 150% に変更
+    await zoomSlider.fill('150');
+    await expect(zoomCounter).toHaveText('150%');
+  });
+
 });
+
 

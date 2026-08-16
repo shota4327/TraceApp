@@ -22,20 +22,60 @@ interface LeftPanelProps {
   executionStatus?: 'not_started' | 'running' | 'ended';
 }
 
+/** ステップスライダー＆カウンターサブコンポーネント */
+const TabBarStepControl: React.FC<{
+  currentStep: number;
+  totalSteps: number;
+  isTracing: boolean;
+  onStepChange: (step: number) => void;
+}> = ({ currentStep, totalSteps, isTracing, onStepChange }) => {
+  const maxStep = Math.max(0, totalSteps - 1);
+  return (
+    <div style={stepControlWrapperStyle}>
+      <span id="step-counter" data-testid="step-counter" style={stepCounterStyle}>
+        {totalSteps > 0 ? `ステップ ${currentStep} / ${maxStep}` : 'ステップ 0 / 0'}
+      </span>
+      <input
+        id="step-slider"
+        data-testid="step-slider"
+        type="range"
+        min={0}
+        max={maxStep}
+        value={currentStep}
+        onChange={(e) => onStepChange(Number(e.target.value))}
+        disabled={totalSteps <= 0 || isTracing}
+        style={stepSliderStyle}
+        aria-label="ステップ進行スライダー"
+      />
+    </div>
+  );
+};
+
 /** 左パネルのコード/流れ図タブバー */
 const LeftPanelTabBar: React.FC<{
   activeTab: 'code' | 'flowchart';
   onSelectTab: (tab: 'code' | 'flowchart') => void;
   activeLine?: number;
   executionStatus?: 'not_started' | 'running' | 'ended';
-}> = ({ activeTab, onSelectTab, activeLine, executionStatus }) => {
+  currentStep: number;
+  totalSteps: number;
+  onStepChange: (step: number) => void;
+  isTracing: boolean;
+}> = ({
+  activeTab,
+  onSelectTab,
+  activeLine,
+  executionStatus,
+  currentStep,
+  totalSteps,
+  onStepChange,
+  isTracing,
+}) => {
   let badgeText = '実行行: (未実行)';
   if (executionStatus === 'ended') {
     badgeText = '実行行: (実行終了)';
   } else if (executionStatus === 'running' || (activeLine !== undefined && activeLine > 0)) {
     badgeText = `実行行: Line ${activeLine}`;
-  } else {
-    badgeText = '実行行: (未実行)';
   }
 
   return (
@@ -64,8 +104,16 @@ const LeftPanelTabBar: React.FC<{
           流れ図
         </button>
       </div>
-      <div style={badgeWrapperStyle}>
-        <span id="active-line-badge" data-testid="active-line-badge" style={highlightBadgeStyle}>{badgeText}</span>
+      <div style={tabBarRightAreaStyle}>
+        <TabBarStepControl
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          isTracing={isTracing}
+          onStepChange={onStepChange}
+        />
+        <span id="active-line-badge" data-testid="active-line-badge" style={highlightBadgeStyle}>
+          {badgeText}
+        </span>
       </div>
     </div>
   );
@@ -73,7 +121,7 @@ const LeftPanelTabBar: React.FC<{
 
 /**
  * 左パネルコンポーネント
- * コード/流れ図のタブ切り替えおよびステップナビゲーションを統括
+ * コード/流れ図のタブ切り替え、ステップナビゲーション、ズーム倍率管理を統括
  */
 export const LeftPanel: React.FC<LeftPanelProps> = ({
   code,
@@ -92,6 +140,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   executionStatus,
 }) => {
   const [activeTab, setActiveTab] = useState<'code' | 'flowchart'>('code');
+  const [zoom, setZoom] = useState<number>(100);
 
   const memoizedGraph = useMemo(() => {
     if (flowchartNodes && flowchartNodes.length > 0) {
@@ -107,13 +156,17 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         onSelectTab={setActiveTab}
         activeLine={activeLine}
         executionStatus={executionStatus}
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+        onStepChange={onStepChange}
+        isTracing={isTracing}
       />
       <div style={contentStyle}>
         <div id="panel-code" role="tabpanel" aria-labelledby="tab-code" style={{ height: '100%', display: activeTab === 'code' ? 'block' : 'none' }}>
-          <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} />
+          <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} zoom={zoom} />
         </div>
         <div style={{ height: '100%', display: activeTab === 'flowchart' ? 'block' : 'none' }}>
-          <FlowchartViewer nodes={memoizedGraph.nodes} edges={memoizedGraph.edges} activeLine={activeLine} activeNodeId={activeNodeId} code={code} />
+          <FlowchartViewer nodes={memoizedGraph.nodes} edges={memoizedGraph.edges} activeLine={activeLine} activeNodeId={activeNodeId} code={code} zoom={zoom} />
         </div>
       </div>
       <StepNavigation
@@ -124,6 +177,8 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         onRun={onRun}
         onLast={onLast}
         isTracing={isTracing}
+        zoom={zoom}
+        onZoomChange={setZoom}
       />
     </div>
   );
@@ -150,9 +205,28 @@ const tabButtonGroupStyle: React.CSSProperties = {
   display: 'flex',
 };
 
-const badgeWrapperStyle: React.CSSProperties = {
+const tabBarRightAreaStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
+  gap: '12px',
+};
+
+const stepControlWrapperStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+};
+
+const stepCounterStyle: React.CSSProperties = {
+  fontSize: '0.78rem',
+  color: '#475569',
+  fontWeight: 500,
+  whiteSpace: 'nowrap',
+};
+
+const stepSliderStyle: React.CSSProperties = {
+  width: '90px',
+  cursor: 'pointer',
 };
 
 const highlightBadgeStyle: React.CSSProperties = {
@@ -163,6 +237,7 @@ const highlightBadgeStyle: React.CSSProperties = {
   color: '#854d0e',
   border: '1px solid #fde047',
   fontWeight: 600,
+  whiteSpace: 'nowrap',
 };
 
 const tabStyle: React.CSSProperties = {
