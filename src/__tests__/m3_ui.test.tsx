@@ -33,7 +33,7 @@ class MockWorker {
 vi.stubGlobal('Worker', MockWorker);
 
 describe('MonacoEditor & App M3 結合テスト (m3_ui.test.tsx)', () => {
-  it('1. MonacoEditor が正常にレンダリングされ、行ハイライト badge と code-input / code-viewer が存在すること', () => {
+  it('1. MonacoEditor が正常にレンダリングされ、code-input / code-viewer が存在すること', () => {
     const handleChange = vi.fn();
     render(
       <MonacoEditor
@@ -46,7 +46,6 @@ describe('MonacoEditor & App M3 結合テスト (m3_ui.test.tsx)', () => {
     expect(screen.getByTestId('monaco-editor')).toBeDefined();
     expect(screen.getByTestId('code-input')).toBeDefined();
     expect(screen.getByTestId('code-viewer')).toBeDefined();
-    expect(screen.getByText('実行行: Line 2')).toBeDefined();
   });
 
   it('2. MonacoEditor で .py ファイルのドラッグ＆ドロップ時に onChange が発火すること', async () => {

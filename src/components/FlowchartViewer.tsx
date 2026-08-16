@@ -40,10 +40,6 @@ export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
 
   return (
     <div id="flowchart-viewer" data-testid="flowchart-viewer" role="tabpanel" aria-labelledby="tab-flowchart" style={containerStyle}>
-      <div style={headerStyle}>
-        <span>流れ図</span>
-        {activeLine !== undefined && activeLine > 0 && <span style={activeStyle}>アクティブ行: Line {activeLine}</span>}
-      </div>
       <div style={contentStyle}>{svgContent}</div>
     </div>
   );
@@ -54,21 +50,6 @@ const containerStyle: React.CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   backgroundColor: '#ffffff',
-};
-
-const headerStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  padding: '8px 12px',
-  backgroundColor: '#f1f5f9',
-  borderBottom: '1px solid #e2e8f0',
-  fontSize: '0.85rem',
-  color: '#475569',
-};
-
-const activeStyle: React.CSSProperties = {
-  color: '#2563eb',
-  fontWeight: 600,
 };
 
 const contentStyle: React.CSSProperties = {

@@ -26,32 +26,50 @@ interface LeftPanelProps {
 const LeftPanelTabBar: React.FC<{
   activeTab: 'code' | 'flowchart';
   onSelectTab: (tab: 'code' | 'flowchart') => void;
-}> = ({ activeTab, onSelectTab }) => (
-  <div style={tabContainerStyle} role="tablist" aria-label="表示モード切り替え">
-    <button
-      id="tab-code"
-      data-testid="tab-code"
-      role="tab"
-      aria-selected={activeTab === 'code'}
-      aria-controls="panel-code"
-      onClick={() => onSelectTab('code')}
-      style={activeTab === 'code' ? activeTabStyle : tabStyle}
-    >
-      コード
-    </button>
-    <button
-      id="tab-flowchart"
-      data-testid="tab-flowchart"
-      role="tab"
-      aria-selected={activeTab === 'flowchart'}
-      aria-controls="flowchart-viewer"
-      onClick={() => onSelectTab('flowchart')}
-      style={activeTab === 'flowchart' ? activeTabStyle : tabStyle}
-    >
-      流れ図
-    </button>
-  </div>
-);
+  activeLine?: number;
+  executionStatus?: 'not_started' | 'running' | 'ended';
+}> = ({ activeTab, onSelectTab, activeLine, executionStatus }) => {
+  let badgeText = '実行行: (未実行)';
+  if (executionStatus === 'ended') {
+    badgeText = '実行行: (実行終了)';
+  } else if (executionStatus === 'running' || (activeLine !== undefined && activeLine > 0)) {
+    badgeText = `実行行: Line ${activeLine}`;
+  } else {
+    badgeText = '実行行: (未実行)';
+  }
+
+  return (
+    <div style={tabContainerStyle} role="tablist" aria-label="表示モード切り替え">
+      <div style={tabButtonGroupStyle}>
+        <button
+          id="tab-code"
+          data-testid="tab-code"
+          role="tab"
+          aria-selected={activeTab === 'code'}
+          aria-controls="panel-code"
+          onClick={() => onSelectTab('code')}
+          style={activeTab === 'code' ? activeTabStyle : tabStyle}
+        >
+          コード(Python)
+        </button>
+        <button
+          id="tab-flowchart"
+          data-testid="tab-flowchart"
+          role="tab"
+          aria-selected={activeTab === 'flowchart'}
+          aria-controls="flowchart-viewer"
+          onClick={() => onSelectTab('flowchart')}
+          style={activeTab === 'flowchart' ? activeTabStyle : tabStyle}
+        >
+          流れ図
+        </button>
+      </div>
+      <div style={badgeWrapperStyle}>
+        <span id="active-line-badge" data-testid="active-line-badge" style={highlightBadgeStyle}>{badgeText}</span>
+      </div>
+    </div>
+  );
+};
 
 /**
  * 左パネルコンポーネント
@@ -84,10 +102,15 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
   return (
     <div style={containerStyle}>
-      <LeftPanelTabBar activeTab={activeTab} onSelectTab={setActiveTab} />
+      <LeftPanelTabBar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        activeLine={activeLine}
+        executionStatus={executionStatus}
+      />
       <div style={contentStyle}>
         <div id="panel-code" role="tabpanel" aria-labelledby="tab-code" style={{ height: '100%', display: activeTab === 'code' ? 'block' : 'none' }}>
-          <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} executionStatus={executionStatus} />
+          <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} />
         </div>
         <div style={{ height: '100%', display: activeTab === 'flowchart' ? 'block' : 'none' }}>
           <FlowchartViewer nodes={memoizedGraph.nodes} edges={memoizedGraph.edges} activeLine={activeLine} activeNodeId={activeNodeId} code={code} />
@@ -116,8 +139,30 @@ const containerStyle: React.CSSProperties = {
 
 const tabContainerStyle: React.CSSProperties = {
   display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
   backgroundColor: '#f1f5f9',
   borderBottom: '1px solid #e2e8f0',
+  paddingRight: '12px',
+};
+
+const tabButtonGroupStyle: React.CSSProperties = {
+  display: 'flex',
+};
+
+const badgeWrapperStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+};
+
+const highlightBadgeStyle: React.CSSProperties = {
+  fontSize: '0.75rem',
+  padding: '3px 8px',
+  borderRadius: '4px',
+  backgroundColor: '#eff6ff',
+  color: '#1d4ed8',
+  border: '1px solid #bfdbfe',
+  fontWeight: 600,
 };
 
 const tabStyle: React.CSSProperties = {

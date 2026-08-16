@@ -199,7 +199,7 @@ describe('Challenger M4 Fix: Comprehensive Edge Case & Stress Verification Suite
       const tablist = screen.getByRole('tablist', { name: '表示モード切り替え' });
       expect(tablist).toBeDefined();
 
-      const codeTab = screen.getByRole('tab', { name: 'コード' });
+      const codeTab = screen.getByRole('tab', { name: 'コード(Python)' });
       const flowchartTab = screen.getByRole('tab', { name: '流れ図' });
 
       expect(codeTab.getAttribute('aria-selected')).toBe('true');

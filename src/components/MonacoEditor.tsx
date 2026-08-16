@@ -9,31 +9,7 @@ interface MonacoEditorProps {
   onChange: (value: string) => void;
   /** ハイライト表示する現在の実行行番号 (1-indexed) */
   highlightLine?: number;
-  /** 実行状態 ('not_started' | 'running' | 'ended') */
-  executionStatus?: 'not_started' | 'running' | 'ended';
 }
-
-/** エディタヘッダーサブコンポーネント */
-const EditorHeader: React.FC<{ highlightLine?: number; executionStatus?: 'not_started' | 'running' | 'ended' }> = ({
-  highlightLine,
-  executionStatus,
-}) => {
-  let badgeText = '実行行: (未実行)';
-  if (executionStatus === 'ended') {
-    badgeText = '実行行: (実行終了)';
-  } else if (executionStatus === 'running' || (highlightLine !== undefined && highlightLine > 0)) {
-    badgeText = `実行行: Line ${highlightLine}`;
-  } else {
-    badgeText = '実行行: (未実行)';
-  }
-
-  return (
-    <div style={headerInfoStyle}>
-      <span>Python ソースコードエディタ (.pyファイルドロップ可能)</span>
-      <span style={highlightBadgeStyle}>{badgeText}</span>
-    </div>
-  );
-};
 
 /** E2E テスト・フォールバック用コードビューア */
 const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number }> = ({ lines, highlightLine }) => (
@@ -56,7 +32,7 @@ const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number }> = ({ lin
  * Monaco Editor 表示コンポーネント
  * Python コード編集、実行行デコレーションハイライト、および .py ファイルドロップ機能を提供
  */
-export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, highlightLine, executionStatus }) => {
+export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, highlightLine }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
@@ -99,7 +75,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, high
 
   return (
     <div id="monaco-editor" data-testid="monaco-editor" onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }} onDrop={handleDrop} style={containerStyle}>
-      <EditorHeader highlightLine={highlightLine} executionStatus={executionStatus} />
       <div style={editorWrapperStyle}>
         <Editor
           height="100%"
@@ -149,25 +124,6 @@ const containerStyle: React.CSSProperties = {
   width: '100%',
   backgroundColor: '#ffffff',
   position: 'relative',
-};
-
-const headerInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '8px 12px',
-  backgroundColor: '#f1f5f9',
-  borderBottom: '1px solid #e2e8f0',
-  fontSize: '0.85rem',
-  color: '#475569',
-};
-
-const highlightBadgeStyle: React.CSSProperties = {
-  backgroundColor: '#fef08a',
-  color: '#854d0e',
-  padding: '2px 8px',
-  borderRadius: '4px',
-  fontWeight: 600,
 };
 
 const editorWrapperStyle: React.CSSProperties = {
