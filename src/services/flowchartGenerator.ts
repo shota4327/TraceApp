@@ -49,6 +49,20 @@ function createTerminalNode(id: string, label: string, lineNo: number, yPos: num
   };
 }
 
+/**
+ * 処理ブロックのラベル生成
+ * 代入文（例: a = 4）の場合、右辺と左辺を入れ替えて「右辺 → 左辺」（例: 4 → a）に変換
+ */
+export function formatProcessLabel(trimmed: string): string {
+  const assignMatch = trimmed.match(/^([^=<>!]+?)\s*=\s*([^=].*)$/);
+  if (assignMatch && assignMatch[1] && assignMatch[2]) {
+    const lhs = assignMatch[1].trim();
+    const rhs = assignMatch[2].trim();
+    return `${rhs} → ${lhs}`;
+  }
+  return trimmed;
+}
+
 /** 1行のコード文字列からノード種別とラベルを決定 */
 function classifyLine(trimmed: string): { type: FlowchartNodeType; label: string } {
   if (trimmed.startsWith('def ')) {
@@ -63,7 +77,7 @@ function classifyLine(trimmed: string): { type: FlowchartNodeType; label: string
   if (trimmed.startsWith('for ') || trimmed.startsWith('while ')) {
     return { type: 'loop', label: trimmed.replace(/:$/, '') };
   }
-  return { type: 'process', label: trimmed };
+  return { type: 'process', label: formatProcessLabel(trimmed) };
 }
 
 /** 1行から FlowchartNode を生成 */
