@@ -8,6 +8,7 @@ interface StepNavigationProps {
   onRun?: () => void;
   onLast?: () => void;
   isTracing?: boolean;
+  isCodeDirty?: boolean;
   zoom?: number;
   onZoomChange?: (zoom: number) => void;
 }
@@ -22,25 +23,63 @@ const NavButtons: React.FC<{
   canPrev: boolean;
   canNext: boolean;
   isTracing: boolean;
-}> = ({ onRun, onReset, onPrev, onNext, onLast, canPrev, canNext, isTracing }) => (
-  <div style={buttonGroupStyle}>
-    <button id="btn-run" data-testid="btn-run" onClick={onRun} disabled={isTracing} style={primaryButtonStyle}>
-      トレース準備
-    </button>
-    <button id="btn-reset" data-testid="btn-first" onClick={onReset} disabled={isTracing} style={buttonStyle}>
-      最初
-    </button>
-    <button id="btn-prev" data-testid="btn-prev" onClick={onPrev} disabled={!canPrev || isTracing} style={buttonStyle}>
-      前へ
-    </button>
-    <button id="btn-next" data-testid="btn-next" onClick={onNext} disabled={!canNext || isTracing} style={buttonStyle}>
-      次へ
-    </button>
-    <button id="btn-last" data-testid="btn-last" onClick={onLast} disabled={!canNext || isTracing} style={buttonStyle}>
-      最後
-    </button>
-  </div>
-);
+  isCodeDirty?: boolean;
+}> = ({ onRun, onReset, onPrev, onNext, onLast, canPrev, canNext, isTracing, isCodeDirty }) => {
+  const isRunDisabled = isTracing || !isCodeDirty;
+  const isNavDisabled = isTracing || !!isCodeDirty;
+  const isPrevDisabled = isNavDisabled || !canPrev;
+  const isNextDisabled = isNavDisabled || !canNext;
+
+  return (
+    <div style={buttonGroupStyle}>
+      <button
+        id="btn-run"
+        data-testid="btn-run"
+        onClick={onRun}
+        disabled={isRunDisabled}
+        style={isRunDisabled ? disabledRunButtonStyle : primaryButtonStyle}
+      >
+        トレース準備
+      </button>
+      <button
+        id="btn-reset"
+        data-testid="btn-first"
+        onClick={onReset}
+        disabled={isNavDisabled}
+        style={isNavDisabled ? disabledButtonStyle : buttonStyle}
+      >
+        最初
+      </button>
+      <button
+        id="btn-prev"
+        data-testid="btn-prev"
+        onClick={onPrev}
+        disabled={isPrevDisabled}
+        style={isPrevDisabled ? disabledButtonStyle : buttonStyle}
+      >
+        前へ
+      </button>
+      <button
+        id="btn-next"
+        data-testid="btn-next"
+        onClick={onNext}
+        disabled={isNextDisabled}
+        style={isNextDisabled ? disabledButtonStyle : buttonStyle}
+      >
+        次へ
+      </button>
+      <button
+        id="btn-last"
+        data-testid="btn-last"
+        onClick={onLast}
+        disabled={isNextDisabled}
+        style={isNextDisabled ? disabledButtonStyle : buttonStyle}
+      >
+        最後
+      </button>
+    </div>
+  );
+};
 
 /** ズームスライダーサブコンポーネント */
 const ZoomSlider: React.FC<{
@@ -79,6 +118,7 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
   onRun,
   onLast,
   isTracing = false,
+  isCodeDirty = false,
   zoom = 100,
   onZoomChange,
 }) => {
@@ -96,6 +136,7 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
         canPrev={currentStep > 0}
         canNext={totalSteps > 0 && currentStep < maxStep}
         isTracing={isTracing}
+        isCodeDirty={isCodeDirty}
       />
       {onZoomChange && <ZoomSlider zoom={zoom} onZoomChange={onZoomChange} />}
     </div>
@@ -117,22 +158,52 @@ const buttonGroupStyle: React.CSSProperties = {
   gap: '8px',
 };
 
-const buttonStyle: React.CSSProperties = {
+const baseButtonStyle: React.CSSProperties = {
   padding: '6px 14px',
   borderRadius: '4px',
-  border: '1px solid #cbd5e1',
-  backgroundColor: '#ffffff',
-  color: '#334155',
+  borderWidth: '1px',
+  borderStyle: 'solid',
   fontSize: '0.875rem',
+  fontWeight: 500,
+  transition: 'all 0.15s ease',
+  boxSizing: 'border-box',
+};
+
+const buttonStyle: React.CSSProperties = {
+  ...baseButtonStyle,
+  borderColor: '#cbd5e1',
+  backgroundColor: '#ffffff',
+  color: '#1e293b',
   cursor: 'pointer',
+  opacity: 1,
+};
+
+const disabledButtonStyle: React.CSSProperties = {
+  ...baseButtonStyle,
+  borderColor: '#e2e8f0',
+  backgroundColor: '#f8fafc',
+  color: '#94a3b8',
+  cursor: 'not-allowed',
+  opacity: 0.5,
 };
 
 const primaryButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
+  ...baseButtonStyle,
+  borderColor: '#2563eb',
   backgroundColor: '#2563eb',
   color: '#ffffff',
-  borderColor: '#2563eb',
   fontWeight: 600,
+  cursor: 'pointer',
+  opacity: 1,
+};
+
+const disabledRunButtonStyle: React.CSSProperties = {
+  ...baseButtonStyle,
+  borderColor: '#e2e8f0',
+  backgroundColor: '#f1f5f9',
+  color: '#94a3b8',
+  cursor: 'not-allowed',
+  opacity: 0.6,
 };
 
 const sliderContainerStyle: React.CSSProperties = {

@@ -26,6 +26,7 @@ const LoadingOverlay: React.FC = () => (
 export const App: React.FC = () => {
   const [selectedSampleId, setSelectedSampleId] = useState<string>(DEFAULT_SAMPLE.id);
   const [code, setCode] = useState<string>(DEFAULT_SAMPLE.code);
+  const [lastTracedCode, setLastTracedCode] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [snapshots, setSnapshots] = useState<StepSnapshot[]>([]);
   const [flowchartNodes, setFlowchartNodes] = useState<FlowchartNode[]>([]);
@@ -59,6 +60,7 @@ export const App: React.FC = () => {
           setFlowchartNodes(graph.nodes);
           setFlowchartEdges(graph.edges);
         }
+        setLastTracedCode(targetCode);
         setCurrentStep(0);
         setStatusText(result.truncated ? `警告: ${result.error || 'ステップ数上限を超過しました。'}` : '準備完了 (ready)');
       } catch (err: unknown) {
@@ -96,12 +98,15 @@ export const App: React.FC = () => {
     if (!isInitializing) runTrace(newCode);
   };
 
+  const isCodeDirty = !isInitializing && !initError && lastTracedCode !== '' && code !== lastTracedCode;
+
   // 実行状態の計算:
+  // isCodeDirty === true: コード変更未準備（Line 0, 開始ノード）
   // currentStep === 0: 未実行状態（Line 0, 開始ノード, 変数履歴なし）
   // currentStep === snapshots.length - 1 (かつ snapshots.length > 1): 全行実行終了（ハイライトなし, 終了ノード）
   // 1 <= currentStep < snapshots.length - 1: ステップ実行中（直前の行を実行した結果）
-  const isEnded = snapshots.length > 1 && currentStep === snapshots.length - 1;
-  const isNotStarted = currentStep === 0;
+  const isEnded = !isCodeDirty && snapshots.length > 1 && currentStep === snapshots.length - 1;
+  const isNotStarted = isCodeDirty || currentStep === 0;
   const executionStatus: 'not_started' | 'running' | 'ended' = isNotStarted
     ? 'not_started'
     : isEnded
@@ -114,19 +119,32 @@ export const App: React.FC = () => {
     : isEnded
     ? 'node-end'
     : (snapshots[currentStep - 1]?.astNodeId ?? 'node-start');
-  const activeSnapshot = snapshots[currentStep];
+  const activeSnapshot = isCodeDirty ? undefined : snapshots[currentStep];
+
+  let displayStatusText = statusText;
+  if (isInitializing) {
+    displayStatusText = 'Pyodide初期化中...';
+  } else if (initError) {
+    displayStatusText = `Pyodide初期化エラー: ${initError}`;
+  } else if (isTracing) {
+    displayStatusText = 'トレース実行中...';
+  } else if (isCodeDirty) {
+    displayStatusText = 'コードが変更されました (not ready)';
+  } else if (statusText === 'トレース実行中...' || statusText === 'Pyodide初期化中...') {
+    displayStatusText = '準備完了 (ready)';
+  }
 
   return (
     <div style={appContainerStyle}>
       {isInitializing && <LoadingOverlay />}
-      <Header selectedSampleId={selectedSampleId} onSelectSample={handleSelectSample} onFileUpload={handleFileUpload} statusText={statusText} />
+      <Header selectedSampleId={selectedSampleId} onSelectSample={handleSelectSample} onFileUpload={handleFileUpload} statusText={displayStatusText} />
       <main ref={mainContainerRef} style={{ ...mainContentStyle, userSelect: isDragging ? 'none' : 'auto' }}>
         <div style={{ ...leftPanelWrapperStyle, flex: `0 0 ${leftPercent}`, width: leftPercent }}>
           <LeftPanel
             code={code}
             onChangeCode={setCode}
-            currentStep={currentStep}
-            totalSteps={snapshots.length}
+            currentStep={isCodeDirty ? 0 : currentStep}
+            totalSteps={isCodeDirty ? 0 : snapshots.length}
             onStepChange={setCurrentStep}
             onReset={() => setCurrentStep(0)}
             onRun={() => runTrace(code)}
@@ -136,6 +154,7 @@ export const App: React.FC = () => {
             flowchartNodes={flowchartNodes}
             flowchartEdges={flowchartEdges}
             isTracing={isTracing || isInitializing}
+            isCodeDirty={isCodeDirty}
             executionStatus={executionStatus}
           />
         </div>

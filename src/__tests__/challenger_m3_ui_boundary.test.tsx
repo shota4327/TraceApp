@@ -129,6 +129,63 @@ describe('Challenger M3 UI Edge Cases & Boundary Verification', () => {
       expect(prevBtn.disabled).toBe(false);
       expect(nextBtn.disabled).toBe(true);
     });
+
+    it('2.3. isCodeDirty = true の場合、「トレース準備」ボタンが有効化され、ステップナビゲーション（最初・前へ・次へ・最後）が無効化されること', () => {
+      const onStepChange = vi.fn();
+      const onReset = vi.fn();
+      const onRun = vi.fn();
+      const onLast = vi.fn();
+
+      render(
+        <StepNavigation
+          currentStep={2}
+          totalSteps={5}
+          onStepChange={onStepChange}
+          onReset={onReset}
+          onRun={onRun}
+          onLast={onLast}
+          isCodeDirty={true}
+        />
+      );
+
+      const runBtn = screen.getByRole('button', { name: /トレース準備/i }) as HTMLButtonElement;
+      const firstBtn = screen.getByRole('button', { name: /最初/i }) as HTMLButtonElement;
+      const prevBtn = screen.getByRole('button', { name: /前へ/i }) as HTMLButtonElement;
+      const nextBtn = screen.getByRole('button', { name: /次へ/i }) as HTMLButtonElement;
+      const lastBtn = screen.getByRole('button', { name: /最後/i }) as HTMLButtonElement;
+
+      expect(runBtn.disabled).toBe(false);
+      expect(firstBtn.disabled).toBe(true);
+      expect(prevBtn.disabled).toBe(true);
+      expect(nextBtn.disabled).toBe(true);
+      expect(lastBtn.disabled).toBe(true);
+    });
+
+    it('2.4. isCodeDirty = false の場合、「トレース準備」ボタンが無効化され、ステップナビゲーションが通常動作すること', () => {
+      render(
+        <StepNavigation
+          currentStep={2}
+          totalSteps={5}
+          onStepChange={vi.fn()}
+          onReset={vi.fn()}
+          onRun={vi.fn()}
+          onLast={vi.fn()}
+          isCodeDirty={false}
+        />
+      );
+
+      const runBtn = screen.getByRole('button', { name: /トレース準備/i }) as HTMLButtonElement;
+      const firstBtn = screen.getByRole('button', { name: /最初/i }) as HTMLButtonElement;
+      const prevBtn = screen.getByRole('button', { name: /前へ/i }) as HTMLButtonElement;
+      const nextBtn = screen.getByRole('button', { name: /次へ/i }) as HTMLButtonElement;
+      const lastBtn = screen.getByRole('button', { name: /最後/i }) as HTMLButtonElement;
+
+      expect(runBtn.disabled).toBe(true);
+      expect(firstBtn.disabled).toBe(false);
+      expect(prevBtn.disabled).toBe(false);
+      expect(nextBtn.disabled).toBe(false);
+      expect(lastBtn.disabled).toBe(false);
+    });
   });
 
   describe('3. OutputConsole 境界値テスト', () => {

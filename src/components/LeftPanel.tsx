@@ -19,6 +19,7 @@ interface LeftPanelProps {
   flowchartNodes?: FlowchartNode[];
   flowchartEdges?: FlowchartEdge[];
   isTracing?: boolean;
+  isCodeDirty?: boolean;
   executionStatus?: 'not_started' | 'running' | 'ended';
 }
 
@@ -27,9 +28,12 @@ const TabBarStepControl: React.FC<{
   currentStep: number;
   totalSteps: number;
   isTracing: boolean;
+  isCodeDirty?: boolean;
   onStepChange: (step: number) => void;
-}> = ({ currentStep, totalSteps, isTracing, onStepChange }) => {
+}> = ({ currentStep, totalSteps, isTracing, isCodeDirty, onStepChange }) => {
   const maxStep = Math.max(0, totalSteps - 1);
+  const isSliderDisabled = totalSteps <= 0 || isTracing || !!isCodeDirty;
+
   return (
     <div style={stepControlWrapperStyle}>
       <span id="step-counter" data-testid="step-counter" style={stepCounterStyle}>
@@ -43,8 +47,8 @@ const TabBarStepControl: React.FC<{
         max={maxStep}
         value={currentStep}
         onChange={(e) => onStepChange(Number(e.target.value))}
-        disabled={totalSteps <= 0 || isTracing}
-        style={stepSliderStyle}
+        disabled={isSliderDisabled}
+        style={isSliderDisabled ? disabledStepSliderStyle : stepSliderStyle}
         aria-label="ステップ進行スライダー"
       />
     </div>
@@ -61,6 +65,7 @@ const LeftPanelTabBar: React.FC<{
   totalSteps: number;
   onStepChange: (step: number) => void;
   isTracing: boolean;
+  isCodeDirty?: boolean;
 }> = ({
   activeTab,
   onSelectTab,
@@ -70,6 +75,7 @@ const LeftPanelTabBar: React.FC<{
   totalSteps,
   onStepChange,
   isTracing,
+  isCodeDirty,
 }) => {
   let badgeText = '実行行: (未実行)';
   if (executionStatus === 'ended') {
@@ -109,6 +115,7 @@ const LeftPanelTabBar: React.FC<{
           currentStep={currentStep}
           totalSteps={totalSteps}
           isTracing={isTracing}
+          isCodeDirty={isCodeDirty}
           onStepChange={onStepChange}
         />
         <span id="active-line-badge" data-testid="active-line-badge" style={highlightBadgeStyle}>
@@ -137,6 +144,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   flowchartNodes,
   flowchartEdges,
   isTracing = false,
+  isCodeDirty = false,
   executionStatus,
 }) => {
   const [activeTab, setActiveTab] = useState<'code' | 'flowchart'>('code');
@@ -160,6 +168,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         totalSteps={totalSteps}
         onStepChange={onStepChange}
         isTracing={isTracing}
+        isCodeDirty={isCodeDirty}
       />
       <div style={contentStyle}>
         <div id="panel-code" role="tabpanel" aria-labelledby="tab-code" style={{ height: '100%', display: activeTab === 'code' ? 'block' : 'none' }}>
@@ -177,6 +186,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         onRun={onRun}
         onLast={onLast}
         isTracing={isTracing}
+        isCodeDirty={isCodeDirty}
         zoom={zoom}
         onZoomChange={setZoom}
       />
@@ -237,6 +247,13 @@ const stepSliderStyle: React.CSSProperties = {
   width: '100px',
   cursor: 'pointer',
   flexShrink: 0,
+  opacity: 1,
+};
+
+const disabledStepSliderStyle: React.CSSProperties = {
+  ...stepSliderStyle,
+  cursor: 'not-allowed',
+  opacity: 0.35,
 };
 
 const highlightBadgeStyle: React.CSSProperties = {
