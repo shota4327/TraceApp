@@ -180,7 +180,7 @@ export function renderNodeShape(
     'aria-label': `ノード ${node.label} (${node.type})`,
   };
   const textElement = (
-    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill={isActive ? '#1e293b' : '#334155'} fontSize={13} fontWeight={isActive ? 700 : 500} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill={isActive ? '#1e293b' : '#334155'} fontSize={18} fontWeight={isActive ? 700 : 500} style={{ pointerEvents: 'none', userSelect: 'none' }}>
       {labelText}
     </text>
   );
@@ -476,7 +476,7 @@ function renderFalseEdgeElement(
     return (
       <g key={id} className="flowchart-edge edge-false edge-no">
         <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} />
-        <text x={startX + 8} y={startY - 8} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>No</text>
+        <text x={startX + 8} y={startY - 8} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>No</text>
       </g>
     );
   }
@@ -491,7 +491,7 @@ function renderFalseEdgeElement(
   return (
     <g key={id} className="flowchart-edge edge-false edge-no">
       <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} markerEnd={isActive ? 'url(#arrowhead-active)' : 'url(#arrowhead-false)'} />
-      <text x={startX + 8} y={startY - 8} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>No</text>
+      <text x={startX + 8} y={startY - 8} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>No</text>
     </g>
   );
 }
@@ -556,7 +556,7 @@ function renderSingleEdge(
   return (
     <g key={edge.id} className={`flowchart-edge ${isYes ? 'edge-true edge-yes' : 'edge-next'}`}>
       <line x1={startX} y1={startY} x2={tgt.x + tgt.w / 2} y2={tgt.y} stroke={stroke} strokeWidth={isActive ? 3 : 2} />
-      {isYes && <text x={startX + 8} y={startY + 10} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={11} fontWeight={600}>Yes</text>}
+      {isYes && <text x={startX + 8} y={startY + 10} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>Yes</text>}
     </g>
   );
 }
