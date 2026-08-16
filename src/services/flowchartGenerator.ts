@@ -123,14 +123,14 @@ function replaceMathOperators(expr: string): string {
 }
 
 /** while文のラベル整形 */
-function formatWhileLabel(trimmed: string): string {
+function formatWhileLabel(trimmed: string, loopTitle = 'ループ'): string {
   const cond = trimmed.replace(/^while\s+/, '').replace(/:$/, '').trim();
   const mathCond = replaceMathOperators(cond);
-  return `ループ\n${mathCond}の間`;
+  return `${loopTitle}\n${mathCond}の間`;
 }
 
 /** for文のrange引数解析とラベル整形 */
-function formatForRange(varName: string, rangeContent: string): string {
+function formatForRange(varName: string, rangeContent: string, loopTitle = 'ループ'): string {
   const args = rangeContent.split(',').map((s) => s.trim()).filter(Boolean);
   const startStr = args.length >= 2 ? args[0]! : '0';
   const stopStr = args.length === 1 ? args[0]! : (args[1] || '0');
@@ -143,42 +143,47 @@ function formatForRange(varName: string, rangeContent: string): string {
     if (!isNaN(stepNum) && stepNum < 0) {
       const actualEnd = stopNum + 1;
       const absStep = Math.abs(stepNum);
-      return `ループ\n${varName}は${startStr}から${absStep}ずつ減らして${varName}≧${actualEnd}の間`;
+      return `${loopTitle}\n${varName}は${startStr}から${absStep}ずつ減らして${varName}≧${actualEnd}の間`;
     }
     const actualEnd = stopNum - 1;
     const stepVal = !isNaN(stepNum) ? stepNum : stepStr;
-    return `ループ\n${varName}は${startStr}から${stepVal}ずつ増やして${varName}≦${actualEnd}の間`;
+    return `${loopTitle}\n${varName}は${startStr}から${stepVal}ずつ増やして${varName}≦${actualEnd}の間`;
   }
-  return `ループ\n${varName}は${startStr}から${stepStr}ずつ増やして${varName}≦${stopStr}-1の間`;
+  return `${loopTitle}\n${varName}は${startStr}から${stepStr}ずつ増やして${varName}≦${stopStr}-1の間`;
 }
 
 /** for文のラベル整形 */
-function formatForLabel(trimmed: string): string {
+function formatForLabel(trimmed: string, loopTitle = 'ループ'): string {
   const forMatch = trimmed.match(/^for\s+([a-zA-Z_]\w*)\s+in\s+range\s*\(([\s\S]*)\)\s*:?$/);
   if (forMatch && forMatch[1] && forMatch[2] !== undefined) {
-    return formatForRange(forMatch[1], forMatch[2].trim());
+    return formatForRange(forMatch[1], forMatch[2].trim(), loopTitle);
   }
   const genericMatch = trimmed.match(/^for\s+([a-zA-Z_]\w*)\s+in\s+([^:]+):?$/);
   if (genericMatch && genericMatch[1] && genericMatch[2]) {
-    return `ループ\n${genericMatch[1]}を${genericMatch[2].trim()}から順に取り出す間`;
+    return `${loopTitle}\n${genericMatch[1]}を${genericMatch[2].trim()}から順に取り出す間`;
   }
   const raw = trimmed.replace(/:$/, '').trim();
-  return `ループ\n${raw}の間`;
+  return `${loopTitle}\n${raw}の間`;
 }
 
 /** ループ文（for / while）のラベル生成 */
-export function formatLoopLabel(trimmed: string): string {
+export function formatLoopLabel(trimmed: string, loopNumber?: number, totalLoops = 1): string {
+  const loopTitle = totalLoops > 1 && loopNumber !== undefined ? `ループ${loopNumber}` : 'ループ';
   if (trimmed.startsWith('while ')) {
-    return formatWhileLabel(trimmed);
+    return formatWhileLabel(trimmed, loopTitle);
   }
   if (trimmed.startsWith('for ')) {
-    return formatForLabel(trimmed);
+    return formatForLabel(trimmed, loopTitle);
   }
   return trimmed;
 }
 
 /** 1行のコード文字列からノード種別とラベルを決定 */
-function classifyLine(trimmed: string): { type: FlowchartNodeType; label: string } {
+function classifyLine(
+  trimmed: string,
+  loopNumber?: number,
+  totalLoops = 1
+): { type: FlowchartNodeType; label: string } {
   if (trimmed.startsWith('def ')) {
     return { type: 'subroutine', label: trimmed.replace(/:$/, '') };
   }
@@ -192,14 +197,20 @@ function classifyLine(trimmed: string): { type: FlowchartNodeType; label: string
     return { type: 'decision', label: 'else' };
   }
   if (trimmed.startsWith('for ') || trimmed.startsWith('while ')) {
-    return { type: 'loop', label: formatLoopLabel(trimmed) };
+    return { type: 'loop', label: formatLoopLabel(trimmed, loopNumber, totalLoops) };
   }
   return { type: 'process', label: formatProcessLabel(trimmed) };
 }
 
 /** 1行から FlowchartNode を生成 */
-function createNodeForLine(trimmed: string, lineNo: number, yPos: number): FlowchartNode {
-  const { type, label } = classifyLine(trimmed);
+function createNodeForLine(
+  trimmed: string,
+  lineNo: number,
+  yPos: number,
+  loopNumber?: number,
+  totalLoops = 1
+): FlowchartNode {
+  const { type, label } = classifyLine(trimmed, loopNumber, totalLoops);
   const id = `node-${lineNo}`;
   const xmlStyle = getMxStyleForType(type);
   const escaped = escapeXml(label);
@@ -224,6 +235,22 @@ interface ParsedLineInfo {
   indent: number;
 }
 
+/** コード内のループ行番号と通し番号 (1, 2, ...) のマップを構築 */
+export function analyzeLoopInfo(validLines: ParsedLineInfo[]): {
+  totalLoops: number;
+  loopNumberByLine: Map<number, number>;
+} {
+  const loopNumberByLine = new Map<number, number>();
+  let count = 0;
+  for (const line of validLines) {
+    if (line.text.startsWith('for ') || line.text.startsWith('while ')) {
+      count++;
+      loopNumberByLine.set(line.lineNo, count);
+    }
+  }
+  return { totalLoops: count, loopNumberByLine };
+}
+
 /** コード文字列を解析用行配列に分解 */
 function parseValidLines(code: string): ParsedLineInfo[] {
   const rawLines = code.split('\n');
@@ -239,9 +266,14 @@ function parseValidLines(code: string): ParsedLineInfo[] {
 }
 
 /** ループ終了ノードを生成 */
-function createLoopEndNode(headerId: string, yPos: number): FlowchartNode {
+function createLoopEndNode(
+  headerId: string,
+  yPos: number,
+  loopNumber?: number,
+  totalLoops = 1
+): FlowchartNode {
   const id = `node-loop-end-${headerId}`;
-  const label = 'ループ';
+  const label = totalLoops > 1 && loopNumber !== undefined ? `ループ${loopNumber}` : 'ループ';
   const xmlStyle = getMxStyleForType('loop');
   const escaped = escapeXml(label);
   const xmlSnippet = `<mxCell id="${id}" value="${escaped}" style="${xmlStyle}" vertex="1" parent="1"><mxGeometry x="100" y="${yPos}" width="180" height="50" as="geometry"/></mxCell>`;
@@ -266,6 +298,8 @@ interface BlockContext {
   mergeTargets: string[];
   bodyLastId?: string;
   isElse?: boolean;
+  loopNumber?: number;
+  totalLoops?: number;
 }
 
 /** ループブロック終了時のノードおよびエッジ生成 helper */
@@ -275,7 +309,7 @@ function processPoppedLoopBlock(
   edges: FlowchartEdge[],
   nodes: FlowchartNode[]
 ): string {
-  const loopEndNode = createLoopEndNode(popped.headerId, nodes.length * 60 + 20);
+  const loopEndNode = createLoopEndNode(popped.headerId, nodes.length * 60 + 20, popped.loopNumber, popped.totalLoops);
   nodes.push(loopEndNode);
 
   if (popped.bodyLastId) {
@@ -363,7 +397,9 @@ function processLineNodeEdge(
   lineIndent: number,
   blockStack: BlockContext[],
   edges: FlowchartEdge[],
-  inheritedMergeTargets: string[] = []
+  inheritedMergeTargets: string[] = [],
+  loopNumber?: number,
+  totalLoops = 1
 ): void {
   const nextNodeId = nextLine ? `node-${nextLine.lineNo}` : 'node-end';
   const isElse = node.label === 'else';
@@ -386,7 +422,14 @@ function processLineNodeEdge(
     if (prevNodeId !== startNodeId && !edges.some((e) => e.targetId === node.id)) {
       edges.push({ id: `edge-${prevNodeId}-${node.id}`, sourceId: prevNodeId, targetId: node.id, label: 'Next' });
     }
-    blockStack.push({ type: 'loop', headerId: node.id, indent: lineIndent, mergeTargets: [] });
+    blockStack.push({
+      type: 'loop',
+      headerId: node.id,
+      indent: lineIndent,
+      mergeTargets: [],
+      loopNumber,
+      totalLoops,
+    });
   } else {
     if (prevNodeId && !edges.some((e) => e.sourceId === prevNodeId && e.targetId === node.id) && !edges.some((e) => e.targetId === node.id && (e.label === 'True' || e.label === 'False'))) {
       edges.push({ id: `edge-${prevNodeId}-${node.id}`, sourceId: prevNodeId, targetId: node.id, label: 'Next' });
@@ -496,13 +539,15 @@ function processRegularLine(
   startNodeId: string,
   blockStack: BlockContext[],
   edges: FlowchartEdge[],
-  nodes: FlowchartNode[]
+  nodes: FlowchartNode[],
+  loopNumber?: number,
+  totalLoops = 1
 ): string {
   const { inheritedMergeTargets, lastPoppedId } = handleBlockStackUnwind(line, `node-${line.lineNo}`, blockStack, edges, nodes);
   const effectivePrevId = lastPoppedId || prevNodeId;
-  const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20);
+  const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20, loopNumber, totalLoops);
   nodes.push(node);
-  processLineNodeEdge(node, effectivePrevId, startNodeId, nextLine, line.indent, blockStack, edges, inheritedMergeTargets);
+  processLineNodeEdge(node, effectivePrevId, startNodeId, nextLine, line.indent, blockStack, edges, inheritedMergeTargets, loopNumber, totalLoops);
 
   if (blockStack.length > 0) {
     const top = blockStack[blockStack.length - 1]!;
@@ -521,6 +566,7 @@ export function generateFlowchartGraph(code: string): FlowchartGraph {
   if (!code || !code.trim()) return buildDefaultGraph();
 
   const validLines = parseValidLines(code);
+  const { totalLoops, loopNumberByLine } = analyzeLoopInfo(validLines);
   const nodes: FlowchartNode[] = [];
   const edges: FlowchartEdge[] = [];
   const startNode = createTerminalNode('node-start', '開始', 1, 20);
@@ -534,7 +580,18 @@ export function generateFlowchartGraph(code: string): FlowchartGraph {
     if (line.text.startsWith('else:')) {
       handleElseLine(line, validLines[i + 1], blockStack, edges, nodes);
     } else {
-      prevNodeId = processRegularLine(line, validLines[i + 1], prevNodeId, startNode.id, blockStack, edges, nodes);
+      const loopNumber = loopNumberByLine.get(line.lineNo);
+      prevNodeId = processRegularLine(
+        line,
+        validLines[i + 1],
+        prevNodeId,
+        startNode.id,
+        blockStack,
+        edges,
+        nodes,
+        loopNumber,
+        totalLoops
+      );
     }
   }
 

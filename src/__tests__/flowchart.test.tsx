@@ -114,28 +114,39 @@ print()`;
       expect(processNodes[5]!.label).toBe('表示');
     });
 
-    it('ループブロックのラベルが「ループ」および「条件の間」に正しく整形されること', () => {
+    it('単一ループの場合は番号なしで「ループ」および「条件の間」に整形されること', () => {
+      const singleLoopCode = `while i <= 5:
+    pass`;
+      const singleNodes = generateFlowchartNodes(singleLoopCode);
+      const singleLoopNodes = singleNodes.filter((n) => n.type === 'loop');
+      expect(singleLoopNodes[0]!.label).toBe('ループ\ni ≦ 5の間');
+      expect(singleLoopNodes[1]!.label).toBe('ループ');
+    });
+
+    it('複数ループおよびネストループの場合は上から出現順に「ループ1」「ループ2」...と番号が付与されること', () => {
       const code = `while i <= 5:
     pass
 for i in range(4):
-    pass
-for j in range(1, 10, 2):
-    pass`;
+    for j in range(1, 10, 2):
+        pass`;
       const nodes = generateFlowchartNodes(code);
       const loopNodes = nodes.filter((n) => n.type === 'loop');
 
-      // while i <= 5
-      expect(loopNodes[0]!.label).toBe('ループ\ni ≦ 5の間');
-      // while のループ終了ノード
-      expect(loopNodes[1]!.label).toBe('ループ');
+      // ループ1: while i <= 5
+      expect(loopNodes[0]!.label).toBe('ループ1\ni ≦ 5の間');
+      expect(loopNodes[1]!.label).toBe('ループ1');
 
-      // for i in range(4)
-      expect(loopNodes[2]!.label).toBe('ループ\niは0から1ずつ増やしてi≦3の間');
-      // for のループ終了ノード
-      expect(loopNodes[3]!.label).toBe('ループ');
+      // ループ2: 外側 for i in range(4) 開始
+      expect(loopNodes[2]!.label).toBe('ループ2\niは0から1ずつ増やしてi≦3の間');
 
-      // for j in range(1, 10, 2)
-      expect(loopNodes[4]!.label).toBe('ループ\njは1から2ずつ増やしてj≦9の間');
+      // ループ3: 内側 for j in range(1, 10, 2) 開始
+      expect(loopNodes[3]!.label).toBe('ループ3\njは1から2ずつ増やしてj≦9の間');
+
+      // ループ3: 内側 for 終了
+      expect(loopNodes[4]!.label).toBe('ループ3');
+
+      // ループ2: 外側 for 終了
+      expect(loopNodes[5]!.label).toBe('ループ2');
     });
   });
 
