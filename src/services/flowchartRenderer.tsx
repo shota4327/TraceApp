@@ -455,6 +455,7 @@ function populateNodeYPositions(
       if (i > 0) currentY += defaultGap;
       currentY = layoutBranchChain(i, nodes, nodeCols, nodeHeights, edges, nodeYs, currentY, decisionGap);
     } else {
+      const isPrevDecision = i > 0 && nodes[i - 1]?.type === 'decision';
       const isMerge =
         !node.id.includes('loop-end') &&
         !node.label.includes('ループ終了') &&
@@ -464,7 +465,8 @@ function populateNodeYPositions(
             !e.id.includes('loop-exit') &&
             (e.id.includes('merge') || e.id.includes('join') || (e.label === 'False' && !e.id.includes('loop')))
         );
-      if (i > 0) currentY += isMerge ? mergeGap : defaultGap;
+      const gap = isMerge ? mergeGap : isPrevDecision ? decisionGap : defaultGap;
+      if (i > 0) currentY += gap;
       nodeYs[i] = currentY;
       currentY += h;
     }
@@ -476,9 +478,9 @@ function populateNodeYPositions(
 function calculateNodeLayouts(
   nodes: FlowchartNode[],
   edges?: FlowchartEdge[],
-  defaultGap = 12,
+  defaultGap = 14,
   mergeGap = 45,
-  decisionGap = 20,
+  decisionGap = 24,
   nodeWidth = 180,
   baseNodeHeight = 50,
   colGap = 40,
@@ -642,10 +644,11 @@ function renderSingleEdge(
   const isYes = edge.label === 'True' || edge.label === 'Yes';
   const startX = src.x + src.w / 2;
   const startY = src.y + src.h;
+  const labelY = startY + (tgt.y - startY) / 2;
   return (
     <g key={edge.id} className={`flowchart-edge ${isYes ? 'edge-true edge-yes' : 'edge-next'}`}>
       <line x1={startX} y1={startY} x2={tgt.x + tgt.w / 2} y2={tgt.y} stroke={stroke} strokeWidth={isActive ? 3 : 2} />
-      {isYes && <text x={startX + 8} y={startY + 10} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>Yes</text>}
+      {isYes && <text x={startX + 8} y={labelY} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>Yes</text>}
     </g>
   );
 }

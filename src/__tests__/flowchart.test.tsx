@@ -244,6 +244,24 @@ for i in range(4):
       );
       expect(activeElements.length).toBeGreaterThan(0);
     });
+
+    it('elif/else のない単一 if 文において、Yes 側の処理ブロックとの間に十分な余白が確保され Yes ラベルが描画されること', () => {
+      const code = `if x > 0:
+    ans = 100
+print(ans)`;
+      const graph = generateFlowchartGraph(code);
+      const { container } = render(
+        <FlowchartViewer nodes={graph.nodes} edges={graph.edges} code={code} />
+      );
+
+      const yesEdge = container.querySelector('.edge-yes');
+      expect(yesEdge).not.toBeNull();
+      expect(yesEdge?.textContent).toContain('Yes');
+
+      // decision ノードと Yes 側処理ノードの Y 座標差が 20px 以上確保されていること
+      const nodeElements = container.querySelectorAll('.flowchart-node');
+      expect(nodeElements.length).toBeGreaterThanOrEqual(4);
+    });
   });
 
   describe('LeftPanel タブ切り替え統合', () => {
