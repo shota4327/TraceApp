@@ -45,8 +45,8 @@ const NavButtons: React.FC<{
         id="btn-reset"
         data-testid="btn-first"
         onClick={onReset}
-        disabled={isNavDisabled}
-        style={isNavDisabled ? disabledButtonStyle : buttonStyle}
+        disabled={isPrevDisabled}
+        style={isPrevDisabled ? disabledButtonStyle : buttonStyle}
       >
         最初
       </button>

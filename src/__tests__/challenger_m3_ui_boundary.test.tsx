@@ -90,24 +90,26 @@ describe('Challenger M3 UI Edge Cases & Boundary Verification', () => {
   });
 
   describe('2. StepNavigation 境界値テスト', () => {
-    it('2.1. totalSteps = 0 の場合、「前へ」「次へ」ボタンが無効化されること', () => {
+    it('2.1. currentStep = 0 の場合、「最初」「前へ」ボタンが無効化されること', () => {
       const onStepChange = vi.fn();
       const onReset = vi.fn();
 
       render(
         <StepNavigation
           currentStep={0}
-          totalSteps={0}
+          totalSteps={5}
           onStepChange={onStepChange}
           onReset={onReset}
         />
       );
 
+      const firstBtn = screen.getByRole('button', { name: /最初/i }) as HTMLButtonElement;
       const prevBtn = screen.getByRole('button', { name: /前へ/i }) as HTMLButtonElement;
       const nextBtn = screen.getByRole('button', { name: /次へ/i }) as HTMLButtonElement;
 
+      expect(firstBtn.disabled).toBe(true);
       expect(prevBtn.disabled).toBe(true);
-      expect(nextBtn.disabled).toBe(true);
+      expect(nextBtn.disabled).toBe(false);
     });
 
     it('2.2. 最終ステップ到達時に「次へ」ボタンが無効化され、「前へ」が有効化されること', () => {
