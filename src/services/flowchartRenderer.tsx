@@ -180,7 +180,7 @@ export function renderNodeShape(
     'aria-label': `ノード ${node.label} (${node.type})`,
   };
   const textElement = (
-    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill={isActive ? '#1e293b' : '#334155'} fontSize={18} fontWeight={isActive ? 700 : 500} style={{ pointerEvents: 'none', userSelect: 'none' }}>
+    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill={isActive ? '#1e293b' : '#334155'} fontSize={16} fontWeight={isActive ? 700 : 500} style={{ pointerEvents: 'none', userSelect: 'none' }}>
       {labelText}
     </text>
   );
