@@ -153,14 +153,14 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
     await codeInput.fill(loadedCode);
     await btnRun.click();
 
-    // ステップカウンタが / 4 に更新されるのを待機
-    await expect(stepCounter).toContainText('/ 4');
+    // ステップカウンタが / 5 に更新されるのを待機
+    await expect(stepCounter).toContainText('/ 5');
 
     // 最終ステップへジャンプ
     const btnLast = getEl(page, 'btn-last');
     await expect(btnLast).toBeEnabled();
     await btnLast.click();
-    await expect(stepCounter).toContainText('ステップ 4 / 4');
+    await expect(stepCounter).toContainText('ステップ 5 / 5');
 
     const localsTable = getEl(page, 'locals-table-body');
     const globalsTable = getEl(page, 'globals-table-body');

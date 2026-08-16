@@ -196,13 +196,13 @@ print(deep_var)`;
     await codeInput.fill(nestedCode);
     await btnRun.click();
 
-    // ステップカウンタが / 10 に更新されることを待機
-    await expect(stepCounter).toContainText('/ 10');
+    // ステップカウンタが / 11 に更新されることを待機
+    await expect(stepCounter).toContainText('/ 11');
 
     const btnLast = getEl(page, 'btn-last');
     await expect(btnLast).toBeEnabled();
     await btnLast.click();
-    await expect(stepCounter).toContainText('ステップ 10 / 10');
+    await expect(stepCounter).toContainText('ステップ 11 / 11');
 
     const localsTable = getEl(page, 'locals-table-body');
     const globalsTable = getEl(page, 'globals-table-body');

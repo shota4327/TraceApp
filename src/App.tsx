@@ -103,9 +103,9 @@ export const App: React.FC = () => {
   // 実行状態の計算:
   // isCodeDirty === true: コード変更未準備（Line 0, 開始ノード）
   // currentStep === 0: 未実行状態（Line 0, 開始ノード, 変数履歴なし）
-  // currentStep === snapshots.length - 1 (かつ snapshots.length > 1): 全行実行終了（ハイライトなし, 終了ノード）
-  // 1 <= currentStep < snapshots.length - 1: ステップ実行中（直前の行を実行した結果）
-  const isEnded = !isCodeDirty && snapshots.length > 1 && currentStep === snapshots.length - 1;
+  // currentStep === snapshots.length (かつ snapshots.length > 0): 全行実行終了（ハイライトなし, 終了ノード）
+  // 1 <= currentStep <= snapshots.length - 1: ステップ実行中（その行を実行した結果）
+  const isEnded = !isCodeDirty && snapshots.length > 0 && currentStep === snapshots.length;
   const isNotStarted = isCodeDirty || currentStep === 0;
   const executionStatus: 'not_started' | 'running' | 'ended' = isNotStarted
     ? 'not_started'
@@ -144,11 +144,11 @@ export const App: React.FC = () => {
             code={code}
             onChangeCode={setCode}
             currentStep={isCodeDirty ? 0 : currentStep}
-            totalSteps={isCodeDirty ? 0 : snapshots.length}
+            totalSteps={isCodeDirty ? 0 : snapshots.length + 1}
             onStepChange={setCurrentStep}
             onReset={() => setCurrentStep(0)}
             onRun={() => runTrace(code)}
-            onLast={() => snapshots.length > 0 && setCurrentStep(snapshots.length - 1)}
+            onLast={() => snapshots.length > 0 && setCurrentStep(snapshots.length)}
             activeLine={activeLine}
             activeNodeId={activeNodeId}
             flowchartNodes={flowchartNodes}
