@@ -237,14 +237,14 @@ const stepSliderStyle: React.CSSProperties = {
 
 const highlightBadgeStyle: React.CSSProperties = {
   fontSize: '0.75rem',
-  padding: '3px 8px',
+  padding: '3px 4px',
   borderRadius: '4px',
   backgroundColor: '#fef08a',
   color: '#854d0e',
   border: '1px solid #fde047',
   fontWeight: 600,
   whiteSpace: 'nowrap',
-  width: '130px',
+  width: '120px',
   display: 'inline-flex',
   justifyContent: 'center',
   alignItems: 'center',
