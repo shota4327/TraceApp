@@ -129,6 +129,8 @@ export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
   const { isPanning, handlePointerDown, handlePointerMove, handlePointerUp } = useFlowchartPan(containerRef);
 
   const scale = zoom / 100;
+  const svgWidth = (React.isValidElement(svgContent) ? Number(svgContent.props.width) : 0) || 300;
+  const svgHeight = (React.isValidElement(svgContent) ? Number(svgContent.props.height) : 0) || 500;
 
   return (
     <div
@@ -150,20 +152,31 @@ export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
           userSelect: isPanning ? 'none' : 'auto',
         }}
       >
-        <div
-          style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'top center',
-            transition: 'transform 0.15s ease',
-            padding: '24px 16px',
-            minWidth: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-            boxSizing: 'border-box',
-          }}
-        >
-          {svgContent}
+        <div style={scrollContentWrapperStyle}>
+          <div
+            style={{
+              width: svgWidth * scale,
+              height: svgHeight * scale,
+              position: 'relative',
+              boxSizing: 'border-box',
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+                transition: 'transform 0.15s ease',
+                width: svgWidth,
+                height: svgHeight,
+                position: 'absolute',
+                top: 0,
+                left: 0,
+              }}
+            >
+              {svgContent}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -180,11 +193,18 @@ const containerStyle: React.CSSProperties = {
 
 const contentStyle: React.CSSProperties = {
   flex: 1,
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'flex-start',
-  alignItems: 'center',
   overflow: 'auto',
   width: '100%',
   position: 'relative',
+  padding: '24px 20px',
+  boxSizing: 'border-box',
+};
+
+const scrollContentWrapperStyle: React.CSSProperties = {
+  minWidth: '100%',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'flex-start',
+  width: 'max-content',
+  boxSizing: 'border-box',
 };
