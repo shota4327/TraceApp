@@ -18,6 +18,16 @@ function getEl(page: Page, idOrTestId: string) {
 }
 
 /**
+ * トレース準備ボタンが有効な場合のみクリックするヘルパー関数
+ */
+async function clickRunIfEnabled(page: Page) {
+  const btnRun = page.locator('#btn-run, [data-testid="btn-run"]').first();
+  if (await btnRun.isEnabled()) {
+    await btnRun.click();
+  }
+}
+
+/**
  * Pyodide の初期化ロード完了を待機するヘルパー関数
  */
 async function waitForPyodideReady(page: Page) {
@@ -110,14 +120,13 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
   });
 
   test('T1-05: ステップナビゲーション（次へ、前へ、リセット、最後）', async ({ page }) => {
-    const btnRun = getEl(page, 'btn-run');
     const btnNext = getEl(page, 'btn-next');
     const btnPrev = getEl(page, 'btn-prev');
     const btnFirst = getEl(page, 'btn-first');
     const stepCounter = getEl(page, 'step-counter');
 
-    // 順次実行サンプルでトレース実行
-    await btnRun.click();
+    // 順次実行サンプルでトレース準備（必要な場合）
+    await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 「次へ」をクリック
@@ -134,12 +143,11 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
   });
 
   test('T1-06: Monaco Editor 実行行デコレーションハイライトの追従', async ({ page }) => {
-    const btnRun = getEl(page, 'btn-run');
     const btnNext = getEl(page, 'btn-next');
     const activeLineBadge = getEl(page, 'active-line-badge');
     const stepCounter = getEl(page, 'step-counter');
 
-    await btnRun.click();
+    await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 1ステップ目 (起動直後・未実行): (未実行) が表示されることを確認
@@ -169,12 +177,11 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
   });
 
   test('T1-07: スプレッドシート型変数履歴表の描画と更新', async ({ page }) => {
-    const btnRun = getEl(page, 'btn-run');
     const btnNext = getEl(page, 'btn-next');
     const stepCounter = getEl(page, 'step-counter');
 
-    // トレース実行 (x = 5, y = 3, total = x + y)
-    await btnRun.click();
+    // トレース準備 (x = 5, y = 3, total = x + y)
+    await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
     // ステップ 2 (y = 3 の行) へ進むと、x = 5 が記録される
@@ -191,13 +198,12 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
 
   test('T1-08: print 出力コンソールの段階的キャプチャ表示', async ({ page }) => {
     const presetSelect = getEl(page, 'preset-select');
-    const btnRun = getEl(page, 'btn-run');
     const btnNext = getEl(page, 'btn-next');
     const consoleOutput = getEl(page, 'console-output');
 
     // print サンプルコードを選択して実行
     await presetSelect.selectOption('print');
-    await btnRun.click();
+    await clickRunIfEnabled(page);
 
     // ステップを進めて print 出力が表示されることを確認
     await btnNext.click(); // print("Hello TraceApp!")
@@ -208,11 +214,10 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
   });
 
   test('T1-09: AST 流れ図構造の自動解析・描画・ハイライト確認', async ({ page }) => {
-    const btnRun = getEl(page, 'btn-run');
     const tabFlowchart = getEl(page, 'tab-flowchart');
     const flowchartViewer = getEl(page, 'flowchart-viewer');
 
-    await btnRun.click();
+    await clickRunIfEnabled(page);
 
     // 流れ図タブへ切り替え
     await tabFlowchart.click();

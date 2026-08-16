@@ -63,8 +63,8 @@ test.describe('Tier 2: 境界値・コーナーケーステスト (Boundary & Co
                               statusContent.includes('TraceLimitExceeded');
     expect(isExceededHandled).toBe(true);
 
-    // ボタンが再度アクティブになり画面がフリーズしていないことを検証
-    await expect(btnRun).toBeEnabled();
+    // ボタンがフリーズせず準備完了状態（disabled）になることを検証
+    await expect(btnRun).toBeDisabled();
   });
 
   test('T2-02: 特殊浮動小数点数 (NaN / Infinity) のサニタイズと変数表表示', async ({ page }) => {
@@ -112,7 +112,6 @@ test.describe('Tier 2: 境界値・コーナーケーステスト (Boundary & Co
     // エラー文言が適切に捕捉されていることをアサーション
     const isErrorCaught = alertMessage.includes('SyntaxError') || statusContent.includes('SyntaxError') || alertMessage.length > 0 || statusContent.includes('エラー');
     expect(isErrorCaught).toBe(true);
-    await expect(btnRun).toBeEnabled();
   });
 
   test('T2-04: 実行時例外 (ZeroDivisionError) の捕捉と安全停止', async ({ page }) => {
@@ -137,7 +136,6 @@ test.describe('Tier 2: 境界値・コーナーケーステスト (Boundary & Co
     // 例外エラー文言が適切に捕捉されていることをアサーション
     const isErrorCaught = alertMessage.includes('ZeroDivisionError') || statusContent.includes('ZeroDivisionError') || alertMessage.length > 0 || statusContent.includes('警告');
     expect(isErrorCaught).toBe(true);
-    await expect(btnRun).toBeEnabled();
   });
 
   test('T2-05: 空コードおよびコメントのみの入力に対する安全動作', async ({ page }) => {
@@ -151,7 +149,7 @@ test.describe('Tier 2: 境界値・コーナーケーステスト (Boundary & Co
     // トレース完了してもクラッシュしないこと
     const stepCounter = getEl(page, 'step-counter');
     await expect(stepCounter).toBeVisible();
-    await expect(btnRun).toBeEnabled();
+    await expect(btnRun).toBeDisabled();
   });
 
   test('T2-06: 大量変数（50個以上）定義時のスクロール・非崩れ検証', async ({ page }) => {

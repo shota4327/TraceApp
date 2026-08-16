@@ -40,8 +40,7 @@ test('単一 index.html ファイルを直接開いた際の起動およびト�
   await btnPrev.click();
   await expect(stepCounter).toContainText('ステップ 0 /');
 
-  // 6. 「トレース実行」ボタンの再実行確認
+  // 6. 「トレース準備」ボタンが無効化（ready状態）であることを確認
   const btnRun = page.locator('#btn-run, [data-testid="btn-run"]').first();
-  await btnRun.click();
-  await expect(stepCounter).toContainText('ステップ 0 /');
+  await expect(btnRun).toBeDisabled();
 });

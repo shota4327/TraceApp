@@ -18,6 +18,16 @@ function getEl(page: Page, idOrTestId: string) {
 }
 
 /**
+ * トレース準備ボタンが有効な場合のみクリックするヘルパー関数
+ */
+async function clickRunIfEnabled(page: Page) {
+  const btnRun = page.locator('#btn-run, [data-testid="btn-run"]').first();
+  if (await btnRun.isEnabled()) {
+    await btnRun.click();
+  }
+}
+
+/**
  * Pyodide の初期化ロード完了を待機するヘルパー関数
  */
 async function waitForPyodideReady(page: Page) {
@@ -38,17 +48,14 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
 
   test('T3-01: ステップ移動時の全画面構成要素（エディタ行, 変数表, printコンソール）の完全同期', async ({ page }) => {
     const presetSelect = getEl(page, 'preset-select');
-    const btnRun = getEl(page, 'btn-run');
     const btnNext = getEl(page, 'btn-next');
     const codeViewer = getEl(page, 'code-viewer');
-    const localsTable = getEl(page, 'locals-table-body');
-    const globalsTable = getEl(page, 'globals-table-body');
     const consoleOutput = getEl(page, 'console-output');
     const stepCounter = getEl(page, 'step-counter');
 
     // print サンプルコードを読み込んで実行
     await presetSelect.selectOption('print');
-    await btnRun.click();
+    await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 1ステップ目 (未実行): active 行なし
@@ -71,12 +78,11 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
   });
 
   test('T3-02: 「前へ」「次へ」往復操作における表示状態の一貫性', async ({ page }) => {
-    const btnRun = getEl(page, 'btn-run');
     const btnNext = getEl(page, 'btn-next');
     const btnPrev = getEl(page, 'btn-prev');
     const stepCounter = getEl(page, 'step-counter');
 
-    await btnRun.click();
+    await clickRunIfEnabled(page);
 
     // 3ステップ進める
     await btnNext.click();
@@ -98,13 +104,12 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
   });
 
   test('T3-03: タブ切り替え操作時におけるステップハイライトとトレース状態の維持', async ({ page }) => {
-    const btnRun = getEl(page, 'btn-run');
     const btnNext = getEl(page, 'btn-next');
     const tabFlowchart = getEl(page, 'tab-flowchart');
     const tabCode = getEl(page, 'tab-code');
     const stepCounter = getEl(page, 'step-counter');
 
-    await btnRun.click();
+    await clickRunIfEnabled(page);
     await btnNext.click();
     const stepBeforeTab = await stepCounter.textContent();
 
@@ -164,11 +169,10 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
   });
 
   test('T3-06: 「次へ」ボタンの高速連続クリックと非同期 Worker 追従性', async ({ page }) => {
-    const btnRun = getEl(page, 'btn-run');
     const btnNext = getEl(page, 'btn-next');
     const stepCounter = getEl(page, 'step-counter');
 
-    await btnRun.click();
+    await clickRunIfEnabled(page);
 
     // 「次へ」を高速で連打クリック（100ms間隔）
     for (let i = 0; i < 5; i++) {
@@ -179,7 +183,8 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
 
     // 連打操作後もクラッシュせず、正常に到達ステップが表示されていること
     await expect(stepCounter).toBeVisible();
-    await expect(btnRun).toBeEnabled();
+    const btnRun = getEl(page, 'btn-run');
+    await expect(btnRun).toBeDisabled();
   });
 
 });

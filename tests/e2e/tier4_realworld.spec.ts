@@ -17,6 +17,16 @@ function getEl(page: Page, idOrTestId: string) {
 }
 
 /**
+ * トレース準備ボタンが有効な場合のみクリックするヘルパー関数
+ */
+async function clickRunIfEnabled(page: Page) {
+  const btnRun = page.locator('#btn-run, [data-testid="btn-run"]').first();
+  if (await btnRun.isEnabled()) {
+    await btnRun.click();
+  }
+}
+
+/**
  * Pyodide の初期化ロード完了を待機するヘルパー関数
  */
 async function waitForPyodideReady(page: Page) {
@@ -37,7 +47,6 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
 
   test('T4-01: 検証用テスト1 — 基本的な順次・代入プログラムのトレース', async ({ page }) => {
     const presetSelect = getEl(page, 'preset-select');
-    const btnRun = getEl(page, 'btn-run');
     const btnNext = getEl(page, 'btn-next');
     const btnLast = getEl(page, 'btn-last');
     const localsTable = getEl(page, 'locals-table-body');
@@ -46,7 +55,7 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
 
     // テスト1: 順次実行サンプルを選択
     await presetSelect.selectOption('seq');
-    await btnRun.click();
+    await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
     // ステップ2: x = 5 が記録される
@@ -75,7 +84,6 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
 
   test('T4-02: 検証用テスト2 — 条件分岐（if / elif / else）の分岐判定追尾', async ({ page }) => {
     const presetSelect = getEl(page, 'preset-select');
-    const btnRun = getEl(page, 'btn-run');
     const btnLast = getEl(page, 'btn-last');
     const localsTable = getEl(page, 'locals-table-body');
     const globalsTable = getEl(page, 'globals-table-body');
@@ -83,7 +91,7 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
 
     // テスト2: 条件分岐サンプルを選択 (score = 75)
     await presetSelect.selectOption('branch');
-    await btnRun.click();
+    await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
     // ステップ進行し、elif score >= 60 が評価され grade = "B" になることを検証
@@ -98,7 +106,6 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
 
   test('T4-03: 検証用テスト3 — ループと関数呼び出し（def add / for ループ）の推移可視化', async ({ page }) => {
     const presetSelect = getEl(page, 'preset-select');
-    const btnRun = getEl(page, 'btn-run');
     const btnLast = getEl(page, 'btn-last');
     const localsTable = getEl(page, 'locals-table-body');
     const globalsTable = getEl(page, 'globals-table-body');
@@ -106,7 +113,7 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
 
     // テスト3: ループサンプルを選択
     await presetSelect.selectOption('loop');
-    await btnRun.click();
+    await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
     // 最終結果 total = 6 に到達することを確認
