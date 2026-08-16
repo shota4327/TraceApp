@@ -190,12 +190,12 @@ const metaTdStyle: React.CSSProperties = {
 
 const lineThStyle: React.CSSProperties = {
   ...metaThStyle,
-  borderRight: '3px double #94a3b8',
+  borderRight: '4px double #64748b',
 };
 
 const lineTdStyle: React.CSSProperties = {
   ...metaTdStyle,
-  borderRight: '3px double #94a3b8',
+  borderRight: '4px double #64748b',
 };
 
 const thStyle: React.CSSProperties = {
