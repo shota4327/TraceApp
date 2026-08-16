@@ -90,17 +90,21 @@ export const VariableTable: React.FC<VariableTableProps> = ({
   snapshots = [],
   currentStepIndex = 0,
 }) => {
+  const [hideUnchanged, setHideUnchanged] = React.useState(true);
   const allVarNames = extractAllVarNames(snapshots);
   // currentStepIndex < 0 の場合は未実行状態 (0件)
   const count = currentStepIndex >= 0 ? currentStepIndex + 1 : 0;
   const activeSnapshots = snapshots.slice(0, count).filter((s) => s.event !== 'end');
+  const displayedSnapshots = hideUnchanged
+    ? activeSnapshots.filter((s) => s.changedVars.length > 0)
+    : activeSnapshots;
   const currentSnapshot = activeSnapshots.length > 0 ? activeSnapshots[activeSnapshots.length - 1] : undefined;
   const currentChangedVars = currentSnapshot?.changedVars ?? [];
 
   // 各変数が最後に書き換わった最新ステップを計算
   const latestChangedStepByVar: Record<string, number> = {};
-  activeSnapshots.forEach((s, idx) => {
-    const stepNo = idx + 1;
+  activeSnapshots.forEach((s) => {
+    const stepNo = s.stepIndex + 1;
     for (const v of s.changedVars) {
       latestChangedStepByVar[v] = stepNo;
     }
@@ -108,23 +112,37 @@ export const VariableTable: React.FC<VariableTableProps> = ({
 
   return (
     <div id="variable-table" data-testid="variable-table" style={containerStyle}>
-      <div style={headerTitleStyle}>変数履歴表</div>
+      <div style={headerTitleStyle}>
+        <span>変数履歴表</span>
+        <label style={filterCheckboxLabelStyle}>
+          <input
+            id="hide-unchanged-steps-checkbox"
+            data-testid="hide-unchanged-steps-checkbox"
+            type="checkbox"
+            checked={hideUnchanged}
+            onChange={(e) => setHideUnchanged(e.target.checked)}
+            style={{ cursor: 'pointer', margin: 0 }}
+          />
+          変更のない行を非表示
+        </label>
+      </div>
       <div id="locals-table-body" data-testid="locals-table-body" style={tableWrapperStyle}>
-        {allVarNames.length === 0 || activeSnapshots.length === 0 ? (
+        {allVarNames.length === 0 || displayedSnapshots.length === 0 ? (
           <div style={emptyStyle}>表示する変数の履歴がありません</div>
         ) : (
           <table style={tableStyle}>
             <VariableTableHeader varNames={allVarNames} changedVars={currentChangedVars} />
             <tbody>
-              {activeSnapshots.map((s, idx) => {
-                const stepNo = idx + 1;
+              {displayedSnapshots.map((s) => {
+                const stepNo = s.stepIndex + 1;
+                const isCurrent = currentSnapshot?.stepIndex === s.stepIndex && currentSnapshot.changedVars.length > 0;
                 return (
                   <VariableTableRow
-                    key={stepNo}
+                    key={s.stepIndex}
                     stepNumber={stepNo}
                     snapshot={s}
                     executedLine={s.line}
-                    isCurrent={stepNo === activeSnapshots.length}
+                    isCurrent={isCurrent}
                     varNames={allVarNames}
                     currentChangedVars={currentChangedVars}
                     latestChangedStepByVar={latestChangedStepByVar}
@@ -147,6 +165,17 @@ const containerStyle: React.CSSProperties = {
   backgroundColor: '#ffffff',
 };
 
+const filterCheckboxLabelStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  color: '#64748b',
+  cursor: 'pointer',
+  userSelect: 'none',
+};
+
 const headerTitleStyle: React.CSSProperties = {
   padding: '0 12px',
   backgroundColor: '#f1f5f9',
@@ -158,6 +187,7 @@ const headerTitleStyle: React.CSSProperties = {
   minHeight: '38px',
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'space-between',
   boxSizing: 'border-box',
 };
 
