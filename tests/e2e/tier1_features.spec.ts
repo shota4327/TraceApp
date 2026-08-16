@@ -128,18 +128,20 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     // 順次実行サンプルでトレース準備（必要な場合）
     await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
+    await expect(btnFirst).toBeDisabled();
+    await expect(btnPrev).toBeDisabled();
 
     // 「次へ」をクリック
     await btnNext.click();
     await expect(stepCounter).toContainText('ステップ 1 /');
-
-    // 「前へ」をクリック
-    await btnPrev.click();
-    await expect(stepCounter).toContainText('ステップ 0 /');
+    await expect(btnFirst).toBeEnabled();
+    await expect(btnPrev).toBeEnabled();
 
     // 「最初 / リセット」をクリック
     await btnFirst.click();
     await expect(stepCounter).toContainText('ステップ 0 /');
+    await expect(btnFirst).toBeDisabled();
+    await expect(btnPrev).toBeDisabled();
   });
 
   test('T1-06: Monaco Editor 実行行デコレーションハイライトの追従', async ({ page }) => {

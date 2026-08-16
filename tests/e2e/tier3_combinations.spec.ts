@@ -137,8 +137,14 @@ test.describe('Tier 3: 複合機能・相互作用テスト (Cross-Feature Combi
     await btnRun.click();
     await expect(stepCounter).not.toHaveText('ステップ 0 / 0');
 
-    // 4. リセット（最初）ボタンを押下
+    // 4. 「次へ」でステップ進行
+    const btnNext = getEl(page, 'btn-next');
+    await btnNext.click();
+    await expect(stepCounter).toContainText('ステップ 1 /');
+
+    // 5. リセット（最初）ボタンを押下
     await btnFirst.click();
+    await expect(stepCounter).toContainText('ステップ 0 /');
 
     // カスタムコードが保持されたまま、ステップのみリセットされていることを確認
     const currentCode = await codeInput.inputValue();
