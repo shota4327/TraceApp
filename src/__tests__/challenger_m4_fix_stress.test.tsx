@@ -143,6 +143,7 @@ describe('Challenger M4 Fix: Comprehensive Edge Case & Stress Verification Suite
       const code = [
         'def add(a, b):',
         '    return a + b',
+        'reset()',
         'if x > 0:',
         '    y = 1',
         'elif x == 0:',
@@ -162,6 +163,7 @@ describe('Challenger M4 Fix: Comprehensive Edge Case & Stress Verification Suite
       expect(types).toContain('decision');
       expect(types).toContain('loop');
       expect(types).toContain('process');
+      expect(types).toContain('terminal');
     });
   });
 

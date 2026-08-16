@@ -109,7 +109,7 @@ while i < 3:
   });
 
   describe('3. 再帰関数・複数関数定義の CFG 生成 & XML/SVG 検証', () => {
-    it('再帰関数および複数関数定義に対して subroutine ノードが生成され、エスケープや特殊文字を含む場合でも XML パースが成功すること', () => {
+    it('再帰関数および複数関数定義に対して関数端子および呼び出しノードが生成され、エスケープや特殊文字を含む場合でも XML パースが成功すること', () => {
       const code = `def fib(n):
     if n <= 1:
         return n
@@ -122,8 +122,11 @@ def process_data(data):
 fib(5)`;
 
       const graph = generateFlowchartGraph(code);
+      const funcDefNodes = graph.nodes.filter((n) => n.subType === 'function-terminal');
+      expect(funcDefNodes.length).toBeGreaterThanOrEqual(2);
+
       const subNodes = graph.nodes.filter((n) => n.type === 'subroutine');
-      expect(subNodes.length).toBe(2);
+      expect(subNodes.length).toBe(1); // fib(5)
 
       // XML パース検証
       const xml = generateDrawIoXml(graph);
@@ -132,16 +135,10 @@ fib(5)`;
       const vertices = doc.querySelectorAll('mxCell[vertex="1"]');
       expect(vertices.length).toBe(graph.nodes.length);
 
-      // サブルーチンノードのスタイル検証
-      const subVertices = Array.from(vertices).filter((v) =>
-        v.getAttribute('style')?.includes('shape=process')
-      );
-      expect(subVertices.length).toBe(2);
-
       // SVG レンダリング
       const svgElement = renderFlowchartSvg(graph.nodes, { edges: graph.edges });
       render(<>{svgElement}</>);
-      expect(screen.getAllByTestId('flowchart-node-subroutine').length).toBe(2);
+      expect(screen.getAllByTestId('flowchart-node-subroutine').length).toBe(1);
     });
   });
 

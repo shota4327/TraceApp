@@ -13,12 +13,13 @@ describe('Milestone 4: AST Flowchart Generator & Renderer', () => {
     result = a + b
     return result
 
+reset()
 total = 0
 if total >= 0:
     print("positive")
 
 for i in range(1, 4):
-    total += i
+    total = add(total, i)
 `;
       const nodes = generateFlowchartNodes(code);
 
@@ -33,9 +34,16 @@ for i in range(1, 4):
       expect(types).toContain('decision');
       expect(types).toContain('loop');
 
-      const lastNode = nodes[nodes.length - 1]!;
-      expect(lastNode.type).toBe('terminal');
-      expect(lastNode.label).toBe('終了');
+      // 関数の開始端子 (def add) と終了端子 (return result) の検証
+      const defNode = nodes.find((n) => n.label.startsWith('def add'));
+      expect(defNode).toBeDefined();
+      expect(defNode?.type).toBe('terminal');
+      expect(defNode?.subType).toBe('function-terminal');
+
+      const returnNode = nodes.find((n) => n.label.startsWith('return'));
+      expect(returnNode).toBeDefined();
+      expect(returnNode?.type).toBe('terminal');
+      expect(returnNode?.subType).toBe('function-terminal');
     });
 
     it('FlowchartNode[]およびFlowchartEdge[]からValidなdraw.io mxGraph XMLを生成できること', () => {
@@ -277,6 +285,46 @@ print(total)`;
       expect(svg).not.toBeNull();
       // 単一列 (nodeWidth: 180, paddingX: 16, extraRightMargin: 16 -> totalWidth: 212)
       expect(svg?.getAttribute('width')).toBe('212');
+    });
+
+    it('関数とメイン処理が左右に独立して配置され、def/returnが緑色端子、呼び出しが緑枠線で描画されること', () => {
+      const code = `def add(a, b):
+    result = a + b
+    return result
+
+total = 0
+for i in range(1, 4):
+    total = add(total, i)
+print(total)`;
+      const graph = generateFlowchartGraph(code);
+      const { container } = render(
+        <FlowchartViewer nodes={graph.nodes} edges={graph.edges} code={code} />
+      );
+
+      // メイン処理の開始・終了端子
+      const mainStart = container.querySelector('[data-node-id="node-start"]');
+      expect(mainStart).not.toBeNull();
+
+      // 関数の開始端子 (def add)
+      const defNode = container.querySelector('[data-node-id="node-1"]');
+      expect(defNode).not.toBeNull();
+      const defRect = defNode?.querySelector('rect');
+      expect(defRect?.getAttribute('fill')).toBe('#ecfdf5');
+      expect(defRect?.getAttribute('stroke')).toBe('#059669');
+
+      // 関数の終了端子 (return result)
+      const returnNode = container.querySelector('[data-node-id="node-3"]');
+      expect(returnNode).not.toBeNull();
+      const returnRect = returnNode?.querySelector('rect');
+      expect(returnRect?.getAttribute('fill')).toBe('#ecfdf5');
+      expect(returnRect?.getAttribute('stroke')).toBe('#059669');
+
+      // 返り値あり関数呼び出しノード (total = add(total, i))
+      const callNode = container.querySelector('[data-node-id="node-7"]');
+      expect(callNode).not.toBeNull();
+      const callRect = callNode?.querySelector('rect');
+      expect(callRect?.getAttribute('stroke')).toBe('#059669');
+      expect(callRect?.getAttribute('fill')).toBe('#ffffff');
     });
   });
 

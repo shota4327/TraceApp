@@ -123,19 +123,29 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(xml).toContain('rhombus;whiteSpace=wrap;html=1');
     });
 
-    it('1.3 ループと関数プログラム: subroutine(二重線長方形) と loop(六角形) および Loop/False エッジが生成されること', () => {
+    it('1.3 ループと関数プログラム: 関数端子(def/return) と loop(六角形) および Loop/False エッジが生成されること', () => {
       const graph = generateFlowchartGraph(PROGRAM_3_LOOP_FUNC);
 
       const nodeTypes = graph.nodes.map((n) => n.type);
-      expect(nodeTypes).toContain('subroutine');
       expect(nodeTypes).toContain('loop');
       expect(nodeTypes).toContain('process');
       expect(nodeTypes).toContain('terminal');
 
-      // 関数のノード種別
-      const subNode = graph.nodes.find((n) => n.type === 'subroutine');
-      expect(subNode).toBeDefined();
-      expect(subNode!.label).toContain('def add');
+      // 関数の開始端子 (def add) と終了端子 (return result)
+      const defNode = graph.nodes.find((n) => n.label.startsWith('def add'));
+      expect(defNode).toBeDefined();
+      expect(defNode?.type).toBe('terminal');
+      expect(defNode?.subType).toBe('function-terminal');
+
+      const returnNode = graph.nodes.find((n) => n.label.startsWith('return'));
+      expect(returnNode).toBeDefined();
+      expect(returnNode?.type).toBe('terminal');
+      expect(returnNode?.subType).toBe('function-terminal');
+
+      // 返り値あり関数呼び出しノード (total = add(total, i))
+      const callNode = graph.nodes.find((n) => n.label.includes('add(total, i)'));
+      expect(callNode).toBeDefined();
+      expect(callNode?.subType).toBe('function-call-return');
 
       // ループのノード種別
       const loopNode = graph.nodes.find((n) => n.type === 'loop');
@@ -147,10 +157,8 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(edgeLabels).toContain('Loop');
       expect(edgeLabels).toContain('False');
 
-      // draw.io XML に shape=hexagon および shape=process スタイルが含まれること
       const xml = generateDrawIoXml(graph);
       expect(xml).toContain('shape=hexagon');
-      expect(xml).toContain('shape=process');
     });
   });
 
@@ -266,12 +274,16 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(edgeLabels).toContain('False');
     });
 
-    it('3.3 ループと関数プログラムから subroutine / loop ノードと Loop エッジを取得できること', () => {
+    it('3.3 ループと関数プログラムから loop ノードと関数端子および Loop エッジを取得できること', () => {
       const graph = generateFlowchartGraph(PROGRAM_3_LOOP_FUNC);
 
       const types = graph.nodes.map((n) => n.type);
-      expect(types).toContain('subroutine');
       expect(types).toContain('loop');
+      expect(types).toContain('terminal');
+      expect(types).toContain('process');
+
+      const defNode = graph.nodes.find((n) => n.label.startsWith('def add'));
+      expect(defNode?.subType).toBe('function-terminal');
 
       const edgeLabels = graph.edges.map((e) => e.label);
       expect(edgeLabels).toContain('Loop');

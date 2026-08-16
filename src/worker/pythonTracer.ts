@@ -53,7 +53,7 @@ class PyodideTracer:
         'sys', 'io', 'math', 'json', 'tracer_instance', 'exec_globals', 'compiled_code'
     }
 
-    def __init__(self, max_steps=10000):
+    def __init__(self, max_steps=10000, toplevel_def_lines=None):
         self.max_steps = max_steps
         self.step_count = 0
         self.limit_exceeded = False
@@ -63,6 +63,7 @@ class PyodideTracer:
         self.prev_locals = {}
         self.prev_func = None
         self.stdout_writer = StepStdoutWriter()
+        self.toplevel_def_lines = set(toplevel_def_lines or [])
 
     def _safe_repr(self, v):
         """
@@ -158,13 +159,21 @@ class PyodideTracer:
         func_name = frame.f_code.co_name
         is_module_call = (event == 'call' and func_name == '<module>')
 
-        if (event in ('line', 'call', 'return')) and not is_module_call:
+        # トップレベル（<module>）での初期 def 宣言行の line イベントはスキップ
+        if func_name == "<module>" and event == 'line' and frame.f_lineno in self.toplevel_def_lines:
+            return self.trace_func
+
+        # 記録対象のイベント判定
+        # - line: 各実行行
+        # - call (関数内への突入時): def 行を記録
+        # - return: return 文のない関数の暗黙リターン等
+        if (event in ('line', 'call')) and not is_module_call:
             self.step_count += 1
             if self.step_count > self.max_steps:
                 self.limit_exceeded = True
                 raise TraceLimitExceeded(f"ステップ数上限 ({self.max_steps}) を超過しました。")
 
-            line_no = frame.f_lineno
+            line_no = frame.f_code.co_firstlineno if event == 'call' else frame.f_lineno
 
             if func_name == "<module>":
                 globals_snap = self._sanitize_scope(frame.f_globals)
@@ -246,9 +255,18 @@ class PyodideTracer:
 def run_trace(code_str, max_steps=10000):
     """
     Pythonコードを sys.settrace() 付きで実行し、トレース結果の JSON 文字列を返却します。
-    （流れ図の生成は TypeScript 側の flowchartGenerator に完全一本化されています）
     """
-    tracer = PyodideTracer(max_steps=max_steps)
+    toplevel_def_lines = set()
+    try:
+        import ast
+        tree = ast.parse(code_str)
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef):
+                toplevel_def_lines.add(node.lineno)
+    except Exception:
+        pass
+
+    tracer = PyodideTracer(max_steps=max_steps, toplevel_def_lines=toplevel_def_lines)
     old_stdout = sys.stdout
     sys.stdout = tracer.stdout_writer
 

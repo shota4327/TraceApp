@@ -58,6 +58,8 @@ export interface FlowchartNode {
   children?: FlowchartNode[];
   /** ノードに関連付けられたエッジ配列 */
   edges?: FlowchartEdge[];
+  /** 関数の端子または返り値あり呼び出し等の補助種別 */
+  subType?: 'function-terminal' | 'function-call-return';
   /** draw.io mxGraph XMLスニペット */
   xmlSnippet?: string;
 }

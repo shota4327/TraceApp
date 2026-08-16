@@ -38,9 +38,12 @@ export function renderTerminalNode(
   commonProps: React.HTMLAttributes<SVGGElement>,
   textElement: React.ReactNode
 ): React.ReactNode {
+  const isFuncTerminal = node.subType === 'function-terminal' || node.label.startsWith('def ') || node.label.startsWith('return');
+  const fill = isActive ? '#dbeafe' : isFuncTerminal ? '#ecfdf5' : '#f1f5f9';
+  const stroke = isActive ? '#2563eb' : isFuncTerminal ? '#059669' : '#64748b';
   return (
     <g key={node.id} {...commonProps} className={`flowchart-node ${isActive ? 'active' : ''}`}>
-      <rect x={x} y={y} width={width} height={height} rx={22} ry={22} fill={isActive ? '#dbeafe' : '#f1f5f9'} stroke={isActive ? '#2563eb' : '#64748b'} strokeWidth={isActive ? 3 : 2} />
+      <rect x={x} y={y} width={width} height={height} rx={22} ry={22} fill={fill} stroke={stroke} strokeWidth={isActive ? 3 : 2} />
       {textElement}
     </g>
   );
@@ -57,9 +60,12 @@ export function renderProcessNode(
   commonProps: React.HTMLAttributes<SVGGElement>,
   textElement: React.ReactNode
 ): React.ReactNode {
+  const isFuncCallReturn = node.subType === 'function-call-return';
+  const fill = isActive ? '#eff6ff' : '#ffffff';
+  const stroke = isActive ? '#2563eb' : isFuncCallReturn ? '#059669' : '#3b82f6';
   return (
     <g key={node.id} {...commonProps} className={`flowchart-node ${isActive ? 'active' : ''}`}>
-      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={isActive ? '#eff6ff' : '#ffffff'} stroke={isActive ? '#2563eb' : '#3b82f6'} strokeWidth={isActive ? 3 : 2} />
+      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={fill} stroke={stroke} strokeWidth={isActive ? 3 : 2} />
       {textElement}
     </g>
   );
@@ -291,13 +297,36 @@ function renderSvgDefs(): React.ReactNode {
 
 interface NodeBox { x: number; y: number; w: number; h: number; col: number; index: number }
 
-/** 各ノードの所属カラム (0: メイン, 1: elif1/else, 2: elif2/else...) を算出 */
-function calculateNodeColumns(nodes: FlowchartNode[], edges?: FlowchartEdge[]): number[] {
-  const cols = new Array(nodes.length).fill(0);
-  if (!edges || edges.length === 0) return cols;
+/** ノード群をメイン処理と各関数ブロックに分割 */
+function partitionNodeGroups(nodes: FlowchartNode[]): FlowchartNode[][] {
+  const groups: FlowchartNode[][] = [];
+  let currentGroup: FlowchartNode[] = [];
 
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]!;
+    // node-start はメイングループの開始
+    if (node.id === 'node-start') {
+      if (currentGroup.length > 0) groups.push(currentGroup);
+      currentGroup = [node];
+    } else if (node.subType === 'function-terminal' && (node.label.startsWith('def ') || node.id.includes('def'))) {
+      // def で始まる関数開始端子は新規関数グループの開始
+      if (currentGroup.length > 0) groups.push(currentGroup);
+      currentGroup = [node];
+    } else {
+      currentGroup.push(node);
+    }
+  }
+  if (currentGroup.length > 0) groups.push(currentGroup);
+  return groups;
+}
+
+/** 単一グループ内のノード所属カラムを算出 */
+function calculateGroupColumns(groupNodes: FlowchartNode[], edges?: FlowchartEdge[]): number[] {
+  const cols = new Array(groupNodes.length).fill(0);
+  if (!edges || edges.length === 0) return cols;
+
+  for (let i = 0; i < groupNodes.length; i++) {
+    const node = groupNodes[i]!;
     if (node.id === 'node-end' || node.id.includes('loop-end') || node.label.includes('終了')) continue;
 
     // False / No エッジで入ってくるノード (elif または else)
@@ -305,9 +334,8 @@ function calculateNodeColumns(nodes: FlowchartNode[], edges?: FlowchartEdge[]): 
       (e) => e.targetId === node.id && !e.id.includes('loop-exit') && (e.label === 'False' || e.label === 'No' || e.id.includes('edge-false-'))
     );
     if (inFalse) {
-      const srcIdx = nodes.findIndex((n) => n.id === inFalse.sourceId);
+      const srcIdx = groupNodes.findIndex((n) => n.id === inFalse.sourceId);
       if (srcIdx >= 0) {
-        // True側の末尾からもこのノードに合流エッジが入っている場合は、else ではなく単一 if の合流先 (col=0)
         const isMergeTarget = edges.some(
           (e) => e.targetId === node.id && (e.id.includes('merge') || e.id.includes('join'))
         );
@@ -318,20 +346,19 @@ function calculateNodeColumns(nodes: FlowchartNode[], edges?: FlowchartEdge[]): 
     }
   }
 
-  // elif / else 配下のノードにカラムを伝播
-  for (let i = 1; i < nodes.length; i++) {
-    const node = nodes[i]!;
+  for (let i = 1; i < groupNodes.length; i++) {
+    const node = groupNodes[i]!;
     if (cols[i] === 0 && !node.label.includes('終了') && node.id !== 'node-end' && !node.id.includes('loop-end')) {
       const inTrue = edges.find((e) => e.targetId === node.id && (e.label === 'True' || e.label === 'Yes'));
       if (inTrue) {
-        const srcIdx = nodes.findIndex((n) => n.id === inTrue.sourceId);
+        const srcIdx = groupNodes.findIndex((n) => n.id === inTrue.sourceId);
         if (srcIdx >= 0 && cols[srcIdx]! > 0) cols[i] = cols[srcIdx]!;
       } else {
         const inNext = edges.find(
           (e) => e.targetId === node.id && (e.label === 'Next' || !e.label) && !e.id.includes('merge') && !e.id.includes('join')
         );
         if (inNext) {
-          const srcIdx = nodes.findIndex((n) => n.id === inNext.sourceId);
+          const srcIdx = groupNodes.findIndex((n) => n.id === inNext.sourceId);
           if (srcIdx >= 0 && cols[srcIdx]! > 0 && !edges.some((e) => e.id.includes('merge') && e.targetId === node.id)) {
             cols[i] = cols[srcIdx]!;
           }
@@ -430,9 +457,11 @@ function layoutBranchChain(
   return processY + maxProcessHeight;
 }
 
-/** 各ノードの Y 座標を順次配置 */
-function populateNodeYPositions(
-  nodes: FlowchartNode[],
+/** 単一グループのノード Y 座標を上端から順次配置 */
+function populateGroupYPositions(
+  groupNodes: FlowchartNode[],
+  groupIndices: number[],
+  allNodes: FlowchartNode[],
   nodeCols: number[],
   nodeHeights: number[],
   edges: FlowchartEdge[] | undefined,
@@ -444,18 +473,19 @@ function populateNodeYPositions(
 ): number {
   let currentY = paddingY;
 
-  for (let i = 0; i < nodes.length; i++) {
-    if (nodeYs[i] !== 0) continue;
+  for (let localIdx = 0; localIdx < groupNodes.length; localIdx++) {
+    const globalIdx = groupIndices[localIdx]!;
+    if (nodeYs[globalIdx] !== 0) continue;
 
-    const node = nodes[i]!;
-    const col = nodeCols[i]!;
-    const h = nodeHeights[i] ?? 50;
+    const node = groupNodes[localIdx]!;
+    const col = nodeCols[globalIdx]!;
+    const h = nodeHeights[globalIdx] ?? 50;
 
-    if (node.type === 'decision' && col === 0 && edges?.some((e) => e.sourceId === node.id && (e.label === 'False' || e.id.includes('edge-false-')) && nodeCols[nodes.findIndex((n) => n.id === e.targetId)]! > 0)) {
-      if (i > 0) currentY += defaultGap;
-      currentY = layoutBranchChain(i, nodes, nodeCols, nodeHeights, edges, nodeYs, currentY, decisionGap);
+    if (node.type === 'decision' && col === nodeCols[groupIndices[0]!] && edges?.some((e) => e.sourceId === node.id && (e.label === 'False' || e.id.includes('edge-false-')) && nodeCols[allNodes.findIndex((n) => n.id === e.targetId)]! > col)) {
+      if (localIdx > 0) currentY += defaultGap;
+      currentY = layoutBranchChain(globalIdx, allNodes, nodeCols, nodeHeights, edges, nodeYs, currentY, decisionGap);
     } else {
-      const isPrevDecision = i > 0 && nodes[i - 1]?.type === 'decision';
+      const isPrevDecision = localIdx > 0 && groupNodes[localIdx - 1]?.type === 'decision';
       const isMerge =
         !node.id.includes('loop-end') &&
         !node.label.includes('ループ終了') &&
@@ -466,12 +496,85 @@ function populateNodeYPositions(
             (e.id.includes('merge') || e.id.includes('join') || (e.label === 'False' && !e.id.includes('loop')))
         );
       const gap = isMerge ? mergeGap : isPrevDecision ? decisionGap : defaultGap;
-      if (i > 0) currentY += gap;
-      nodeYs[i] = currentY;
+      if (localIdx > 0) currentY += gap;
+      nodeYs[globalIdx] = currentY;
       currentY += h;
     }
   }
   return currentY;
+}
+
+/** 全ノードグループのカラムおよびY座標を順次レイアウト */
+function layoutAllNodeGroups(
+  nodes: FlowchartNode[],
+  edges: FlowchartEdge[] | undefined,
+  nodeCols: number[],
+  nodeHeights: number[],
+  nodeYs: number[],
+  paddingY: number,
+  defaultGap: number,
+  mergeGap: number,
+  decisionGap: number
+): number {
+  const groups = partitionNodeGroups(nodes);
+  let currentColOffset = 0;
+  let maxGroupHeight = paddingY;
+
+  for (const group of groups) {
+    const groupIndices = group.map((gn) => nodes.findIndex((n) => n.id === gn.id));
+    const localCols = calculateGroupColumns(group, edges);
+    for (let i = 0; i < group.length; i++) {
+      nodeCols[groupIndices[i]!] = currentColOffset + localCols[i]!;
+    }
+
+    const groupFinalY = populateGroupYPositions(
+      group,
+      groupIndices,
+      nodes,
+      nodeCols,
+      nodeHeights,
+      edges,
+      nodeYs,
+      paddingY,
+      defaultGap,
+      mergeGap,
+      decisionGap
+    );
+    maxGroupHeight = Math.max(maxGroupHeight, groupFinalY);
+    const groupMaxLocalCol = Math.max(0, ...localCols);
+    currentColOffset += groupMaxLocalCol + 1;
+  }
+  return maxGroupHeight;
+}
+
+/** 最終的な SVG 幅と高さを計算 */
+function computeLayoutDimensions(
+  nodeCols: number[],
+  nodeYs: number[],
+  nodeHeights: number[],
+  edges: FlowchartEdge[] | undefined,
+  maxGroupHeight: number,
+  nodeWidth: number,
+  baseNodeHeight: number,
+  colGap: number,
+  paddingX: number,
+  paddingY: number
+): { nodeXs: number[]; totalWidth: number; totalHeight: number } {
+  const nodeXs = nodeCols.map((col) => paddingX + col * (nodeWidth + colGap));
+  const maxCol = Math.max(0, ...nodeCols);
+  const hasBranchOrMerge = edges?.some(
+    (e) =>
+      !e.id.includes('loop-exit') &&
+      !e.id.includes('loopback') &&
+      e.label !== 'Loop' &&
+      (e.label === 'False' || e.label === 'No' || e.id.includes('merge') || e.id.includes('edge-false-'))
+  );
+  const extraRightMargin = hasBranchOrMerge ? 48 : 16;
+  const totalWidth = (maxCol + 1) * (nodeWidth + colGap) - colGap + paddingX + extraRightMargin;
+  const maxYWithHeight = Math.max(...nodeYs.map((y, idx) => y + (nodeHeights[idx] ?? baseNodeHeight)));
+  const totalHeight = Math.max(maxGroupHeight + paddingY, maxYWithHeight + paddingY);
+
+  return { nodeXs, totalWidth, totalHeight };
 }
 
 /** 各ノードの X, Y 座標と全体のサイズを算出 */
@@ -488,15 +591,14 @@ function calculateNodeLayouts(
   paddingY = 40
 ): { nodeXs: number[]; nodeYs: number[]; nodeHeights: number[]; nodeCols: number[]; totalWidth: number; totalHeight: number } {
   const nodeHeights = nodes.map((node) => calculateNodeHeight(node, baseNodeHeight));
-  const nodeCols = calculateNodeColumns(nodes, edges);
-  const nodeXs = nodeCols.map((col) => paddingX + col * (nodeWidth + colGap));
+  const nodeCols = new Array<number>(nodes.length).fill(0);
   const nodeYs = new Array<number>(nodes.length).fill(0);
 
-  const finalY = populateNodeYPositions(
+  const maxGroupHeight = layoutAllNodeGroups(
     nodes,
+    edges,
     nodeCols,
     nodeHeights,
-    edges,
     nodeYs,
     paddingY,
     defaultGap,
@@ -504,18 +606,18 @@ function calculateNodeLayouts(
     decisionGap
   );
 
-  const maxCol = Math.max(0, ...nodeCols);
-  const hasBranchOrMerge = edges?.some(
-    (e) =>
-      !e.id.includes('loop-exit') &&
-      !e.id.includes('loopback') &&
-      e.label !== 'Loop' &&
-      (e.label === 'False' || e.label === 'No' || e.id.includes('merge') || e.id.includes('edge-false-'))
+  const { nodeXs, totalWidth, totalHeight } = computeLayoutDimensions(
+    nodeCols,
+    nodeYs,
+    nodeHeights,
+    edges,
+    maxGroupHeight,
+    nodeWidth,
+    baseNodeHeight,
+    colGap,
+    paddingX,
+    paddingY
   );
-  const extraRightMargin = hasBranchOrMerge ? 48 : 16;
-  const totalWidth = (maxCol + 1) * (nodeWidth + colGap) - colGap + paddingX + extraRightMargin;
-  const maxYWithHeight = Math.max(...nodeYs.map((y, idx) => y + (nodeHeights[idx] ?? baseNodeHeight)));
-  const totalHeight = Math.max(finalY + paddingY, maxYWithHeight + paddingY);
 
   return { nodeXs, nodeYs, nodeHeights, nodeCols, totalWidth, totalHeight };
 }

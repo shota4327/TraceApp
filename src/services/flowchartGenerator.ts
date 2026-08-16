@@ -207,57 +207,6 @@ export function formatLoopLabel(trimmed: string, loopNumber?: number, totalLoops
   return trimmed;
 }
 
-/** 1行のコード文字列からノード種別とラベルを決定 */
-function classifyLine(
-  trimmed: string,
-  loopNumber?: number,
-  totalLoops = 1
-): { type: FlowchartNodeType; label: string } {
-  if (trimmed.startsWith('def ')) {
-    return { type: 'subroutine', label: trimmed.replace(/:$/, '') };
-  }
-  if (trimmed.startsWith('if ')) {
-    return { type: 'decision', label: replaceMathOperators(trimmed.replace(/^if\s+/, '').replace(/:$/, '').trim()) };
-  }
-  if (trimmed.startsWith('elif ')) {
-    return { type: 'decision', label: replaceMathOperators(trimmed.replace(/^elif\s+/, '').replace(/:$/, '').trim()) };
-  }
-  if (trimmed.startsWith('else:')) {
-    return { type: 'decision', label: 'else' };
-  }
-  if (trimmed.startsWith('for ') || trimmed.startsWith('while ')) {
-    return { type: 'loop', label: formatLoopLabel(trimmed, loopNumber, totalLoops) };
-  }
-  return { type: 'process', label: formatProcessLabel(trimmed) };
-}
-
-/** 1行から FlowchartNode を生成 */
-function createNodeForLine(
-  trimmed: string,
-  lineNo: number,
-  yPos: number,
-  loopNumber?: number,
-  totalLoops = 1
-): FlowchartNode {
-  const { type, label } = classifyLine(trimmed, loopNumber, totalLoops);
-  const id = `node-${lineNo}`;
-  const xmlStyle = getMxStyleForType(type);
-  const escaped = escapeXml(label);
-  const xmlSnippet = `<mxCell id="${id}" value="${escaped}" style="${xmlStyle}" vertex="1" parent="1"><mxGeometry x="100" y="${yPos}" width="180" height="50" as="geometry"/></mxCell>`;
-
-  return {
-    id,
-    type,
-    label,
-    lineRange: [lineNo, lineNo],
-    x: 100,
-    y: yPos,
-    width: 180,
-    height: 50,
-    xmlSnippet,
-  };
-}
-
 interface ParsedLineInfo {
   text: string;
   lineNo: number;
@@ -516,29 +465,6 @@ function handleBlockStackUnwind(
   return { inheritedMergeTargets, lastPoppedId, poppedHeaderId };
 }
 
-/** 終了端子ノードの追加と残存ブロックの合流処理 */
-function finalizeFlowchartGraph(
-  code: string,
-  nodes: FlowchartNode[],
-  edges: FlowchartEdge[],
-  blockStack: BlockContext[],
-  prevNodeId: string
-): void {
-  const endNode = createTerminalNode('node-end', '終了', code.split('\n').length, nodes.length * 60 + 20);
-
-  let lastPoppedId: string | undefined;
-  while (blockStack.length > 0) {
-    lastPoppedId = processPoppedBlock(blockStack.pop()!, endNode.id, edges, nodes);
-  }
-
-  nodes.push(endNode);
-
-  const effectivePrevId = lastPoppedId || prevNodeId;
-  if (!edges.some((e) => e.targetId === endNode.id) && effectivePrevId && effectivePrevId !== endNode.id) {
-    edges.push({ id: `edge-${effectivePrevId}-${endNode.id}`, sourceId: effectivePrevId, targetId: endNode.id, label: 'Next' });
-  }
-}
-
 /** else行の処理 helper */
 function handleElseLine(
   line: ParsedLineInfo,
@@ -560,72 +486,247 @@ function handleElseLine(
   }
 }
 
-/** 通常行のノードおよびエッジ追加 helper */
-function processRegularLine(
-  line: ParsedLineInfo,
-  nextLine: ParsedLineInfo | undefined,
-  prevNodeId: string,
-  startNodeId: string,
-  blockStack: BlockContext[],
-  edges: FlowchartEdge[],
-  nodes: FlowchartNode[],
-  loopNumber?: number,
-  totalLoops = 1
-): string {
-  const { inheritedMergeTargets, lastPoppedId } = handleBlockStackUnwind(line, `node-${line.lineNo}`, blockStack, edges, nodes);
-  const effectivePrevId = lastPoppedId || prevNodeId;
-  const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20, loopNumber, totalLoops);
-  nodes.push(node);
-  processLineNodeEdge(node, effectivePrevId, startNodeId, nextLine, line.indent, blockStack, edges, inheritedMergeTargets, loopNumber, totalLoops);
+interface FunctionBlockInfo {
+  name: string;
+  defLine: ParsedLineInfo;
+  bodyLines: ParsedLineInfo[];
+}
 
-  if (blockStack.length > 0) {
-    const top = blockStack[blockStack.length - 1]!;
-    top.bodyLastId = node.id;
-    if (top.type === 'if' && node.type !== 'decision' && !top.mergeTargets.includes(node.id)) {
-      top.mergeTargets.push(node.id);
+/** コード全体から定義されている関数ブロックとメイン行を分離 */
+function partitionCodeLines(validLines: ParsedLineInfo[]): {
+  functionBlocks: FunctionBlockInfo[];
+  mainLines: ParsedLineInfo[];
+  definedFuncNames: Set<string>;
+} {
+  const functionBlocks: FunctionBlockInfo[] = [];
+  const mainLines: ParsedLineInfo[] = [];
+  const definedFuncNames = new Set<string>();
+
+  let i = 0;
+  while (i < validLines.length) {
+    const line = validLines[i]!;
+    const defMatch = line.indent === 0 ? line.text.match(/^def\s+([a-zA-Z_]\w*)\s*\(/) : null;
+    if (defMatch) {
+      const funcName = defMatch[1]!;
+      definedFuncNames.add(funcName);
+      const bodyLines: ParsedLineInfo[] = [];
+      let j = i + 1;
+      while (j < validLines.length && validLines[j]!.indent > 0) {
+        bodyLines.push(validLines[j]!);
+        j++;
+      }
+      functionBlocks.push({ name: funcName, defLine: line, bodyLines });
+      i = j;
+    } else {
+      mainLines.push(line);
+      i++;
     }
   }
-  return node.id;
+
+  return { functionBlocks, mainLines, definedFuncNames };
+}
+
+/** 関数呼び出し（返り値なし vs 返り値あり）の判定 helper */
+function classifyFunctionCall(
+  trimmed: string,
+  definedFuncNames?: Set<string>
+): { type: FlowchartNodeType; label: string; subType?: 'function-terminal' | 'function-call-return' } | null {
+  if (definedFuncNames) {
+    for (const fn of definedFuncNames) {
+      if (new RegExp(`^${fn}\\s*\\(`).test(trimmed)) {
+        return { type: 'subroutine', label: formatProcessLabel(trimmed) };
+      }
+      if (new RegExp(`^[a-zA-Z_]\\w*\\s*=\\s*.*\\b${fn}\\s*\\(`).test(trimmed)) {
+        return { type: 'process', subType: 'function-call-return', label: formatProcessLabel(trimmed) };
+      }
+    }
+  }
+  // 未登録関数でも print 以外の単体呼び出し (例: reset(), draw(x, y))
+  const directCall = trimmed.match(/^([a-zA-Z_]\w*)\s*\([^)]*\)$/);
+  if (directCall && directCall[1] !== 'print') {
+    return { type: 'subroutine', label: formatProcessLabel(trimmed) };
+  }
+  return null;
+}
+
+/** 1行のコード文字列からノード種別とラベルを決定 */
+function classifyLine(
+  trimmed: string,
+  loopNumber?: number,
+  totalLoops = 1,
+  definedFuncNames?: Set<string>
+): { type: FlowchartNodeType; label: string; subType?: 'function-terminal' | 'function-call-return' } {
+  if (trimmed.startsWith('def ')) {
+    return { type: 'terminal', subType: 'function-terminal', label: trimmed.replace(/:$/, '') };
+  }
+  if (trimmed.startsWith('return ') || trimmed === 'return') {
+    return { type: 'terminal', subType: 'function-terminal', label: trimmed };
+  }
+  if (trimmed.startsWith('if ')) {
+    return { type: 'decision', label: replaceMathOperators(trimmed.replace(/^if\s+/, '').replace(/:$/, '').trim()) };
+  }
+  if (trimmed.startsWith('elif ')) {
+    return { type: 'decision', label: replaceMathOperators(trimmed.replace(/^elif\s+/, '').replace(/:$/, '').trim()) };
+  }
+  if (trimmed.startsWith('else:')) {
+    return { type: 'decision', label: 'else' };
+  }
+  if (trimmed.startsWith('for ') || trimmed.startsWith('while ')) {
+    return { type: 'loop', label: formatLoopLabel(trimmed, loopNumber, totalLoops) };
+  }
+  const callResult = classifyFunctionCall(trimmed, definedFuncNames);
+  if (callResult) return callResult;
+
+  return { type: 'process', label: formatProcessLabel(trimmed) };
+}
+
+/** 1行から FlowchartNode を生成 */
+function createNodeForLine(
+  trimmed: string,
+  lineNo: number,
+  yPos: number,
+  loopNumber?: number,
+  totalLoops = 1,
+  definedFuncNames?: Set<string>
+): FlowchartNode {
+  const { type, label, subType } = classifyLine(trimmed, loopNumber, totalLoops, definedFuncNames);
+  const id = `node-${lineNo}`;
+  const xmlStyle = getMxStyleForType(type);
+  const escaped = escapeXml(label);
+  const xmlSnippet = `<mxCell id="${id}" value="${escaped}" style="${xmlStyle}" vertex="1" parent="1"><mxGeometry x="100" y="${yPos}" width="180" height="50" as="geometry"/></mxCell>`;
+
+  return {
+    id,
+    type,
+    label,
+    subType,
+    lineRange: [lineNo, lineNo],
+    x: 100,
+    y: yPos,
+    width: 180,
+    height: 50,
+    xmlSnippet,
+  };
+}
+
+/** 単一の一連の行群（メインまたは関数ブロック）をグラフ化 */
+function buildLinearGraph(
+  lines: ParsedLineInfo[],
+  startNode: FlowchartNode,
+  endNode: FlowchartNode | null,
+  loopNumberByLine: Map<number, number>,
+  totalLoops: number,
+  definedFuncNames: Set<string>
+): { nodes: FlowchartNode[]; edges: FlowchartEdge[] } {
+  const nodes: FlowchartNode[] = [startNode];
+  const edges: FlowchartEdge[] = [];
+  let prevNodeId = startNode.id;
+  const blockStack: BlockContext[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (line.text.startsWith('else:')) {
+      handleElseLine(line, lines[i + 1], blockStack, edges, nodes);
+    } else {
+      const loopNumber = loopNumberByLine.get(line.lineNo);
+      const { inheritedMergeTargets, lastPoppedId } = handleBlockStackUnwind(line, `node-${line.lineNo}`, blockStack, edges, nodes);
+      const effectivePrevId = lastPoppedId || prevNodeId;
+      const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20, loopNumber, totalLoops, definedFuncNames);
+      nodes.push(node);
+      processLineNodeEdge(node, effectivePrevId, startNode.id, lines[i + 1], line.indent, blockStack, edges, inheritedMergeTargets, loopNumber, totalLoops);
+
+      if (blockStack.length > 0) {
+        const top = blockStack[blockStack.length - 1]!;
+        top.bodyLastId = node.id;
+        if (top.type === 'if' && node.type !== 'decision' && !top.mergeTargets.includes(node.id)) {
+          top.mergeTargets.push(node.id);
+        }
+      }
+      prevNodeId = node.id;
+    }
+  }
+
+  if (endNode) {
+    let lastPoppedId: string | undefined;
+    while (blockStack.length > 0) {
+      lastPoppedId = processPoppedBlock(blockStack.pop()!, endNode.id, edges, nodes);
+    }
+    nodes.push(endNode);
+    const effectivePrevId = lastPoppedId || prevNodeId;
+    if (!edges.some((e) => e.targetId === endNode.id) && effectivePrevId && effectivePrevId !== endNode.id) {
+      edges.push({ id: `edge-${effectivePrevId}-${endNode.id}`, sourceId: effectivePrevId, targetId: endNode.id, label: 'Next' });
+    }
+  }
+
+  return { nodes, edges };
+}
+
+/** 各関数ブロックのグラフを構築する helper */
+function buildFunctionGraphs(
+  functionBlocks: FunctionBlockInfo[],
+  loopNumberByLine: Map<number, number>,
+  totalLoops: number,
+  definedFuncNames: Set<string>
+): { nodes: FlowchartNode[]; edges: FlowchartEdge[] } {
+  const allNodes: FlowchartNode[] = [];
+  const allEdges: FlowchartEdge[] = [];
+
+  for (const fn of functionBlocks) {
+    const defNode = createNodeForLine(fn.defLine.text, fn.defLine.lineNo, 20, undefined, totalLoops, definedFuncNames);
+    const lastBodyLine = fn.bodyLines[fn.bodyLines.length - 1];
+    const hasReturnAtEnd = lastBodyLine && (lastBodyLine.text.startsWith('return ') || lastBodyLine.text === 'return');
+
+    let funcEndNode: FlowchartNode | null = null;
+    let bodyLinesToProcess = fn.bodyLines;
+
+    if (hasReturnAtEnd) {
+      bodyLinesToProcess = fn.bodyLines.slice(0, -1);
+      funcEndNode = createNodeForLine(lastBodyLine.text, lastBodyLine.lineNo, 80, undefined, totalLoops, definedFuncNames);
+    } else {
+      const endLineNo = lastBodyLine?.lineNo || fn.defLine.lineNo;
+      funcEndNode = {
+        id: `node-func-end-${fn.defLine.lineNo}`,
+        type: 'terminal',
+        subType: 'function-terminal',
+        label: '終了',
+        lineRange: [endLineNo, endLineNo],
+        x: 100,
+        y: 80,
+        width: 180,
+        height: 50,
+      };
+    }
+
+    const funcGraph = buildLinearGraph(bodyLinesToProcess, defNode, funcEndNode, loopNumberByLine, totalLoops, definedFuncNames);
+    allNodes.push(...funcGraph.nodes);
+    allEdges.push(...funcGraph.edges);
+  }
+
+  return { nodes: allNodes, edges: allEdges };
 }
 
 /**
  * Pythonコードから FlowchartGraph (ノード・エッジ構造) を自動生成
+ * - メイン処理: 「開始」から「終了」
+ * - 関数: 右側に独立した列として「def ...」から「return ...」（または「終了」）
  */
 export function generateFlowchartGraph(code: string): FlowchartGraph {
   if (!code || !code.trim()) return buildDefaultGraph();
 
   const validLines = parseValidLines(code);
   const { totalLoops, loopNumberByLine } = analyzeLoopInfo(validLines);
-  const nodes: FlowchartNode[] = [];
-  const edges: FlowchartEdge[] = [];
-  const startNode = createTerminalNode('node-start', '開始', 1, 20);
-  nodes.push(startNode);
+  const { functionBlocks, mainLines, definedFuncNames } = partitionCodeLines(validLines);
 
-  let prevNodeId = startNode.id;
-  const blockStack: BlockContext[] = [];
+  const mainStartNode = createTerminalNode('node-start', '開始', mainLines[0]?.lineNo || 1, 20);
+  const mainEndNode = createTerminalNode('node-end', '終了', validLines[validLines.length - 1]?.lineNo || 1, 80);
+  const mainGraph = buildLinearGraph(mainLines, mainStartNode, mainEndNode, loopNumberByLine, totalLoops, definedFuncNames);
 
-  for (let i = 0; i < validLines.length; i++) {
-    const line = validLines[i]!;
-    if (line.text.startsWith('else:')) {
-      handleElseLine(line, validLines[i + 1], blockStack, edges, nodes);
-    } else {
-      const loopNumber = loopNumberByLine.get(line.lineNo);
-      prevNodeId = processRegularLine(
-        line,
-        validLines[i + 1],
-        prevNodeId,
-        startNode.id,
-        blockStack,
-        edges,
-        nodes,
-        loopNumber,
-        totalLoops
-      );
-    }
-  }
+  const funcGraphs = buildFunctionGraphs(functionBlocks, loopNumberByLine, totalLoops, definedFuncNames);
 
-  finalizeFlowchartGraph(code, nodes, edges, blockStack, prevNodeId);
-  return { nodes, edges };
+  return {
+    nodes: [...mainGraph.nodes, ...funcGraphs.nodes],
+    edges: [...mainGraph.edges, ...funcGraphs.edges],
+  };
 }
 
 /** Pythonコードから FlowchartNode[] 配列を生成 */

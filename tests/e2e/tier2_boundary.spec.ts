@@ -183,9 +183,7 @@ test.describe('Tier 2: 境界値・コーナーケーステスト (Boundary & Co
     const btnRun = getEl(page, 'btn-run');
     const stepCounter = getEl(page, 'step-counter');
 
-    // 8重の if ネスト構造
-    const nestedCode = `
-if True:
+    const nestedCode = `if True:
     if True:
         if True:
             if True:
@@ -194,18 +192,24 @@ if True:
                         if True:
                             if True:
                                 deep_var = 99
-`;
+print(deep_var)`;
     await codeInput.fill(nestedCode);
     await btnRun.click();
-    await expect(stepCounter).toContainText('ステップ 0 /');
+
+    // ステップカウンタが / 10 に更新されることを待機
+    await expect(stepCounter).toContainText('/ 10');
 
     const btnLast = getEl(page, 'btn-last');
+    await expect(btnLast).toBeEnabled();
     await btnLast.click();
+    await expect(stepCounter).toContainText('ステップ 10 / 10');
 
     const localsTable = getEl(page, 'locals-table-body');
     const globalsTable = getEl(page, 'globals-table-body');
-    const tableText = (await localsTable.textContent()) + (await globalsTable.textContent());
-    expect(tableText).toContain('deep_var');
+    await expect(async () => {
+      const tableText = (await localsTable.textContent()) + (await globalsTable.textContent());
+      expect(tableText).toContain('deep_var');
+    }).toPass({ timeout: 5000 });
   });
 
   test('T2-08: 特殊文字・改行・HTMLタグを含む print 出力のエスケープ検証', async ({ page }) => {
