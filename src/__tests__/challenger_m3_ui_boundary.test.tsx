@@ -4,6 +4,7 @@ import { VariableTable } from '../components/VariableTable';
 import { StepNavigation } from '../components/StepNavigation';
 import { OutputConsole } from '../components/OutputConsole';
 import { MonacoEditor } from '../components/MonacoEditor';
+import { Header } from '../components/Header';
 import { StepSnapshot } from '../types/trace';
 
 describe('Challenger M3 UI Edge Cases & Boundary Verification', () => {
@@ -225,6 +226,49 @@ describe('Challenger M3 UI Edge Cases & Boundary Verification', () => {
       });
 
       expect(onChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('5. Header ステータスインジケータテスト', () => {
+    it('5.1. 「コードが変更されました」のときにオレンジ注意色のスタイルが適用されること', () => {
+      const { container } = render(
+        <Header
+          selectedSampleId="seq"
+          onSelectSample={vi.fn()}
+          onFileUpload={vi.fn()}
+          statusText="コードが変更されました (not ready)"
+        />
+      );
+
+      const statusBar = container.querySelector('#status-indicator') as HTMLElement;
+      const statusText = container.querySelector('#status-text') as HTMLElement;
+
+      expect(statusBar).not.toBeNull();
+      expect(statusBar.className).toContain('dirty');
+      expect(statusBar.style.backgroundColor).toBe('rgb(255, 247, 237)'); // #fff7ed
+      expect(statusBar.style.borderColor).toBe('rgb(249, 115, 22)'); // #f97316
+      expect(statusText.style.color).toBe('rgb(194, 65, 12)'); // #c2410c
+      expect(statusText.style.fontWeight).toBe('600');
+    });
+
+    it('5.2. 「準備完了 (ready)」のときに緑色スタイルが適用されること', () => {
+      const { container } = render(
+        <Header
+          selectedSampleId="seq"
+          onSelectSample={vi.fn()}
+          onFileUpload={vi.fn()}
+          statusText="準備完了 (ready)"
+        />
+      );
+
+      const statusBar = container.querySelector('#status-indicator') as HTMLElement;
+      const statusText = container.querySelector('#status-text') as HTMLElement;
+
+      expect(statusBar).not.toBeNull();
+      expect(statusBar.className).toContain('ready');
+      expect(statusBar.style.backgroundColor).toBe('rgb(220, 252, 231)'); // #dcfce7
+      expect(statusBar.style.borderColor).toBe('rgb(134, 239, 172)'); // #86efac
+      expect(statusText.style.color).toBe('rgb(22, 101, 52)'); // #166534
     });
   });
 });

@@ -10,22 +10,51 @@ interface HeaderProps {
 
 /** タイトルおよびステータス表示サブコンポーネント */
 const HeaderTitleGroup: React.FC<{ statusText: string }> = ({ statusText }) => {
-  const isReady = statusText.includes('準備完了') || statusText.includes('ready');
-  const isInitializing = statusText.includes('初期化中') || statusText.includes('loading');
+  const isDirty = statusText.includes('コードが変更されました') || statusText.includes('not ready');
+  const isReady = !isDirty && (statusText.includes('準備完了') || statusText.includes('ready'));
+  const isInitializing = statusText.includes('初期化中') || statusText.includes('トレース実行中') || statusText.includes('loading');
+
+  const statusBg = isDirty
+    ? '#fff7ed'
+    : isReady
+    ? '#dcfce7'
+    : isInitializing
+    ? '#fef9c3'
+    : '#fee2e2';
+
+  const statusBorder = isDirty
+    ? '#f97316'
+    : isReady
+    ? '#86efac'
+    : isInitializing
+    ? '#fde047'
+    : '#fca5a5';
+
+  const statusColor = isDirty
+    ? '#c2410c'
+    : isReady
+    ? '#166534'
+    : isInitializing
+    ? '#854d0e'
+    : '#991b1b';
+
   const dynamicStatusStyle: React.CSSProperties = {
     ...statusIndicatorStyle,
-    backgroundColor: isReady ? '#dcfce7' : isInitializing ? '#fef9c3' : '#fee2e2',
-    borderColor: isReady ? '#86efac' : isInitializing ? '#fde047' : '#fca5a5',
+    backgroundColor: statusBg,
+    borderColor: statusBorder,
   };
   const dynamicTextStyle: React.CSSProperties = {
     ...statusTextStyle,
-    color: isReady ? '#166534' : isInitializing ? '#854d0e' : '#991b1b',
+    color: statusColor,
+    fontWeight: isDirty ? 600 : 500,
   };
+
+  const statusClass = isDirty ? 'dirty not-ready' : isReady ? 'ready' : isInitializing ? 'initializing' : 'error';
 
   return (
     <div style={titleGroupStyle}>
       <h1 style={titleStyle}>PyTrace - トレース学習支援システム</h1>
-      <div id="status-indicator" data-testid="status-bar" className={`status-bar ${isReady ? 'ready' : isInitializing ? 'initializing' : 'error'}`} style={dynamicStatusStyle}>
+      <div id="status-indicator" data-testid="status-bar" className={`status-bar ${statusClass}`} style={dynamicStatusStyle}>
         <span id="status-text" data-testid="status-text" style={dynamicTextStyle}>
           {statusText}
         </span>
