@@ -506,7 +506,11 @@ function calculateNodeLayouts(
 
   const maxCol = Math.max(0, ...nodeCols);
   const hasBranchOrMerge = edges?.some(
-    (e) => e.label === 'False' || e.label === 'No' || e.id.includes('merge') || e.id.includes('edge-false-')
+    (e) =>
+      !e.id.includes('loop-exit') &&
+      !e.id.includes('loopback') &&
+      e.label !== 'Loop' &&
+      (e.label === 'False' || e.label === 'No' || e.id.includes('merge') || e.id.includes('edge-false-'))
   );
   const extraRightMargin = hasBranchOrMerge ? 48 : 16;
   const totalWidth = (maxCol + 1) * (nodeWidth + colGap) - colGap + paddingX + extraRightMargin;

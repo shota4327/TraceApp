@@ -262,6 +262,22 @@ print(ans)`;
       const nodeElements = container.querySelectorAll('.flowchart-node');
       expect(nodeElements.length).toBeGreaterThanOrEqual(4);
     });
+
+    it('ループのみのプログラムにおいて不要な右側余白が発生せず幅が左右対称（212px）になること', () => {
+      const code = `total = 0
+for i in range(3):
+    total += i
+print(total)`;
+      const graph = generateFlowchartGraph(code);
+      const { container } = render(
+        <FlowchartViewer nodes={graph.nodes} edges={graph.edges} code={code} />
+      );
+
+      const svg = container.querySelector('svg');
+      expect(svg).not.toBeNull();
+      // 単一列 (nodeWidth: 180, paddingX: 16, extraRightMargin: 16 -> totalWidth: 212)
+      expect(svg?.getAttribute('width')).toBe('212');
+    });
   });
 
   describe('LeftPanel タブ切り替え統合', () => {
