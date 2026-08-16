@@ -51,9 +51,9 @@ const VariableTableRow: React.FC<{
       }
 
       return (
-        <td key={name} style={cellStyle} title={isLocal ? `${name} (ローカル変数)` : `${name} (グローバル変数)`}>
-          {val !== undefined ? String(val) : '-'}
-          {isLocal ? <span style={localBadgeStyle}>L</span> : null}
+        <td key={name} style={cellStyle} title={isChanged ? (isLocal ? `${name} (ローカル変数)` : `${name} (グローバル変数)`) : undefined}>
+          {isChanged && val !== undefined ? String(val) : ''}
+          {isChanged && isLocal ? <span style={localBadgeStyle}>L</span> : null}
         </td>
       );
     })}
