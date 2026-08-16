@@ -140,7 +140,7 @@ const headerTitleStyle: React.CSSProperties = {
 const tableWrapperStyle: React.CSSProperties = {
   flex: 1,
   overflow: 'auto',
-  padding: '8px',
+  padding: 0,
 };
 
 const emptyStyle: React.CSSProperties = {
@@ -151,7 +151,8 @@ const emptyStyle: React.CSSProperties = {
 };
 
 const tableStyle: React.CSSProperties = {
-  width: 'auto',
+  minWidth: '100%',
+  width: 'max-content',
   borderCollapse: 'collapse',
   fontSize: '0.85rem',
   fontFamily: 'Consolas, Monaco, monospace',
