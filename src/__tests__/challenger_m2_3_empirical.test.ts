@@ -10,8 +10,8 @@ print("done")`;
 
       const graph = generateFlowchartGraph(code);
       const decisionNode = graph.nodes.find((n) => n.type === 'decision' && n.label === 'x > 0');
-      const printXNode = graph.nodes.find((n) => n.label.includes('print(x)'));
-      const printDoneNode = graph.nodes.find((n) => n.label.includes('print("done")'));
+      const printXNode = graph.nodes.find((n) => n.label.includes('xを表示'));
+      const printDoneNode = graph.nodes.find((n) => n.label.includes('"done"を表示'));
 
       expect(decisionNode).toBeDefined();
       expect(printXNode).toBeDefined();
@@ -40,7 +40,7 @@ print("done")`;
 
       const graph = generateFlowchartGraph(code);
       const decisionNode = graph.nodes.find((n) => n.type === 'decision' && n.label === 'x > 0');
-      const printXNode = graph.nodes.find((n) => n.label.includes('print(x)'));
+      const printXNode = graph.nodes.find((n) => n.label.includes('xを表示'));
       const endNode = graph.nodes.find((n) => n.type === 'terminal' && n.label === '終了');
 
       expect(decisionNode).toBeDefined();
@@ -71,9 +71,9 @@ print("done")`;
 
       const outerIf = graph.nodes.find((n) => n.label === 'x > 0');
       const innerIf = graph.nodes.find((n) => n.label === 'x > 5');
-      const printLarge = graph.nodes.find((n) => n.label.includes('print("large")'));
-      const printPositive = graph.nodes.find((n) => n.label.includes('print("positive")'));
-      const printDone = graph.nodes.find((n) => n.label.includes('print("done")'));
+      const printLarge = graph.nodes.find((n) => n.label.includes('"large"を表示'));
+      const printPositive = graph.nodes.find((n) => n.label.includes('"positive"を表示'));
+      const printDone = graph.nodes.find((n) => n.label.includes('"done"を表示'));
 
       expect(outerIf).toBeDefined();
       expect(innerIf).toBeDefined();
@@ -142,7 +142,7 @@ print(grade)`;
       const ifNode = graph.nodes.find((n) => n.label === 'score >= 80');
       const elifNode = graph.nodes.find((n) => n.label === 'score >= 60');
       const elseGradeNode = graph.nodes.find((n) => n.label.includes('grade'));
-      const printGradeNode = graph.nodes.find((n) => n.label.includes('print(grade)'));
+      const printGradeNode = graph.nodes.find((n) => n.label.includes('gradeを表示'));
 
       expect(ifNode).toBeDefined();
       expect(elifNode).toBeDefined();

@@ -95,6 +95,24 @@ print(grade)`;
       expect(falseEdge).toBeDefined();
       expect(falseEdge!.targetId).toBe('node-4');
     });
+
+    it('print文のラベルが「...を表示」「...と...を表示」に正しく変換されること', () => {
+      const code = `print(grade)
+print("数値")
+print("数値", a)
+print("x =", x, "y =", y)
+print("hello, world", count)
+print()`;
+      const nodes = generateFlowchartNodes(code);
+      const processNodes = nodes.filter((n) => n.type === 'process');
+
+      expect(processNodes[0]!.label).toBe('gradeを表示');
+      expect(processNodes[1]!.label).toBe('"数値"を表示');
+      expect(processNodes[2]!.label).toBe('"数値"とaを表示');
+      expect(processNodes[3]!.label).toBe('"x ="とxと"y ="とyを表示');
+      expect(processNodes[4]!.label).toBe('"hello, world"とcountを表示');
+      expect(processNodes[5]!.label).toBe('表示');
+    });
   });
 
   describe('flowchartRenderer & FlowchartViewer', () => {

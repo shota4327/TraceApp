@@ -84,7 +84,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(graph.nodes[3]!.label).toBe('x + y → total');
 
       expect(graph.nodes[4]!.type).toBe('process');
-      expect(graph.nodes[4]!.label).toBe('print(total)');
+      expect(graph.nodes[4]!.label).toBe('totalを表示');
 
       expect(graph.nodes[5]!.type).toBe('terminal');
       expect(graph.nodes[5]!.label).toBe('終了');

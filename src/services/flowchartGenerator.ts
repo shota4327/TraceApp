@@ -49,11 +49,61 @@ function createTerminalNode(id: string, label: string, lineNo: number, yPos: num
   };
 }
 
+/** print文の引数をクォートや括弧を考慮して分割 */
+function splitPrintArgs(argsStr: string): string[] {
+  const args: string[] = [];
+  let current = '';
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let parenDepth = 0;
+
+  for (let i = 0; i < argsStr.length; i++) {
+    const char = argsStr[i]!;
+    if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      current += char;
+    } else if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+      current += char;
+    } else if (!inSingleQuote && !inDoubleQuote) {
+      if (char === '(' || char === '[' || char === '{') {
+        parenDepth++;
+      } else if (char === ')' || char === ']' || char === '}') {
+        parenDepth--;
+      } else if (char === ',' && parenDepth === 0) {
+        if (current.trim()) args.push(current.trim());
+        current = '';
+        continue;
+      }
+      current += char;
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) args.push(current.trim());
+  return args;
+}
+
+/** print文のラベル生成（例: print("数値", a) → "数値"とaを表示） */
+export function formatPrintLabel(trimmed: string): string | null {
+  const printMatch = trimmed.match(/^print\s*\(([\s\S]*)\)$/);
+  if (!printMatch) return null;
+  const content = printMatch[1]?.trim() || '';
+  if (!content) return '表示';
+  const args = splitPrintArgs(content);
+  if (args.length === 0) return '表示';
+  return `${args.join('と')}を表示`;
+}
+
 /**
  * 処理ブロックのラベル生成
- * 代入文（例: a = 4）の場合、右辺と左辺を入れ替えて「右辺 → 左辺」（例: 4 → a）に変換
+ * 1. print文（例: print(grade)）→ 「gradeを表示」
+ * 2. 代入文（例: a = 4）→ 「4 → a」
  */
 export function formatProcessLabel(trimmed: string): string {
+  const printLabel = formatPrintLabel(trimmed);
+  if (printLabel !== null) return printLabel;
+
   const assignMatch = trimmed.match(/^([^=<>!]+?)\s*=\s*([^=].*)$/);
   if (assignMatch && assignMatch[1] && assignMatch[2]) {
     const lhs = assignMatch[1].trim();
