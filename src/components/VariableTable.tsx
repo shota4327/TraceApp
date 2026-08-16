@@ -14,7 +14,7 @@ const VariableTableHeader: React.FC<{
   <thead>
     <tr>
       <th style={metaThStyle}>Step</th>
-      <th style={metaThStyle}>Line</th>
+      <th style={lineThStyle}>Line</th>
       {varNames.map((name) => (
         <th key={name} style={changedVars.includes(name) ? thChangedColStyle : thStyle}>
           {name}
@@ -34,7 +34,7 @@ const VariableTableRow: React.FC<{
 }> = ({ snapshot, executedLine, isCurrent, varNames, currentChangedVars }) => (
   <tr style={isCurrent ? activeRowStyle : trStyle}>
     <td style={metaTdStyle}>{snapshot.stepIndex}</td>
-    <td style={metaTdStyle}>{executedLine}</td>
+    <td style={lineTdStyle}>{executedLine}</td>
     {varNames.map((name) => {
       const isLocal = snapshot.locals[name] !== undefined;
       const val = isLocal ? snapshot.locals[name] : snapshot.globals[name];
@@ -167,6 +167,16 @@ const metaTdStyle: React.CSSProperties = {
   textAlign: 'center',
   whiteSpace: 'nowrap',
   fontSize: '0.8rem',
+};
+
+const lineThStyle: React.CSSProperties = {
+  ...metaThStyle,
+  borderRight: '3px double #94a3b8',
+};
+
+const lineTdStyle: React.CSSProperties = {
+  ...metaTdStyle,
+  borderRight: '3px double #94a3b8',
 };
 
 const thStyle: React.CSSProperties = {
