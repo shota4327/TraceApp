@@ -159,9 +159,9 @@ const highlightBadgeStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   padding: '3px 8px',
   borderRadius: '4px',
-  backgroundColor: '#eff6ff',
-  color: '#1d4ed8',
-  border: '1px solid #bfdbfe',
+  backgroundColor: '#fef08a',
+  color: '#854d0e',
+  border: '1px solid #fde047',
   fontWeight: 600,
 };
 
