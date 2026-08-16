@@ -298,11 +298,11 @@ function calculateNodeColumns(nodes: FlowchartNode[], edges?: FlowchartEdge[]): 
 
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]!;
-    if (node.id === 'node-end' || node.label.includes('終了')) continue;
+    if (node.id === 'node-end' || node.id.includes('loop-end') || node.label.includes('終了')) continue;
 
     // False / No エッジで入ってくるノード (elif または else)
     const inFalse = edges.find(
-      (e) => e.targetId === node.id && (e.label === 'False' || e.label === 'No' || e.id.includes('edge-false-'))
+      (e) => e.targetId === node.id && !e.id.includes('loop-exit') && (e.label === 'False' || e.label === 'No' || e.id.includes('edge-false-'))
     );
     if (inFalse) {
       const srcIdx = nodes.findIndex((n) => n.id === inFalse.sourceId);
@@ -321,7 +321,7 @@ function calculateNodeColumns(nodes: FlowchartNode[], edges?: FlowchartEdge[]): 
   // elif / else 配下のノードにカラムを伝播
   for (let i = 1; i < nodes.length; i++) {
     const node = nodes[i]!;
-    if (cols[i] === 0 && !node.label.includes('終了') && node.id !== 'node-end') {
+    if (cols[i] === 0 && !node.label.includes('終了') && node.id !== 'node-end' && !node.id.includes('loop-end')) {
       const inTrue = edges.find((e) => e.targetId === node.id && (e.label === 'True' || e.label === 'Yes'));
       if (inTrue) {
         const srcIdx = nodes.findIndex((n) => n.id === inTrue.sourceId);
