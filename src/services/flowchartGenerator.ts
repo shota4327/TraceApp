@@ -557,7 +557,7 @@ function classifyLine(
   definedFuncNames?: Set<string>
 ): { type: FlowchartNodeType; label: string; subType?: 'function-terminal' | 'function-call-return' } {
   if (trimmed.startsWith('def ')) {
-    return { type: 'terminal', subType: 'function-terminal', label: trimmed.replace(/:$/, '') };
+    return { type: 'terminal', subType: 'function-terminal', label: trimmed.replace(/^def\s+/, '').replace(/:$/, '').trim() };
   }
   if (trimmed.startsWith('return ') || trimmed === 'return') {
     return { type: 'terminal', subType: 'function-terminal', label: trimmed };

@@ -131,9 +131,10 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(nodeTypes).toContain('process');
       expect(nodeTypes).toContain('terminal');
 
-      // 関数の開始端子 (def add) と終了端子 (return result)
-      const defNode = graph.nodes.find((n) => n.label.startsWith('def add'));
+      // 関数の開始端子 (add(a, b)) と終了端子 (return result)
+      const defNode = graph.nodes.find((n) => n.subType === 'function-terminal' && !n.label.startsWith('return') && n.label !== '終了');
       expect(defNode).toBeDefined();
+      expect(defNode?.label).toBe('add(a, b)');
       expect(defNode?.type).toBe('terminal');
       expect(defNode?.subType).toBe('function-terminal');
 
@@ -282,8 +283,9 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(types).toContain('terminal');
       expect(types).toContain('process');
 
-      const defNode = graph.nodes.find((n) => n.label.startsWith('def add'));
+      const defNode = graph.nodes.find((n) => n.subType === 'function-terminal' && !n.label.startsWith('return') && n.label !== '終了');
       expect(defNode?.subType).toBe('function-terminal');
+      expect(defNode?.label).toBe('add(a, b)');
 
       const edgeLabels = graph.edges.map((e) => e.label);
       expect(edgeLabels).toContain('Loop');

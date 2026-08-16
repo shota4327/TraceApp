@@ -308,8 +308,8 @@ function partitionNodeGroups(nodes: FlowchartNode[]): FlowchartNode[][] {
     if (node.id === 'node-start') {
       if (currentGroup.length > 0) groups.push(currentGroup);
       currentGroup = [node];
-    } else if (node.subType === 'function-terminal' && (node.label.startsWith('def ') || node.id.includes('def'))) {
-      // def で始まる関数開始端子は新規関数グループの開始
+    } else if (node.subType === 'function-terminal' && (node.id.includes('def') || (!node.label.startsWith('return') && node.label !== '終了'))) {
+      // 関数開始端子は新規関数グループの開始
       if (currentGroup.length > 0) groups.push(currentGroup);
       currentGroup = [node];
     } else {

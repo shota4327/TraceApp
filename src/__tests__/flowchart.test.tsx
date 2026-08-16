@@ -34,9 +34,10 @@ for i in range(1, 4):
       expect(types).toContain('decision');
       expect(types).toContain('loop');
 
-      // 関数の開始端子 (def add) と終了端子 (return result) の検証
-      const defNode = nodes.find((n) => n.label.startsWith('def add'));
+      // 関数の開始端子 (add(a, b)) と終了端子 (return result) の検証
+      const defNode = nodes.find((n) => n.subType === 'function-terminal' && !n.label.startsWith('return') && n.label !== '終了');
       expect(defNode).toBeDefined();
+      expect(defNode?.label).toBe('add(a, b)');
       expect(defNode?.type).toBe('terminal');
       expect(defNode?.subType).toBe('function-terminal');
 
