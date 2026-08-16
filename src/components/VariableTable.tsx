@@ -13,8 +13,8 @@ const VariableTableHeader: React.FC<{
 }> = ({ varNames, changedVars }) => (
   <thead>
     <tr>
-      <th style={thStyle}>Step</th>
-      <th style={thStyle}>Line</th>
+      <th style={metaThStyle}>Step</th>
+      <th style={metaThStyle}>Line</th>
       {varNames.map((name) => (
         <th key={name} style={changedVars.includes(name) ? thChangedColStyle : thStyle}>
           {name}
@@ -33,8 +33,8 @@ const VariableTableRow: React.FC<{
   currentChangedVars: string[];
 }> = ({ snapshot, executedLine, isCurrent, varNames, currentChangedVars }) => (
   <tr style={isCurrent ? activeRowStyle : trStyle}>
-    <td style={tdStyle}>{snapshot.stepIndex}</td>
-    <td style={tdStyle}>{executedLine}</td>
+    <td style={metaTdStyle}>{snapshot.stepIndex}</td>
+    <td style={metaTdStyle}>{executedLine}</td>
     {varNames.map((name) => {
       const isLocal = snapshot.locals[name] !== undefined;
       const val = isLocal ? snapshot.locals[name] : snapshot.globals[name];
@@ -148,13 +148,35 @@ const tableStyle: React.CSSProperties = {
   fontFamily: 'Consolas, Monaco, monospace',
 };
 
+const metaThStyle: React.CSSProperties = {
+  border: '1px solid #cbd5e1',
+  padding: '6px 10px',
+  backgroundColor: '#f1f5f9',
+  color: '#64748b',
+  textAlign: 'center',
+  whiteSpace: 'nowrap',
+  fontSize: '0.78rem',
+  fontWeight: 500,
+};
+
+const metaTdStyle: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
+  padding: '6px 10px',
+  backgroundColor: '#f8fafc',
+  color: '#64748b',
+  textAlign: 'center',
+  whiteSpace: 'nowrap',
+  fontSize: '0.8rem',
+};
+
 const thStyle: React.CSSProperties = {
   border: '1px solid #cbd5e1',
   padding: '6px 12px',
-  backgroundColor: '#f8fafc',
+  backgroundColor: '#ffffff',
   color: '#334155',
   textAlign: 'center',
   whiteSpace: 'nowrap',
+  fontWeight: 600,
 };
 
 const thChangedColStyle: React.CSSProperties = {
