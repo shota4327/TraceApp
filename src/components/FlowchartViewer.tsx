@@ -155,10 +155,12 @@ export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
             transform: `scale(${scale})`,
             transformOrigin: 'top center',
             transition: 'transform 0.15s ease',
-            padding: '16px 0px',
-            width: '100%',
+            padding: '24px 16px',
+            minWidth: '100%',
             display: 'flex',
             justifyContent: 'center',
+            alignItems: 'flex-start',
+            boxSizing: 'border-box',
           }}
         >
           {svgContent}

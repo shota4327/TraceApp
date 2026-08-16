@@ -655,10 +655,10 @@ export function renderFlowchartSvg(
     <svg
       role="img"
       aria-label="アルゴリズム流れ図"
-      width="100%"
+      width={totalWidth}
       height={totalHeight}
       viewBox={`0 0 ${totalWidth} ${totalHeight}`}
-      style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
+      style={{ display: 'block', margin: '0 auto', flexShrink: 0 }}
     >
       {renderSvgDefs()}
       {edges && edges.length > 0
@@ -668,4 +668,5 @@ export function renderFlowchartSvg(
     </svg>
   );
 }
+
 
