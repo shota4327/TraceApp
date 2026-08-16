@@ -129,6 +129,23 @@ print()`;
       expect(isNodeActive(node, undefined, 'node-10')).toBe(true);
     });
 
+    it('処理ブロックで長いテキストが複数行に折り返され、高さが自動調整されること', () => {
+      const node: FlowchartNode = {
+        id: 'p-long',
+        type: 'process',
+        label: '"とても長いテキストを出力します"とaを表示',
+        lineRange: [1, 1],
+      };
+      const { container } = render(<FlowchartViewer nodes={[node]} activeLine={1} />);
+      const rect = container.querySelector('rect');
+      expect(rect).not.toBeNull();
+      const height = parseFloat(rect?.getAttribute('height') || '0');
+      expect(height).toBeGreaterThan(50);
+
+      const tspans = container.querySelectorAll('tspan');
+      expect(tspans.length).toBeGreaterThan(1);
+    });
+
     it('renderFlowchartSvgが正しくSVG要素を生成すること', () => {
       const nodes: FlowchartNode[] = [
         { id: 'node-start', type: 'terminal', label: '開始', lineRange: [1, 1] },

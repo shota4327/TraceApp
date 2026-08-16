@@ -180,8 +180,8 @@ finally:
       expect(isNodeActive(malformedNode2, 50)).toBe(false);
     });
 
-    it('極端に長いラベル文字列（500文字）でも表示が切り詰められSVGレンダリングが崩れないこと', () => {
-      const longLabel = 'x = ' + 'a'.repeat(500);
+    it('長いラベル文字列でも複数行（tspan）に折り返されSVGレンダリングが崩れないこと', () => {
+      const longLabel = 'x = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10';
       const node: FlowchartNode = {
         id: 'long-node',
         type: 'process',
@@ -192,9 +192,8 @@ finally:
       const { container } = render(<FlowchartViewer nodes={[node]} activeLine={1} />);
       const textEl = container.querySelector('text');
       expect(textEl).not.toBeNull();
-      // レンダラーで24文字を超えると ellipsis (...) に切られることの確認
-      expect(textEl?.textContent?.length).toBeLessThan(30);
-      expect(textEl?.textContent).toContain('...');
+      const tspans = container.querySelectorAll('tspan');
+      expect(tspans.length).toBeGreaterThan(1);
     });
 
     it('未知のノード種別 (type: unknown) が渡されてもデフォルト形状で安全にレンダリングされること', () => {
