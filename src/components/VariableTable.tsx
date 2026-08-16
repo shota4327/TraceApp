@@ -142,7 +142,7 @@ const emptyStyle: React.CSSProperties = {
 };
 
 const tableStyle: React.CSSProperties = {
-  width: '100%',
+  width: 'auto',
   borderCollapse: 'collapse',
   fontSize: '0.85rem',
   fontFamily: 'Consolas, Monaco, monospace',
@@ -150,10 +150,11 @@ const tableStyle: React.CSSProperties = {
 
 const thStyle: React.CSSProperties = {
   border: '1px solid #cbd5e1',
-  padding: '6px 10px',
+  padding: '6px 12px',
   backgroundColor: '#f8fafc',
   color: '#334155',
   textAlign: 'left',
+  whiteSpace: 'nowrap',
 };
 
 const thChangedColStyle: React.CSSProperties = {
@@ -174,8 +175,9 @@ const activeRowStyle: React.CSSProperties = {
 
 const tdStyle: React.CSSProperties = {
   border: '1px solid #e2e8f0',
-  padding: '6px 10px',
+  padding: '6px 12px',
   color: '#1e293b',
+  whiteSpace: 'nowrap',
 };
 
 const colChangedTdStyle: React.CSSProperties = {
