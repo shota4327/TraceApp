@@ -189,13 +189,13 @@ y = 20
       expect(result.success).toBe(true);
       const snaps = result.snapshots;
 
-      // 行2 (x=10) 実行後、行3イベント時: x が新規登録され changedVars = ['x']
-      const snapAtLine3 = snaps.find((s: any) => s.line === 3 && s.event === 'line');
-      expect(snapAtLine3.changedVars).toContain('x');
+      // 行2 (x=10) 実行後: x が新規登録され changedVars = ['x']
+      const snapAtLine2 = snaps.find((s: any) => s.line === 2 && s.event === 'line');
+      expect(snapAtLine2.changedVars).toContain('x');
 
-      // 行3 (2回目の x=10) 実行後、行4イベント時: x の値は 10 のままで変わらないため changedVars に 'x' は含まれない
-      const snapAtLine4 = snaps.find((s: any) => s.line === 4 && s.event === 'line');
-      expect(snapAtLine4.changedVars).not.toContain('x');
+      // 行3 (2回目の x=10) 実行後: x の値は 10 のままで変わらないため changedVars に 'x' は含まれない
+      const snapAtLine3 = snaps.find((s: any) => s.line === 3 && s.event === 'line');
+      expect(snapAtLine3.changedVars).not.toContain('x');
     });
 
     it('グローバル変数と同名のローカル変数のシャドウイングが相互に干渉せず記録されること', () => {

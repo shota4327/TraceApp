@@ -62,11 +62,11 @@ class PyodideTracer:
         self.snapshots = []
         self.prev_globals = {}
         self.prev_locals = {}
-        self.prev_func = None
         self.stdout_writer = StepStdoutWriter()
         self.toplevel_def_lines = set(toplevel_def_lines or [])
-        self.last_executed_line = None
-        self.call_caller_lines = []
+        self.pending_line = None
+        self.pending_func = None
+        self.caller_stack = []
 
     def _safe_repr(self, v):
         """
@@ -151,6 +151,58 @@ class PyodideTracer:
             clean[k] = self._sanitize_value(v)
         return clean
 
+    def _flush_pending(self, current_globals, current_locals, current_func):
+        """
+        直前の実行行 (pending_line) の実行完了時点のスナップショットを確定して記録します。
+        """
+        if self.pending_line is None:
+            return
+
+        line_no = self.pending_line
+        func_name = self.pending_func
+
+        if func_name is None:
+            snap_globals = self._sanitize_scope(current_globals)
+            snap_locals = {}
+        else:
+            snap_globals = self._sanitize_scope(current_globals)
+            snap_locals = self._sanitize_scope(current_locals)
+
+        changed_vars = []
+        for k, v in snap_globals.items():
+            if k not in self.prev_globals or self.prev_globals[k] != v:
+                changed_vars.append(k)
+
+        if func_name is not None:
+            for k, v in snap_locals.items():
+                if k not in self.prev_locals or self.prev_locals[k] != v:
+                    if k not in changed_vars:
+                        changed_vars.append(k)
+
+        self.prev_globals = snap_globals.copy()
+        self.prev_locals = snap_locals.copy() if func_name is not None else {}
+
+        self.step_count += 1
+        if self.step_count > self.max_steps:
+            self.limit_exceeded = True
+            raise TraceLimitExceeded(f"ステップ数上限 ({self.max_steps}) を超過しました。")
+
+        snapshot = {
+            "stepIndex": len(self.snapshots),
+            "line": line_no,
+            "event": "line",
+            "functionName": func_name,
+            "globals": snap_globals,
+            "locals": snap_locals,
+            "changedVars": changed_vars,
+            "stdoutDelta": self.stdout_writer.get_delta(),
+            "stdoutCumulative": self.stdout_writer.get_cumulative(),
+            "astNodeId": f"node-{line_no}"
+        }
+        self.snapshots.append(snapshot)
+        self.pending_line = None
+        self.pending_func = None
+
     def trace_func(self, frame, event, arg):
         """
         sys.settrace コールバック関数
@@ -168,129 +220,61 @@ class PyodideTracer:
         if func_name == "<module>" and event == 'line' and frame.f_lineno in self.toplevel_def_lines:
             return self.trace_func
 
-        # 記録対象のイベント判定
-        # - line: 各実行行
-        # - call (関数内への突入時): def 行を記録
-        # - return: return 文のない関数の暗黙リターン等
-        if (event in ('line', 'call')) and not is_module_call:
-            self.step_count += 1
-            if self.step_count > self.max_steps:
-                self.limit_exceeded = True
-                raise TraceLimitExceeded(f"ステップ数上限 ({self.max_steps}) を超過しました。")
+        if event == 'call' and not is_module_call:
+            # 関数呼び出し行 (caller) の pending を flush
+            parent_frame = frame.f_back
+            p_globals = parent_frame.f_globals if parent_frame else frame.f_globals
+            p_locals = parent_frame.f_locals if parent_frame else {}
+            p_func = parent_frame.f_code.co_name if (parent_frame and parent_frame.f_code.co_name != '<module>') else None
+            self._flush_pending(p_globals, p_locals, p_func)
 
-            if func_name == "<module>":
-                globals_snap = self._sanitize_scope(frame.f_globals)
-                locals_snap = {}
-                display_func_name = None
-            else:
-                globals_snap = self._sanitize_scope(frame.f_globals)
-                locals_snap = self._sanitize_scope(frame.f_locals)
-                display_func_name = func_name
+            if parent_frame:
+                self.caller_stack.append(parent_frame.f_lineno)
 
-            if event == 'call':
-                line_no = frame.f_code.co_firstlineno
-                caller_line = self.last_executed_line
-                self.call_caller_lines.append(caller_line)
-                executed_line = line_no
-            else:
-                line_no = frame.f_lineno
-                if self.prev_func is not None and display_func_name is None:
-                    # 関数から戻ってきた直後: 呼び出し元行（例: Line 7）への復帰・代入スナップショットを挿入
-                    caller_line = self.call_caller_lines.pop() if self.call_caller_lines else self.last_executed_line
-                    return_changed_vars = []
-                    for k, v in globals_snap.items():
-                        if k not in self.prev_globals or self.prev_globals[k] != v:
-                            return_changed_vars.append(k)
+            # def 行（引数束縛）を flush
+            def_line = frame.f_code.co_firstlineno
+            self.pending_line = def_line
+            self.pending_func = func_name
+            self._flush_pending(frame.f_globals, frame.f_locals, func_name)
 
-                    return_snapshot = {
-                        "stepIndex": len(self.snapshots),
-                        "line": caller_line,
-                        "executedLine": caller_line,
-                        "event": "line",
-                        "functionName": None,
-                        "globals": globals_snap.copy(),
-                        "locals": {},
-                        "changedVars": return_changed_vars,
-                        "stdoutDelta": self.stdout_writer.get_delta(),
-                        "stdoutCumulative": self.stdout_writer.get_cumulative(),
-                        "astNodeId": f"node-{caller_line}"
-                    }
-                    self.snapshots.append(return_snapshot)
-                    self.prev_globals = globals_snap.copy()
-                    self.prev_locals = {}
-                    self.prev_func = None
+        elif event == 'line':
+            cur_func = None if func_name == '<module>' else func_name
+            self._flush_pending(frame.f_globals, frame.f_locals, cur_func)
+            self.pending_line = frame.f_lineno
+            self.pending_func = cur_func
 
-                executed_line = line_no
+        elif event == 'return' and not is_module_call:
+            # return 行の pending を flush
+            self._flush_pending(frame.f_globals, frame.f_locals, func_name)
 
-            self.last_executed_line = line_no
-
-            changed_vars = []
-
-            # グローバル変数の独立変化判定
-            for k, v in globals_snap.items():
-                if k not in self.prev_globals or self.prev_globals[k] != v:
-                    changed_vars.append(k)
-
-            # ローカル変数の独立変化判定（関数スコープ内実行時のみ）
-            if display_func_name is not None:
-                same_func = (self.prev_func == display_func_name)
-                for k, v in locals_snap.items():
-                    if not same_func or k not in self.prev_locals or self.prev_locals[k] != v:
-                        if k not in changed_vars:
-                            changed_vars.append(k)
-
-            self.prev_globals = globals_snap.copy()
-            self.prev_locals = locals_snap.copy() if display_func_name is not None else {}
-            self.prev_func = display_func_name
-
-            stdout_delta = self.stdout_writer.get_delta()
-            stdout_cumulative = self.stdout_writer.get_cumulative()
-
-            snapshot = {
-                "stepIndex": len(self.snapshots),
-                "line": line_no,
-                "executedLine": executed_line,
-                "event": event,
-                "functionName": display_func_name,
-                "globals": globals_snap,
-                "locals": locals_snap,
-                "changedVars": changed_vars,
-                "stdoutDelta": stdout_delta,
-                "stdoutCumulative": stdout_cumulative,
-                "astNodeId": f"node-{line_no}"
-            }
-            self.snapshots.append(snapshot)
+            # 呼び出し元復帰行（代入完了行）を pending_line にセット
+            if self.caller_stack:
+                ret_line = self.caller_stack.pop()
+                self.pending_line = ret_line
+                self.pending_func = None
 
         return self.trace_func
 
     def add_end_snapshot(self, final_globals):
         """
-        スクリプト全行実行完了後に最終状態を反映する event: 'end' のスナップショットを追加します。
+        スクリプト全行実行完了後に最終状態を反映するスナップショットを追加します。
         """
+        if self.pending_line is not None:
+            self._flush_pending(final_globals, {}, None)
+
         last_line = self.snapshots[-1]["line"] if self.snapshots else 1
-        executed_line = self.last_executed_line if self.last_executed_line is not None else last_line
         globals_snap = self._sanitize_scope(final_globals)
-        locals_snap = {}
-
-        changed_vars = []
-        for k, v in globals_snap.items():
-            if k not in self.prev_globals or self.prev_globals[k] != v:
-                changed_vars.append(k)
-
-        stdout_delta = self.stdout_writer.get_delta()
-        stdout_cumulative = self.stdout_writer.get_cumulative()
 
         snapshot = {
             "stepIndex": len(self.snapshots),
             "line": last_line,
-            "executedLine": executed_line,
             "event": "end",
             "functionName": None,
             "globals": globals_snap,
-            "locals": locals_snap,
-            "changedVars": changed_vars,
-            "stdoutDelta": stdout_delta,
-            "stdoutCumulative": stdout_cumulative,
+            "locals": {},
+            "changedVars": [],
+            "stdoutDelta": self.stdout_writer.get_delta(),
+            "stdoutCumulative": self.stdout_writer.get_cumulative(),
             "astNodeId": "node-end"
         }
         self.snapshots.append(snapshot)

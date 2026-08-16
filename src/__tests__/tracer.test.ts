@@ -92,11 +92,11 @@ print(total)`;
     // 関数 add 実行中のスナップショットを抽出
     const funcSnaps = result.snapshots.filter((s: any) => s.functionName === 'add');
     expect(funcSnaps.length).toBeGreaterThan(0);
-    // 関数内では locals に a, b が含まれ、def 行 (Line 1) が executedLine となること
+    // 関数内では locals に a, b が含まれ、def 行 (Line 1) が line となること
     const firstFuncSnap = funcSnaps[0];
     expect(firstFuncSnap.locals.a).toBeDefined();
     expect(firstFuncSnap.locals.b).toBeDefined();
-    expect(firstFuncSnap.executedLine).toBe(1);
+    expect(firstFuncSnap.line).toBe(1);
 
     // Line の実行フローが 5 → 6 → 7 → 1 → 2 → 3 → 7 → 6 → 7 → 1 → 2 → 3 → 7 → 6 → 7 → 1 → 2 → 3 → 7 → 6 → 8 と一致すること
     const nonEndSnaps = result.snapshots.filter((s: any) => s.event !== 'end');

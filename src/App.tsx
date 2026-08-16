@@ -119,7 +119,7 @@ export const App: React.FC = () => {
     : isEnded
     ? 'node-end'
     : (snapshots[currentStep - 1]?.astNodeId ?? 'node-start');
-  const activeSnapshot = isCodeDirty ? undefined : snapshots[currentStep];
+  const activeSnapshot = isNotStarted ? undefined : (isEnded ? snapshots[snapshots.length - 1] : snapshots[currentStep - 1]);
 
   let displayStatusText = statusText;
   if (isInitializing) {
@@ -174,7 +174,11 @@ export const App: React.FC = () => {
           <div style={horizontalHandleKnobStyle} />
         </div>
         <div style={{ ...rightPanelWrapperStyle, flex: `0 0 ${rightPercent}`, width: rightPercent }}>
-          <RightPanel snapshots={snapshots} currentStepIndex={currentStep} stdout={activeSnapshot?.stdoutCumulative ?? ''} />
+          <RightPanel
+            snapshots={snapshots}
+            currentStepIndex={isNotStarted ? -1 : currentStep - 1}
+            stdout={activeSnapshot?.stdoutCumulative ?? ''}
+          />
         </div>
       </main>
     </div>

@@ -26,21 +26,22 @@ const VariableTableHeader: React.FC<{
 
 /** テーブル本体行コンポーネント */
 const VariableTableRow: React.FC<{
+  stepNumber: number;
   snapshot: StepSnapshot;
   executedLine: number;
   isCurrent: boolean;
   varNames: string[];
   currentChangedVars: string[];
   latestChangedStepByVar: Record<string, number>;
-}> = ({ snapshot, executedLine, isCurrent, varNames, currentChangedVars, latestChangedStepByVar }) => (
+}> = ({ stepNumber, snapshot, executedLine, isCurrent, varNames, currentChangedVars, latestChangedStepByVar }) => (
   <tr style={isCurrent ? activeRowStyle : trStyle}>
-    <td style={metaTdStyle}>{snapshot.stepIndex}</td>
+    <td style={metaTdStyle}>{stepNumber}</td>
     <td style={lineTdStyle}>{executedLine}</td>
     {varNames.map((name) => {
       const isLocal = snapshot.locals[name] !== undefined;
       const val = isLocal ? snapshot.locals[name] : snapshot.globals[name];
       const isChanged = snapshot.changedVars.includes(name);
-      const isLatestChanged = latestChangedStepByVar[name] === snapshot.stepIndex;
+      const isLatestChanged = latestChangedStepByVar[name] === stepNumber;
       const isColChanged = currentChangedVars.includes(name);
 
       let cellStyle = tdStyle;
@@ -89,21 +90,21 @@ export const VariableTable: React.FC<VariableTableProps> = ({
   snapshots = [],
   currentStepIndex = 0,
 }) => {
-  const isEnded = snapshots.length > 1 && currentStepIndex === snapshots.length - 1;
   const allVarNames = extractAllVarNames(snapshots);
-  const activeSnapshots = snapshots
-    .slice(0, currentStepIndex + 1)
-    .filter((s) => s.event !== 'end' && (Object.keys(s.globals).length > 0 || Object.keys(s.locals).length > 0));
-  const currentSnapshot = snapshots[currentStepIndex];
-  const currentChangedVars = isEnded ? [] : (currentSnapshot?.changedVars ?? []);
+  // currentStepIndex < 0 の場合は未実行状態 (0件)
+  const count = currentStepIndex >= 0 ? currentStepIndex + 1 : 0;
+  const activeSnapshots = snapshots.slice(0, count).filter((s) => s.event !== 'end');
+  const currentSnapshot = activeSnapshots.length > 0 ? activeSnapshots[activeSnapshots.length - 1] : undefined;
+  const currentChangedVars = currentSnapshot?.changedVars ?? [];
 
   // 各変数が最後に書き換わった最新ステップを計算
   const latestChangedStepByVar: Record<string, number> = {};
-  for (const s of activeSnapshots) {
+  activeSnapshots.forEach((s, idx) => {
+    const stepNo = idx + 1;
     for (const v of s.changedVars) {
-      latestChangedStepByVar[v] = s.stepIndex;
+      latestChangedStepByVar[v] = stepNo;
     }
-  }
+  });
 
   return (
     <div id="variable-table" data-testid="variable-table" style={containerStyle}>
@@ -115,17 +116,21 @@ export const VariableTable: React.FC<VariableTableProps> = ({
           <table style={tableStyle}>
             <VariableTableHeader varNames={allVarNames} changedVars={currentChangedVars} />
             <tbody>
-              {activeSnapshots.map((s) => (
-                <VariableTableRow
-                  key={s.stepIndex}
-                  snapshot={s}
-                  executedLine={s.executedLine ?? s.line}
-                  isCurrent={!isEnded && s.stepIndex === currentSnapshot?.stepIndex}
-                  varNames={allVarNames}
-                  currentChangedVars={currentChangedVars}
-                  latestChangedStepByVar={latestChangedStepByVar}
-                />
-              ))}
+              {activeSnapshots.map((s, idx) => {
+                const stepNo = idx + 1;
+                return (
+                  <VariableTableRow
+                    key={stepNo}
+                    stepNumber={stepNo}
+                    snapshot={s}
+                    executedLine={s.line}
+                    isCurrent={stepNo === activeSnapshots.length}
+                    varNames={allVarNames}
+                    currentChangedVars={currentChangedVars}
+                    latestChangedStepByVar={latestChangedStepByVar}
+                  />
+                );
+              })}
             </tbody>
           </table>
         )}
