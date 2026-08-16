@@ -7,6 +7,7 @@ import { StepSnapshot } from './types/trace';
 import { FlowchartNode, FlowchartEdge } from './types/flowchart';
 import { generateFlowchartGraph } from './services/flowchartGenerator';
 import { useTraceEngine } from './hooks/useTraceEngine';
+import { useHorizontalResize } from './hooks/useHorizontalResize';
 
 /** Pyodide 初期化中ローディングオーバーレイ */
 const LoadingOverlay: React.FC = () => (
@@ -32,7 +33,16 @@ export const App: React.FC = () => {
   const [statusText, setStatusText] = useState<string>('Pyodide初期化中...');
 
   const { isInitializing, initError, isTracing, runTrace: executeTraceEngine } = useTraceEngine();
+  const { containerRef: mainContainerRef, leftRatio, isDragging, handlePointerDown } = useHorizontalResize({
+    initialRatio: 0.5,
+    minRatio: 0.2,
+    maxRatio: 0.8,
+  });
+  const [isResizerHovered, setIsResizerHovered] = useState<boolean>(false);
   const isInitializedRef = useRef<boolean>(false);
+
+  const leftPercent = `${leftRatio * 100}%`;
+  const rightPercent = `${(1 - leftRatio) * 100}%`;
 
   const runTrace = useCallback(
     async (targetCode: string) => {
@@ -110,8 +120,8 @@ export const App: React.FC = () => {
     <div style={appContainerStyle}>
       {isInitializing && <LoadingOverlay />}
       <Header selectedSampleId={selectedSampleId} onSelectSample={handleSelectSample} onFileUpload={handleFileUpload} statusText={statusText} />
-      <main style={mainContentStyle}>
-        <div style={leftPanelWrapperStyle}>
+      <main ref={mainContainerRef} style={{ ...mainContentStyle, userSelect: isDragging ? 'none' : 'auto' }}>
+        <div style={{ ...leftPanelWrapperStyle, flex: `0 0 ${leftPercent}`, width: leftPercent }}>
           <LeftPanel
             code={code}
             onChangeCode={setCode}
@@ -129,7 +139,22 @@ export const App: React.FC = () => {
             executionStatus={executionStatus}
           />
         </div>
-        <div style={rightPanelWrapperStyle}>
+        <div
+          id="main-horizontal-resizer"
+          data-testid="main-horizontal-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          onPointerDown={handlePointerDown}
+          onMouseEnter={() => setIsResizerHovered(true)}
+          onMouseLeave={() => setIsResizerHovered(false)}
+          style={{
+            ...horizontalResizerStyle,
+            backgroundColor: isDragging || isResizerHovered ? '#3b82f6' : '#e2e8f0',
+          }}
+        >
+          <div style={horizontalHandleKnobStyle} />
+        </div>
+        <div style={{ ...rightPanelWrapperStyle, flex: `0 0 ${rightPercent}`, width: rightPercent }}>
           <RightPanel snapshots={snapshots} currentStepIndex={currentStep} stdout={activeSnapshot?.stdoutCumulative ?? ''} />
         </div>
       </main>
@@ -149,16 +174,36 @@ const mainContentStyle: React.CSSProperties = {
   display: 'flex',
   flex: 1,
   overflow: 'hidden',
+  position: 'relative',
+};
+
+const horizontalResizerStyle: React.CSSProperties = {
+  width: '8px',
+  cursor: 'col-resize',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'background-color 0.15s ease',
+  zIndex: 10,
+  flexShrink: 0,
+};
+
+const horizontalHandleKnobStyle: React.CSSProperties = {
+  width: '3px',
+  height: '32px',
+  borderRadius: '2px',
+  backgroundColor: '#94a3b8',
+  pointerEvents: 'none',
 };
 
 const leftPanelWrapperStyle: React.CSSProperties = {
-  flex: 1,
   height: '100%',
+  overflow: 'hidden',
 };
 
 const rightPanelWrapperStyle: React.CSSProperties = {
-  flex: 1,
   height: '100%',
+  overflow: 'hidden',
 };
 
 const overlayStyle: React.CSSProperties = {

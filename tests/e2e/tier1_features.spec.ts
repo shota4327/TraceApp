@@ -261,4 +261,27 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     }
   });
 
+  test('T1-12: 画面左右パネル（コード・流れ図と変数表・出力）の水平ドラッグリサイズ', async ({ page }) => {
+    const resizer = getEl(page, 'main-horizontal-resizer');
+    await expect(resizer).toBeVisible();
+
+    const initialBox = await resizer.boundingBox();
+    expect(initialBox).not.toBeNull();
+
+    if (initialBox) {
+      // マウスドラッグで右方向に100px移動（左パネルを広げる）
+      await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y + initialBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(initialBox.x + 100, initialBox.y + initialBox.height / 2);
+      await page.mouse.up();
+
+      const newBox = await resizer.boundingBox();
+      expect(newBox).not.toBeNull();
+      if (newBox) {
+        expect(newBox.x).toBeGreaterThan(initialBox.x);
+      }
+    }
+  });
+
 });
+
