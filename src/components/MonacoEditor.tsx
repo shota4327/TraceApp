@@ -17,7 +17,7 @@ interface MonacoEditorProps {
 const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number; fontSize?: number }> = ({
   lines,
   highlightLine,
-  fontSize = 14,
+  fontSize = 18,
 }) => (
   <div id="code-viewer" data-testid="code-viewer" style={{ ...codeViewerStyle, fontSize: `${fontSize}px` }}>
     <div style={codeViewerTitleStyle}>実行行デコレーションプレビュー</div>
@@ -42,7 +42,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, high
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
-  const calculatedFontSize = Math.round(14 * (zoom / 100));
+  const calculatedFontSize = Math.round(18 * (zoom / 100));
 
   const applyLineHighlight = (line?: number) => {
     if (!editorRef.current || !monacoRef.current) return;
