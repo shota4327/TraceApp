@@ -151,9 +151,9 @@ const emptyStyle: React.CSSProperties = {
 };
 
 const tableStyle: React.CSSProperties = {
-  minWidth: '100%',
-  width: 'max-content',
-  borderCollapse: 'collapse',
+  width: 'auto',
+  borderCollapse: 'separate',
+  borderSpacing: 0,
   fontSize: '0.85rem',
   fontFamily: 'Consolas, Monaco, monospace',
 };
@@ -161,8 +161,11 @@ const tableStyle: React.CSSProperties = {
 const metaThStyle: React.CSSProperties = {
   position: 'sticky',
   top: 0,
-  zIndex: 2,
-  border: '1px solid #cbd5e1',
+  zIndex: 10,
+  borderTop: 'none',
+  borderBottom: '1px solid #cbd5e1',
+  borderLeft: '1px solid #cbd5e1',
+  borderRight: '1px solid #cbd5e1',
   padding: '6px 10px',
   backgroundColor: '#f1f5f9',
   color: '#64748b',
@@ -173,7 +176,10 @@ const metaThStyle: React.CSSProperties = {
 };
 
 const metaTdStyle: React.CSSProperties = {
-  border: '1px solid #e2e8f0',
+  borderTop: 'none',
+  borderBottom: '1px solid #e2e8f0',
+  borderLeft: '1px solid #e2e8f0',
+  borderRight: '1px solid #e2e8f0',
   padding: '6px 10px',
   backgroundColor: '#f8fafc',
   color: '#64748b',
@@ -195,8 +201,11 @@ const lineTdStyle: React.CSSProperties = {
 const thStyle: React.CSSProperties = {
   position: 'sticky',
   top: 0,
-  zIndex: 2,
-  border: '1px solid #cbd5e1',
+  zIndex: 10,
+  borderTop: 'none',
+  borderBottom: '1px solid #cbd5e1',
+  borderLeft: 'none',
+  borderRight: '1px solid #cbd5e1',
   padding: '6px 12px',
   backgroundColor: '#ffffff',
   color: '#334155',
@@ -212,9 +221,7 @@ const thChangedColStyle: React.CSSProperties = {
   fontWeight: 700,
 };
 
-const trStyle: React.CSSProperties = {
-  borderBottom: '1px solid #e2e8f0',
-};
+const trStyle: React.CSSProperties = {};
 
 const activeRowStyle: React.CSSProperties = {
   ...trStyle,
@@ -222,7 +229,10 @@ const activeRowStyle: React.CSSProperties = {
 };
 
 const tdStyle: React.CSSProperties = {
-  border: '1px solid #e2e8f0',
+  borderTop: 'none',
+  borderBottom: '1px solid #e2e8f0',
+  borderLeft: 'none',
+  borderRight: '1px solid #e2e8f0',
   padding: '6px 12px',
   color: '#1e293b',
   textAlign: 'center',
