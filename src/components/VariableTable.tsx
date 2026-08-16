@@ -153,7 +153,7 @@ const thStyle: React.CSSProperties = {
   padding: '6px 12px',
   backgroundColor: '#f8fafc',
   color: '#334155',
-  textAlign: 'left',
+  textAlign: 'center',
   whiteSpace: 'nowrap',
 };
 
@@ -177,6 +177,7 @@ const tdStyle: React.CSSProperties = {
   border: '1px solid #e2e8f0',
   padding: '6px 12px',
   color: '#1e293b',
+  textAlign: 'center',
   whiteSpace: 'nowrap',
 };
 
