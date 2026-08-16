@@ -26,8 +26,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   });
   const [isHovered, setIsHovered] = useState<boolean>(false);
 
-  const topPercent = `${topRatio * 100}%`;
-  const bottomPercent = `${(1 - topRatio) * 100}%`;
+  const topPercent = `calc(${topRatio * 100}% - 4px)`;
+  const bottomPercent = `calc(${(1 - topRatio) * 100}% - 4px)`;
 
   return (
     <div

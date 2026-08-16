@@ -41,8 +41,8 @@ export const App: React.FC = () => {
   const [isResizerHovered, setIsResizerHovered] = useState<boolean>(false);
   const isInitializedRef = useRef<boolean>(false);
 
-  const leftPercent = `${leftRatio * 100}%`;
-  const rightPercent = `${(1 - leftRatio) * 100}%`;
+  const leftPercent = `calc(${leftRatio * 100}% - 4px)`;
+  const rightPercent = `calc(${(1 - leftRatio) * 100}% - 4px)`;
 
   const runTrace = useCallback(
     async (targetCode: string) => {
