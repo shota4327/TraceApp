@@ -30,8 +30,9 @@ const VariableTableRow: React.FC<{
   executedLine: number;
   isCurrent: boolean;
   varNames: string[];
+  currentChangedVars: string[];
   latestChangedStepByVar: Record<string, number>;
-}> = ({ snapshot, executedLine, isCurrent, varNames, latestChangedStepByVar }) => (
+}> = ({ snapshot, executedLine, isCurrent, varNames, currentChangedVars, latestChangedStepByVar }) => (
   <tr style={isCurrent ? activeRowStyle : trStyle}>
     <td style={metaTdStyle}>{snapshot.stepIndex}</td>
     <td style={lineTdStyle}>{executedLine}</td>
@@ -40,10 +41,13 @@ const VariableTableRow: React.FC<{
       const val = isLocal ? snapshot.locals[name] : snapshot.globals[name];
       const isChanged = snapshot.changedVars.includes(name);
       const isLatestChanged = latestChangedStepByVar[name] === snapshot.stepIndex;
+      const isColChanged = currentChangedVars.includes(name);
 
       let cellStyle = tdStyle;
       if (isLatestChanged) {
         cellStyle = changedTdStyle;
+      } else if (isColChanged) {
+        cellStyle = colChangedTdStyle;
       }
 
       return (
@@ -99,6 +103,7 @@ export const VariableTable: React.FC<VariableTableProps> = ({
                   executedLine={snapshots[s.stepIndex - 1]?.line ?? s.line}
                   isCurrent={!isEnded && s.stepIndex === currentSnapshot?.stepIndex}
                   varNames={allVarNames}
+                  currentChangedVars={currentChangedVars}
                   latestChangedStepByVar={latestChangedStepByVar}
                 />
               ))}
@@ -215,6 +220,11 @@ const tdStyle: React.CSSProperties = {
   color: '#1e293b',
   textAlign: 'center',
   whiteSpace: 'nowrap',
+};
+
+const colChangedTdStyle: React.CSSProperties = {
+  ...tdStyle,
+  backgroundColor: '#fefce8',
 };
 
 const changedTdStyle: React.CSSProperties = {
