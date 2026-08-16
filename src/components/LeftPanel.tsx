@@ -199,10 +199,14 @@ const tabContainerStyle: React.CSSProperties = {
   backgroundColor: '#f1f5f9',
   borderBottom: '1px solid #e2e8f0',
   paddingRight: '12px',
+  height: '38px',
+  minHeight: '38px',
+  boxSizing: 'border-box',
 };
 
 const tabButtonGroupStyle: React.CSSProperties = {
   display: 'flex',
+  height: '100%',
 };
 
 const tabBarRightAreaStyle: React.CSSProperties = {
@@ -254,7 +258,11 @@ const highlightBadgeStyle: React.CSSProperties = {
 };
 
 const tabStyle: React.CSSProperties = {
-  padding: '10px 20px',
+  padding: '0 16px',
+  height: '100%',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   borderTop: 'none',
   borderLeft: 'none',
   borderRight: 'none',
@@ -262,8 +270,9 @@ const tabStyle: React.CSSProperties = {
   backgroundColor: 'transparent',
   color: '#64748b',
   cursor: 'pointer',
-  fontSize: '0.875rem',
+  fontSize: '0.85rem',
   fontWeight: 500,
+  boxSizing: 'border-box',
 };
 
 const activeTabStyle: React.CSSProperties = {

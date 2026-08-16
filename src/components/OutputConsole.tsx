@@ -31,12 +31,17 @@ const containerStyle: React.CSSProperties = {
 };
 
 const headerStyle: React.CSSProperties = {
-  padding: '8px 12px',
+  padding: '0 12px',
   backgroundColor: '#f1f5f9',
   borderBottom: '1px solid #e2e8f0',
   fontSize: '0.85rem',
   fontWeight: 600,
   color: '#475569',
+  height: '38px',
+  minHeight: '38px',
+  display: 'flex',
+  alignItems: 'center',
+  boxSizing: 'border-box',
 };
 
 const consoleAreaStyle: React.CSSProperties = {
