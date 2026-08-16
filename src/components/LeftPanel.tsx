@@ -209,12 +209,14 @@ const tabBarRightAreaStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
+  flexShrink: 0,
 };
 
 const stepControlWrapperStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
+  flexShrink: 0,
 };
 
 const stepCounterStyle: React.CSSProperties = {
@@ -222,11 +224,15 @@ const stepCounterStyle: React.CSSProperties = {
   color: '#475569',
   fontWeight: 500,
   whiteSpace: 'nowrap',
+  minWidth: '85px',
+  textAlign: 'right',
+  flexShrink: 0,
 };
 
 const stepSliderStyle: React.CSSProperties = {
-  width: '90px',
+  width: '100px',
   cursor: 'pointer',
+  flexShrink: 0,
 };
 
 const highlightBadgeStyle: React.CSSProperties = {
@@ -238,6 +244,13 @@ const highlightBadgeStyle: React.CSSProperties = {
   border: '1px solid #fde047',
   fontWeight: 600,
   whiteSpace: 'nowrap',
+  width: '130px',
+  display: 'inline-flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  textAlign: 'center',
+  flexShrink: 0,
+  boxSizing: 'border-box',
 };
 
 const tabStyle: React.CSSProperties = {
