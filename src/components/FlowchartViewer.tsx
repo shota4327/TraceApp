@@ -58,6 +58,8 @@ const contentStyle: React.CSSProperties = {
   flexDirection: 'column',
   justifyContent: 'flex-start',
   alignItems: 'center',
-  padding: '16px',
+  padding: '16px 0px',
   overflowY: 'auto',
+  overflowX: 'hidden',
+  width: '100%',
 };

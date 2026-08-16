@@ -346,22 +346,18 @@ function layoutBranchChain(
   return processY + nodeHeight;
 }
 
-/** 各ノードの X, Y 座標と全体のサイズを算出 */
-function calculateNodeLayouts(
+/** 各ノードの Y 座標を順次配置 */
+function populateNodeYPositions(
   nodes: FlowchartNode[],
-  edges?: FlowchartEdge[],
-  defaultGap = 10,
-  mergeGap = 45,
-  decisionGap = 20,
-  nodeWidth = 180,
-  nodeHeight = 50,
-  colGap = 50,
-  paddingX = 80,
-  paddingY = 40
-): { nodeXs: number[]; nodeYs: number[]; nodeCols: number[]; totalWidth: number; totalHeight: number } {
-  const nodeCols = calculateNodeColumns(nodes, edges);
-  const nodeXs = nodeCols.map((col) => paddingX + col * (nodeWidth + colGap));
-  const nodeYs = new Array<number>(nodes.length).fill(0);
+  nodeCols: number[],
+  edges: FlowchartEdge[] | undefined,
+  nodeYs: number[],
+  nodeHeight: number,
+  paddingY: number,
+  defaultGap: number,
+  mergeGap: number,
+  decisionGap: number
+): number {
   let currentY = paddingY;
 
   for (let i = 0; i < nodes.length; i++) {
@@ -383,17 +379,50 @@ function calculateNodeLayouts(
             !e.id.includes('loop-exit') &&
             (e.id.includes('merge') || e.id.includes('join') || (e.label === 'False' && !e.id.includes('loop')))
         );
-      if (i > 0) {
-        currentY += isMerge ? mergeGap : defaultGap;
-      }
+      if (i > 0) currentY += isMerge ? mergeGap : defaultGap;
       nodeYs[i] = currentY;
       currentY += nodeHeight;
     }
   }
+  return currentY;
+}
+
+/** 各ノードの X, Y 座標と全体のサイズを算出 */
+function calculateNodeLayouts(
+  nodes: FlowchartNode[],
+  edges?: FlowchartEdge[],
+  defaultGap = 12,
+  mergeGap = 45,
+  decisionGap = 20,
+  nodeWidth = 180,
+  nodeHeight = 50,
+  colGap = 40,
+  paddingX = 16,
+  paddingY = 40
+): { nodeXs: number[]; nodeYs: number[]; nodeCols: number[]; totalWidth: number; totalHeight: number } {
+  const nodeCols = calculateNodeColumns(nodes, edges);
+  const nodeXs = nodeCols.map((col) => paddingX + col * (nodeWidth + colGap));
+  const nodeYs = new Array<number>(nodes.length).fill(0);
+
+  const finalY = populateNodeYPositions(
+    nodes,
+    nodeCols,
+    edges,
+    nodeYs,
+    nodeHeight,
+    paddingY,
+    defaultGap,
+    mergeGap,
+    decisionGap
+  );
 
   const maxCol = Math.max(0, ...nodeCols);
-  const totalWidth = Math.max((maxCol + 1) * (nodeWidth + colGap) - colGap + paddingX * 2 + 40, nodeWidth + paddingX * 2 + 60);
-  const totalHeight = Math.max(currentY + paddingY, Math.max(...nodeYs) + nodeHeight + paddingY);
+  const hasBranchOrMerge = edges?.some(
+    (e) => e.label === 'False' || e.label === 'No' || e.id.includes('merge') || e.id.includes('edge-false-')
+  );
+  const extraRightMargin = hasBranchOrMerge ? 48 : 16;
+  const totalWidth = (maxCol + 1) * (nodeWidth + colGap) - colGap + paddingX + extraRightMargin;
+  const totalHeight = Math.max(finalY + paddingY, Math.max(...nodeYs) + nodeHeight + paddingY);
 
   return { nodeXs, nodeYs, nodeCols, totalWidth, totalHeight };
 }
@@ -603,14 +632,14 @@ export function renderFlowchartSvg(
   const { activeLine, activeNodeId, edges } = options;
   const nodeWidth = 180;
   const nodeHeight = 50;
-  const colGap = 50;
-  const paddingX = 80;
+  const colGap = 40;
+  const paddingX = 16;
   const paddingY = 40;
 
   const { nodeXs, nodeYs, nodeCols, totalWidth, totalHeight } = calculateNodeLayouts(
     nodes,
     edges,
-    10,
+    12,
     45,
     20,
     nodeWidth,
@@ -627,9 +656,9 @@ export function renderFlowchartSvg(
       role="img"
       aria-label="アルゴリズム流れ図"
       width="100%"
-      height={Math.max(totalHeight, 400)}
-      viewBox={`0 0 ${totalWidth} ${Math.max(totalHeight, 400)}`}
-      style={{ overflow: 'visible' }}
+      height={totalHeight}
+      viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+      style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
     >
       {renderSvgDefs()}
       {edges && edges.length > 0
@@ -639,3 +668,4 @@ export function renderFlowchartSvg(
     </svg>
   );
 }
+
