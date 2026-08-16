@@ -114,6 +114,25 @@ print()`;
       expect(processNodes[5]!.label).toBe('表示');
     });
 
+    it('四則演算記号 (+ - * /) が全角 (＋ － × ÷) に正しく置換されること', () => {
+      const code = `a = b + c
+d = e - f
+g = h * i
+j = k / l
+if x * 2 + 1 >= y - 3:
+    ans = (m + n) / (p * q)`;
+      const nodes = generateFlowchartNodes(code);
+      const processNodes = nodes.filter((n) => n.type === 'process');
+      const decisionNodes = nodes.filter((n) => n.type === 'decision');
+
+      expect(processNodes[0]!.label).toBe('b ＋ c → a');
+      expect(processNodes[1]!.label).toBe('e － f → d');
+      expect(processNodes[2]!.label).toBe('h × i → g');
+      expect(processNodes[3]!.label).toBe('k ÷ l → j');
+      expect(decisionNodes[0]!.label).toBe('x × 2 ＋ 1 ≧ y － 3');
+      expect(processNodes[4]!.label).toBe('(m ＋ n) ÷ (p × q) → ans');
+    });
+
     it('単一ループの場合は番号なしで「ループ」および「条件の間」に整形されること', () => {
       const singleLoopCode = `while i <= 5:
     pass`;

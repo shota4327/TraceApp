@@ -81,7 +81,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(graph.nodes[2]!.label).toBe('3 → y');
 
       expect(graph.nodes[3]!.type).toBe('process');
-      expect(graph.nodes[3]!.label).toBe('x + y → total');
+      expect(graph.nodes[3]!.label).toBe('x ＋ y → total');
 
       expect(graph.nodes[4]!.type).toBe('process');
       expect(graph.nodes[4]!.label).toBe('totalを表示');
@@ -111,8 +111,8 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
 
       const decisionNodes = graph.nodes.filter((n) => n.type === 'decision');
       expect(decisionNodes.length).toBeGreaterThanOrEqual(2);
-      expect(decisionNodes[0]!.label).toBe('score >= 80');
-      expect(decisionNodes[1]!.label).toBe('score >= 60');
+      expect(decisionNodes[0]!.label).toBe('score ≧ 80');
+      expect(decisionNodes[1]!.label).toBe('score ≧ 60');
 
       // エッジラベルに True が含まれること
       const edgeLabels = graph.edges.map((e) => e.label);

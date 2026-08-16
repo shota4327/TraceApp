@@ -96,6 +96,43 @@ export function formatPrintLabel(trimmed: string): string | null {
 }
 
 /**
+ * 比較演算子・四則演算子を教科書的な全角数学記号に置換
+ * - 比較: <= → ≦, >= → ≧, != → ≠, == → =
+ * - 四則演算: + → ＋, - → －, * → ×, / → ÷
+ * (文字列リテラル "..." / '...' の内部は置換対象外として保護)
+ */
+export function replaceMathOperators(expr: string): string {
+  const stringLiterals: string[] = [];
+  const placeholderPrefix = '__STR_LITERAL_';
+  let tokenized = expr.replace(/(["'])(?:(?=(\\?))\2[\s\S])*?\1/g, (match) => {
+    const idx = stringLiterals.length;
+    stringLiterals.push(match);
+    return `${placeholderPrefix}${idx}__`;
+  });
+
+  // 1. 比較演算子の置換
+  tokenized = tokenized
+    .replace(/<=/g, '≦')
+    .replace(/>=/g, '≧')
+    .replace(/!=/g, '≠')
+    .replace(/==/g, '=');
+
+  // 2. 四則演算子の置換 (+, -, *, /)
+  tokenized = tokenized
+    .replace(/\/\//g, '÷')
+    .replace(/\//g, '÷')
+    .replace(/\*\*/g, '^')
+    .replace(/\*/g, '×')
+    .replace(/\+/g, '＋')
+    .replace(/-/g, '－');
+
+  // 文字列リテラルの復元
+  return tokenized.replace(new RegExp(`${placeholderPrefix}(\\d+)__`, 'g'), (_, idx) => {
+    return stringLiterals[Number(idx)] || '';
+  });
+}
+
+/**
  * 処理ブロックのラベル生成
  * 1. print文（例: print(grade)）→ 「gradeを表示」
  * 2. 代入文（例: a = 4）→ 「4 → a」
@@ -106,20 +143,11 @@ export function formatProcessLabel(trimmed: string): string {
 
   const assignMatch = trimmed.match(/^([^=<>!]+?)\s*=\s*([^=].*)$/);
   if (assignMatch && assignMatch[1] && assignMatch[2]) {
-    const lhs = assignMatch[1].trim();
-    const rhs = assignMatch[2].trim();
+    const lhs = replaceMathOperators(assignMatch[1].trim());
+    const rhs = replaceMathOperators(assignMatch[2].trim());
     return `${rhs} → ${lhs}`;
   }
-  return trimmed;
-}
-
-/** 比較演算子を教科書的な数学記号に置換 */
-function replaceMathOperators(expr: string): string {
-  return expr
-    .replace(/<=/g, '≦')
-    .replace(/>=/g, '≧')
-    .replace(/!=/g, '≠')
-    .replace(/==/g, '=');
+  return replaceMathOperators(trimmed);
 }
 
 /** while文のラベル整形 */
@@ -149,7 +177,8 @@ function formatForRange(varName: string, rangeContent: string, loopTitle = 'ル�
     const stepVal = !isNaN(stepNum) ? stepNum : stepStr;
     return `${loopTitle}\n${varName}は${startStr}から${stepVal}ずつ増やして${varName}≦${actualEnd}の間`;
   }
-  return `${loopTitle}\n${varName}は${startStr}から${stepStr}ずつ増やして${varName}≦${stopStr}-1の間`;
+  const stopFormatted = replaceMathOperators(`${stopStr}-1`);
+  return `${loopTitle}\n${varName}は${startStr}から${stepStr}ずつ増やして${varName}≦${stopFormatted}の間`;
 }
 
 /** for文のラベル整形 */
@@ -188,10 +217,10 @@ function classifyLine(
     return { type: 'subroutine', label: trimmed.replace(/:$/, '') };
   }
   if (trimmed.startsWith('if ')) {
-    return { type: 'decision', label: trimmed.replace(/^if\s+/, '').replace(/:$/, '').trim() };
+    return { type: 'decision', label: replaceMathOperators(trimmed.replace(/^if\s+/, '').replace(/:$/, '').trim()) };
   }
   if (trimmed.startsWith('elif ')) {
-    return { type: 'decision', label: trimmed.replace(/^elif\s+/, '').replace(/:$/, '').trim() };
+    return { type: 'decision', label: replaceMathOperators(trimmed.replace(/^elif\s+/, '').replace(/:$/, '').trim()) };
   }
   if (trimmed.startsWith('else:')) {
     return { type: 'decision', label: 'else' };

@@ -139,8 +139,8 @@ print(grade)`;
 
       const graph = generateFlowchartGraph(code);
 
-      const ifNode = graph.nodes.find((n) => n.label === 'score >= 80');
-      const elifNode = graph.nodes.find((n) => n.label === 'score >= 60');
+      const ifNode = graph.nodes.find((n) => n.label === 'score ≧ 80');
+      const elifNode = graph.nodes.find((n) => n.label === 'score ≧ 60');
       const elseGradeNode = graph.nodes.find((n) => n.label.includes('grade'));
       const printGradeNode = graph.nodes.find((n) => n.label.includes('gradeを表示'));
 
