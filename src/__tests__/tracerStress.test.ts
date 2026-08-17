@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { PYTHON_TRACER_SCRIPT } from '../worker/pythonTracer';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTraceEngine } from '../hooks/useTraceEngine';
 import path from 'path';
 
@@ -76,10 +76,9 @@ describe('Challenger Stress Test 2: React Hook (useTraceEngine) 非同期・状�
   it('2.1a. ガード検証: runTrace 実行中に同期連続呼び出しをした場合、2回目の呼び出しが即時 Reject されるか', async () => {
     const { result } = renderHook(() => useTraceEngine());
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 100));
-    });
-    expect(result.current.isInitializing).toBe(false);
+    await waitFor(() => {
+      expect(result.current.isInitializing).toBe(false);
+    }, { timeout: 10000 });
 
     let promise1: Promise<any>;
     let promise2: Promise<any>;
@@ -103,9 +102,9 @@ describe('Challenger Stress Test 2: React Hook (useTraceEngine) 非同期・状�
   it('2.1c. [STRESS TEST] 同期連打検証: runTrace を 10 回連続で同時実行した場合、1回目が正常処理され 2~10 回目が即時 Reject されるか', async () => {
     const { result } = renderHook(() => useTraceEngine());
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 100));
-    });
+    await waitFor(() => {
+      expect(result.current.isInitializing).toBe(false);
+    }, { timeout: 10000 });
 
     const promises: Promise<any>[] = [];
     act(() => {

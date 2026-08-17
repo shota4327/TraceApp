@@ -40,7 +40,7 @@ function getPyodideIndexURL(): string {
       // ignore
     }
   }
-  return 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+  return 'https://cdn.jsdelivr.net/pyodide/v314.0.5/full/';
 }
 
 /**

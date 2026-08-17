@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { PYTHON_TRACER_SCRIPT } from '../worker/pythonTracer';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTraceEngine } from '../hooks/useTraceEngine';
 
 import path from 'path';
@@ -261,20 +261,19 @@ describe('useTraceEngine React フックのテスト (メインスレッド Pyod
   it('初期状態から Pyodide 初期化完了時に isInitializing が false になること', async () => {
     const { result } = renderHook(() => useTraceEngine());
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 100));
-    });
+    await waitFor(() => {
+      expect(result.current.isInitializing).toBe(false);
+    }, { timeout: 10000 });
 
-    expect(result.current.isInitializing).toBe(false);
     expect(result.current.initError).toBeNull();
   });
 
   it('runTrace 呼び出しにより成功レスポンスが返却されること', async () => {
     const { result } = renderHook(() => useTraceEngine());
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 100));
-    });
+    await waitFor(() => {
+      expect(result.current.isInitializing).toBe(false);
+    }, { timeout: 10000 });
 
     let traceRes: any;
     await act(async () => {

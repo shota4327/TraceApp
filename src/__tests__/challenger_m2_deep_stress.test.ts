@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { PYTHON_TRACER_SCRIPT } from '../worker/pythonTracer';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTraceEngine } from '../hooks/useTraceEngine';
 import path from 'path';
 
@@ -166,9 +166,9 @@ print("BULK_PRINT_" + "X" * 1000)
     it('3.1. 100回連続で runTrace を呼び出した際、1回目のみ成功し残りの99回がすべて即座に Reject されるか', async () => {
       const { result } = renderHook(() => useTraceEngine());
 
-      await act(async () => {
-        await new Promise((r) => setTimeout(r, 100));
-      });
+      await waitFor(() => {
+        expect(result.current.isInitializing).toBe(false);
+      }, { timeout: 10000 });
 
       const promises: Promise<any>[] = [];
       act(() => {

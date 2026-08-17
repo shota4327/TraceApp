@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { PYTHON_TRACER_SCRIPT } from '../worker/pythonTracer';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTraceEngine } from '../hooks/useTraceEngine';
 import path from 'path';
 
@@ -275,11 +275,9 @@ describe('Challenger M1-2: useTraceEngine フックの動作検証 (メインス
   it('useTraceEngine で基本プログラムが正常実行完了すること', async () => {
     const { result } = renderHook(() => useTraceEngine());
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 100));
-    });
-
-    expect(result.current.isInitializing).toBe(false);
+    await waitFor(() => {
+      expect(result.current.isInitializing).toBe(false);
+    }, { timeout: 10000 });
 
     let res: any;
     await act(async () => {
@@ -294,9 +292,9 @@ describe('Challenger M1-2: useTraceEngine フックの動作検証 (メインス
   it('上限オーバー時に useTraceEngine が error にメッセージを設定しつつ、収集済みの traceResult (truncated: true) を保持すること', async () => {
     const { result } = renderHook(() => useTraceEngine());
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 100));
-    });
+    await waitFor(() => {
+      expect(result.current.isInitializing).toBe(false);
+    }, { timeout: 10000 });
 
     let res: any;
     await act(async () => {
