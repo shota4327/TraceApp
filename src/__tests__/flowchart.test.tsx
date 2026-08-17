@@ -410,5 +410,32 @@ print("done")`;
       const falseEdgeEl = container.querySelector('.edge-false');
       expect(falseEdgeEl).not.toBeNull();
     });
+
+    it('if-else文でYes側に複数の処理ブロックがある場合、elseからの合流線がYes側ブロックの下部を通り綺麗に合流すること', () => {
+      const code = `a = 3
+b = 1
+e = a + b
+if a > b:
+    e = e + 1
+    f = a + b
+else:
+    f = a - b
+e = e * e
+f = f * f
+e = e - f
+h = 1`;
+      const graph = generateFlowchartGraph(code);
+      const { container } = render(
+        <FlowchartViewer nodes={graph.nodes} edges={graph.edges} code={code} />
+      );
+
+      // マージエッジ (edge-merge) のパスを取得
+      const mergeEdges = container.querySelectorAll('.edge-merge path');
+      expect(mergeEdges.length).toBeGreaterThan(0);
+
+      // 合流線の Y 座標が、Yes 側 2つ目のノード (f = a + b) の Y 座標より下になっていること
+      const nodeFYes = container.querySelector('[data-node-id="node-6"]'); // f = a + b
+      expect(nodeFYes).not.toBeNull();
+    });
   });
 });

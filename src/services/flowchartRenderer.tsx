@@ -651,6 +651,23 @@ function getEdgeStyleProps(label?: string, isActive = false) {
   return { stroke: isActive ? '#2563eb' : '#64748b' };
 }
 
+/** 合流先ノード (tgt) の直前にあるメインラインノードの最下部 Y 座標を取得 */
+function getMainLineBottom(
+  tgtIndex: number,
+  nodeYs: number[],
+  nodeHeights: number[],
+  nodeCols: number[]
+): number {
+  let maxBottom = 0;
+  for (let i = 0; i < tgtIndex; i++) {
+    if (nodeCols[i] === 0) {
+      const b = nodeYs[i]! + (nodeHeights[i] ?? 50);
+      if (b > maxBottom) maxBottom = b;
+    }
+  }
+  return maxBottom;
+}
+
 /** False / No 分岐エッジ描画 helper */
 function renderFalseEdgeElement(
   id: string,
@@ -658,6 +675,7 @@ function renderFalseEdgeElement(
   tgt: NodeBox,
   nodeYs: number[],
   nodeHeights: number[],
+  nodeCols: number[],
   stroke: string,
   isActive: boolean
 ): React.ReactNode {
@@ -678,8 +696,8 @@ function renderFalseEdgeElement(
 
   // 同一カラムまたはメインラインへの合流の場合（単一 if 等）
   const rightX = src.x + src.w + 40;
-  const prevH = tgt.index > 0 ? (nodeHeights[tgt.index - 1] ?? 50) : src.h;
-  const prevBottom = tgt.index > 0 ? (nodeYs[tgt.index - 1]! + prevH) : (src.y + src.h);
+  const mainLineBottom = getMainLineBottom(tgt.index, nodeYs, nodeHeights, nodeCols);
+  const prevBottom = mainLineBottom > 0 ? mainLineBottom : (src.y + src.h);
   const mergeY = prevBottom + (tgt.y - prevBottom) / 2;
   const mergeX = tgt.x + tgt.w / 2;
   const pathD = `M ${startX} ${startY} H ${rightX} V ${mergeY} H ${mergeX}`;
@@ -699,14 +717,15 @@ function renderMergeEdgeElement(
   tgt: NodeBox,
   nodeYs: number[],
   nodeHeights: number[],
+  nodeCols: number[],
   stroke: string,
   isActive: boolean
 ): React.ReactNode {
   const startX = src.x + src.w / 2;
   const startY = src.y + src.h;
-  const prevH = tgt.index > 0 ? (nodeHeights[tgt.index - 1] ?? 50) : 50;
-  const prevBottom = tgt.index > 0 ? (nodeYs[tgt.index - 1]! + prevH) : startY;
-  const mergeY = Math.max(startY + 15, prevBottom + (tgt.y - prevBottom) / 2);
+  const mainLineBottom = getMainLineBottom(tgt.index, nodeYs, nodeHeights, nodeCols);
+  const branchBottom = Math.max(mainLineBottom, startY);
+  const mergeY = branchBottom + (tgt.y - branchBottom) / 2;
   const mergeX = tgt.x + tgt.w / 2;
   const pathD = `M ${startX} ${startY} V ${mergeY} H ${mergeX}`;
 
@@ -740,11 +759,11 @@ function renderSingleEdge(
   const { stroke } = getEdgeStyleProps(edge.label, isActive);
 
   if (edge.label === 'False' || edge.label === 'No' || edge.id.includes('edge-false-')) {
-    return renderFalseEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, stroke, isActive);
+    return renderFalseEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, nodeCols, stroke, isActive);
   }
 
   if (src.col > tgt.col || (edge.id.includes('merge') && src.col > 0)) {
-    return renderMergeEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, stroke, isActive);
+    return renderMergeEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, nodeCols, stroke, isActive);
   }
 
   const isYes = edge.label === 'True' || edge.label === 'Yes';

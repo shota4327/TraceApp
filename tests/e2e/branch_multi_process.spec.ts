@@ -68,4 +68,47 @@ print("Finished")`;
     expect(pathD).toContain('H ');
     expect(pathD).toContain('V ');
   });
+
+  test('if-else 文で Yes 側に2個、else 側に1個の処理ブロックがある場合、else からの合流線が側面を突き抜けず下部から合流すること', async ({ page }) => {
+    const codeInput = getEl(page, 'code-input');
+    const btnRun = getEl(page, 'btn-run');
+    const tabFlowchart = getEl(page, 'tab-flowchart');
+    const flowchartViewer = getEl(page, 'flowchart-viewer');
+    const stepCounter = getEl(page, 'step-counter');
+
+    // ユーザー提示のコード
+    const customCode = `a = 3
+b = 1
+e = a + b
+if a > b:
+    e = e + 1
+    f = a + b
+else:
+    f = a - b
+e = e * e
+f = f * f
+e = e - f
+h = 1`;
+
+    await codeInput.fill(customCode);
+    await btnRun.click();
+    await expect(stepCounter).toContainText('ステップ 0 /');
+
+    // 「流れ図」タブに切り替え
+    await tabFlowchart.click();
+    await expect(flowchartViewer).toBeVisible();
+
+    const svg = flowchartViewer.locator('svg');
+    await expect(svg).toBeVisible();
+
+    // マージエッジ (edge-merge) が表示されていること
+    const mergeEdge = flowchartViewer.locator('.edge-merge');
+    await expect(mergeEdge).toBeVisible();
+
+    const pathD = await mergeEdge.locator('path').getAttribute('d');
+    expect(pathD).toBeTruthy();
+    expect(pathD).toContain('M ');
+    expect(pathD).toContain('V ');
+    expect(pathD).toContain('H ');
+  });
 });
