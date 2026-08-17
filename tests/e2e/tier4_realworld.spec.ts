@@ -106,9 +106,10 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
 
   test('T4-03: 検証用テスト3 — ループと関数呼び出し（def add / for ループ）の推移可視化', async ({ page }) => {
     const presetSelect = getEl(page, 'preset-select');
+    const btnNext = getEl(page, 'btn-next');
     const btnLast = getEl(page, 'btn-last');
     const localsTable = getEl(page, 'locals-table-body');
-    const globalsTable = getEl(page, 'globals-table-body');
+    const activeLineBadge = getEl(page, 'active-line-badge');
     const stepCounter = getEl(page, 'step-counter');
 
     // テスト3: ループサンプルを選択
@@ -116,12 +117,31 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
     await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
-    // 最終結果 total = 6 に到達することを確認
-    await btnLast.click();
+    // Step 1: Line 5 (total = 0)
+    await btnNext.click();
+    await expect(activeLineBadge).toContainText('実行行: Line 5');
+    await expect(localsTable).toContainText('total');
 
-    const tableText = (await localsTable.textContent()) + (await globalsTable.textContent());
-    expect(tableText).toContain('total');
-    expect(tableText).toContain('6');
+    // Step 2: Line 6 (for i in range(1, 4): i = 1)
+    await btnNext.click();
+    await expect(activeLineBadge).toContainText('実行行: Line 6');
+    await expect(localsTable).toContainText('i');
+
+    // Step 3: Line 7 (total = add(total, i) 呼出)
+    await btnNext.click();
+    await expect(activeLineBadge).toContainText('実行行: Line 7');
+
+    // Step 4: Line 1 (def add(a, b) に移動し引数 a=0, b=1 が代入表示されること)
+    await btnNext.click();
+    await expect(activeLineBadge).toContainText('実行行: Line 1');
+    await expect(localsTable).toContainText('a');
+    await expect(localsTable).toContainText('b');
+
+    // 最終ステップへジャンプし、最終結果 total = 6 に到達することを確認
+    await btnLast.click();
+    await expect(localsTable).toContainText('6');
+    const consoleOutput = getEl(page, 'console-output');
+    await expect(consoleOutput).toContainText('6');
   });
 
   test('T4-04: シナリオ4 — ユーザー学習デバッグ演習（問題コード発見〜修正〜再トレース完了）', async ({ page }) => {

@@ -172,30 +172,68 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
     await expect(stepCounter).toContainText('ステップ 2 /');
     await expect(activeLineBadge).toContainText('実行行: Line 2');
 
-    // 最終ステップまで進める
-    const btnLast = getEl(page, 'btn-last');
-    await btnLast.click();
+    // 4ステップ目 (次へ押下): 3行目 (total = x + y) を実行した結果として Line 3 が表示されることを確認
+    await btnNext.click();
+    await expect(stepCounter).toContainText('ステップ 3 /');
+    await expect(activeLineBadge).toContainText('実行行: Line 3');
+
+    // 5ステップ目 (次へ押下): 4行目 (print(total)) を実行した結果として Line 4 がハイライトされることを確認
+    await btnNext.click();
+    await expect(stepCounter).toContainText('ステップ 4 /');
+    await expect(activeLineBadge).toContainText('実行行: Line 4');
+
+    // 6ステップ目 (次へ押下): 全行実行完了状態となり、実行行バッジが (実行終了) になること
+    await btnNext.click();
+    await expect(stepCounter).toContainText('ステップ 5 /');
     await expect(activeLineBadge).toContainText('実行行: (実行終了)');
   });
 
-  test('T1-07: スプレッドシート型変数履歴表の描画と更新', async ({ page }) => {
+  test('T1-07: スプレッドシート型変数履歴表の描画・更新および「変更のない行を非表示」オプション', async ({ page }) => {
     const btnNext = getEl(page, 'btn-next');
     const stepCounter = getEl(page, 'step-counter');
+    const localsTable = getEl(page, 'locals-table-body');
+    const filterCheckbox = getEl(page, 'hide-unchanged-steps-checkbox');
 
-    // トレース準備 (x = 5, y = 3, total = x + y)
+    // トレース準備 (x = 5, y = 3, total = x + y, print(total))
     await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
-    // ステップ 2 (y = 3 の行) へ進むと、x = 5 が記録される
+    // チェックボックスが存在し、デフォルトで ON であること
+    await expect(filterCheckbox).toBeVisible();
+    await expect(filterCheckbox).toBeChecked();
+
+    // ステップ 1: x = 5 が記録される (行数: 1行)
     await btnNext.click();
-    const localsTable = getEl(page, 'locals-table-body');
     await expect(localsTable).toContainText('x');
     await expect(localsTable).toContainText('5');
 
-    // ステップ 3 (total = x + y の行) へ進むと、y = 3 が記録される
+    // ステップ 2: y = 3 が記録される (行数: 2行)
     await btnNext.click();
     await expect(localsTable).toContainText('y');
     await expect(localsTable).toContainText('3');
+
+    // ステップ 3: total = 8 が記録される (行数: 3行)
+    await btnNext.click();
+    await expect(localsTable).toContainText('total');
+    await expect(localsTable).toContainText('8');
+
+    // ステップ 4: print(total) (値変更なし)
+    await btnNext.click();
+    // デフォルト (ON) のため、変更なしの Step 4 は非表示で 3行のまま
+    let rows = localsTable.locator('tbody tr');
+    await expect(rows).toHaveCount(3);
+
+    // チェックボックスを OFF に切り替えると、Step 4 も展開されて 4行表示されること
+    await filterCheckbox.uncheck();
+    await expect(filterCheckbox).not.toBeChecked();
+    rows = localsTable.locator('tbody tr');
+    await expect(rows).toHaveCount(4);
+
+    // 再度チェックを ON にすると、変更なしの行が除外されて 3行に戻ること
+    await filterCheckbox.check();
+    await expect(filterCheckbox).toBeChecked();
+    rows = localsTable.locator('tbody tr');
+    await expect(rows).toHaveCount(3);
   });
 
   test('T1-08: print 出力コンソールの段階的キャプチャ表示', async ({ page }) => {
