@@ -357,5 +357,58 @@ print(total)`;
       expect(screen.getByTestId('tab-code').getAttribute('aria-selected')).toBe('true');
       expect(screen.getByTestId('flowchart-viewer').parentElement?.style.display).toBe('none');
     });
+
+    it('ifブロックのYes側に複数の処理ブロックがある場合、中間ノードから余分な合流エッジが生成されず、末尾ノードとNoから正しく合流すること', () => {
+      const code = `score = 85
+if score >= 80:
+    x = 1
+    y = 2
+    z = 3
+print("done")`;
+      const graph = generateFlowchartGraph(code);
+
+      // 生成されたノード一覧の確認
+      const nodeIds = graph.nodes.map((n) => n.id);
+      expect(nodeIds).toContain('node-start');
+      expect(nodeIds).toContain('node-1'); // score = 85
+      expect(nodeIds).toContain('node-2'); // if score >= 80 (decision)
+      expect(nodeIds).toContain('node-3'); // x = 1
+      expect(nodeIds).toContain('node-4'); // y = 2
+      expect(nodeIds).toContain('node-5'); // z = 3
+      expect(nodeIds).toContain('node-6'); // print("done")
+      expect(nodeIds).toContain('node-end');
+
+      // エッジの確認
+      // 1. node-2 からの True エッジは node-3 のみ
+      const trueEdge = graph.edges.find((e) => e.sourceId === 'node-2' && e.label === 'True');
+      expect(trueEdge?.targetId).toBe('node-3');
+
+      // 2. node-2 からの False エッジは node-6（合流先）
+      const falseEdge = graph.edges.find((e) => e.sourceId === 'node-2' && e.label === 'False');
+      expect(falseEdge?.targetId).toBe('node-6');
+
+      // 3. Yes側の順次エッジ: 3 -> 4, 4 -> 5
+      const edge34 = graph.edges.find((e) => e.sourceId === 'node-3' && e.targetId === 'node-4');
+      const edge45 = graph.edges.find((e) => e.sourceId === 'node-4' && e.targetId === 'node-5');
+      expect(edge34).toBeDefined();
+      expect(edge45).toBeDefined();
+
+      // 4. 中間ノード (node-3, node-4) から合流先 (node-6) へのエッジは存在しないこと
+      const extraMerge3 = graph.edges.find((e) => e.sourceId === 'node-3' && e.targetId === 'node-6');
+      const extraMerge4 = graph.edges.find((e) => e.sourceId === 'node-4' && e.targetId === 'node-6');
+      expect(extraMerge3).toBeUndefined();
+      expect(extraMerge4).toBeUndefined();
+
+      // 5. 末尾ノード (node-5) から合流先 (node-6) への接続が存在すること
+      const edge56 = graph.edges.find((e) => e.sourceId === 'node-5' && e.targetId === 'node-6');
+      expect(edge56).toBeDefined();
+
+      // SVG レンダリングテスト
+      const { container } = render(
+        <FlowchartViewer nodes={graph.nodes} edges={graph.edges} code={code} />
+      );
+      const falseEdgeEl = container.querySelector('.edge-false');
+      expect(falseEdgeEl).not.toBeNull();
+    });
   });
 });

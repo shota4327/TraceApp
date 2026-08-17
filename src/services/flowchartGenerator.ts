@@ -338,7 +338,11 @@ function processPoppedIfBlock(
       label: 'False',
     });
   }
-  for (const srcId of popped.mergeTargets) {
+  const allMergeTargets = [...popped.mergeTargets];
+  if (popped.bodyLastId && !allMergeTargets.includes(popped.bodyLastId)) {
+    allMergeTargets.push(popped.bodyLastId);
+  }
+  for (const srcId of allMergeTargets) {
     if (srcId !== targetId && !edges.some((e) => e.sourceId === srcId && e.targetId === targetId)) {
       edges.push({
         id: `edge-if-merge-${srcId}-${targetId}`,
@@ -456,7 +460,11 @@ function handleBlockStackUnwind(
           label: 'False',
         });
       }
-      inheritedMergeTargets = [...popped.mergeTargets];
+      const updatedMergeTargets = [...popped.mergeTargets];
+      if (popped.bodyLastId && !updatedMergeTargets.includes(popped.bodyLastId)) {
+        updatedMergeTargets.push(popped.bodyLastId);
+      }
+      inheritedMergeTargets = updatedMergeTargets;
       break;
     } else {
       lastPoppedId = processPoppedBlock(blockStack.pop()!, nodeId, edges, nodes);
@@ -638,9 +646,6 @@ function buildLinearGraph(
       if (blockStack.length > 0) {
         const top = blockStack[blockStack.length - 1]!;
         top.bodyLastId = node.id;
-        if (top.type === 'if' && node.type !== 'decision' && !top.mergeTargets.includes(node.id)) {
-          top.mergeTargets.push(node.id);
-        }
       }
       prevNodeId = node.id;
     }
