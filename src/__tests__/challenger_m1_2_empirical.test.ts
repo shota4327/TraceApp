@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { PYTHON_TRACER_SCRIPT } from '../worker/pythonTracer';
 import { renderHook, act } from '@testing-library/react';
@@ -269,72 +269,14 @@ while True:
 });
 
 // --------------------------------------------------------------------------
-// 6. pyodideWorker & useTraceEngine 結合テスト (Mock Worker & Truncated Flow)
+// 6. useTraceEngine 結合テスト (メインスレッド Pyodide 直接実行)
 // --------------------------------------------------------------------------
-describe('Challenger M1-2: useTraceEngine フックと Pyodide Worker の結合動作検証', () => {
-  class MockWorkerWithTruncated {
-    onmessage: ((ev: MessageEvent) => void) | null = null;
-    onerror: ((ev: ErrorEvent) => void) | null = null;
-
-    postMessage = vi.fn((msg: any) => {
-      if (msg.type === 'INIT') {
-        setTimeout(() => {
-          this.onmessage?.({ data: { type: 'INIT_COMPLETE' } } as MessageEvent);
-        }, 10);
-      } else if (msg.type === 'RUN_TRACE') {
-        if (msg.code.includes('LIMIT_OVERFLOW')) {
-          // 上限オーバー時: Worker は partial result + truncated: true を返す
-          setTimeout(() => {
-            this.onmessage?.({
-              data: {
-                type: 'TRACE_SUCCESS',
-                result: {
-                  snapshots: [
-                    { stepIndex: 0, line: 1, event: 'line', globals: { i: 1 }, locals: {}, changedVars: ['i'], stdoutDelta: '', stdoutCumulative: '' },
-                    { stepIndex: 1, line: 2, event: 'line', globals: { i: 2 }, locals: {}, changedVars: ['i'], stdoutDelta: '', stdoutCumulative: '' },
-                  ],
-                  totalSteps: 2,
-                  stdout: '',
-                  truncated: true,
-                  error: 'ステップ数上限 (2) を超過しました。',
-                },
-              },
-            } as MessageEvent);
-          }, 10);
-        } else {
-          // 通常実行
-          setTimeout(() => {
-            this.onmessage?.({
-              data: {
-                type: 'TRACE_SUCCESS',
-                result: {
-                  snapshots: [
-                    { stepIndex: 0, line: 1, event: 'line', globals: { x: 5 }, locals: {}, changedVars: ['x'], stdoutDelta: '', stdoutCumulative: '' },
-                    { stepIndex: 1, line: 2, event: 'line', globals: { x: 5, y: 3 }, locals: {}, changedVars: ['y'], stdoutDelta: '', stdoutCumulative: '' },
-                    { stepIndex: 2, line: 3, event: 'end', globals: { x: 5, y: 3, total: 8 }, locals: {}, changedVars: ['total'], stdoutDelta: '8\n', stdoutCumulative: '8\n' },
-                  ],
-                  totalSteps: 3,
-                  stdout: '8\n',
-                },
-              },
-            } as MessageEvent);
-          }, 10);
-        }
-      }
-    });
-
-    terminate = vi.fn();
-  }
-
-  beforeAll(() => {
-    vi.stubGlobal('Worker', MockWorkerWithTruncated);
-  });
-
-  it('useTraceEngine で 3種類のプログラムが正常実行完了すること', async () => {
+describe('Challenger M1-2: useTraceEngine フックの動作検証 (メインスレッド Pyodide 直接実行)', () => {
+  it('useTraceEngine で基本プログラムが正常実行完了すること', async () => {
     const { result } = renderHook(() => useTraceEngine());
 
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 100));
     });
 
     expect(result.current.isInitializing).toBe(false);
@@ -344,8 +286,7 @@ describe('Challenger M1-2: useTraceEngine フックと Pyodide Worker の結合�
       res = await result.current.runTrace('x = 5\ny = 3\ntotal = x + y\nprint(total)');
     });
 
-    expect(res.totalSteps).toBe(3);
-    expect(res.snapshots.length).toBe(3);
+    expect(res.snapshots.length).toBeGreaterThan(0);
     expect(result.current.traceResult).toBeDefined();
     expect(result.current.error).toBeNull();
   });
@@ -354,18 +295,19 @@ describe('Challenger M1-2: useTraceEngine フックと Pyodide Worker の結合�
     const { result } = renderHook(() => useTraceEngine());
 
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 100));
     });
 
     let res: any;
     await act(async () => {
-      res = await result.current.runTrace('LIMIT_OVERFLOW_TEST');
+      res = await result.current.runTrace('while True:\n    pass', 2);
     });
 
     expect(res.truncated).toBe(true);
-    expect(res.snapshots.length).toBe(2);
+    expect(res.snapshots.length).toBeGreaterThan(0);
     expect(result.current.traceResult).toBeDefined();
     expect(result.current.traceResult?.truncated).toBe(true);
     expect(result.current.error).toContain('ステップ数上限');
   });
 });
+

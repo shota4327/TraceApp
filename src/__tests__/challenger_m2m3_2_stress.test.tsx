@@ -23,78 +23,9 @@ vi.mock('@monaco-editor/react', () => ({
   ),
 }));
 
-// Web Worker モックの定義
-class MockWorker {
-  onmessage: ((ev: MessageEvent) => void) | null = null;
-  onerror: ((ev: ErrorEvent) => void) | null = null;
-  delayMs: number;
-
-  constructor(delayMs = 10) {
-    this.delayMs = delayMs;
-  }
-
-  postMessage = vi.fn((msg: any) => {
-    if (msg.type === 'INIT') {
-      setTimeout(() => {
-        this.onmessage?.({ data: { type: 'INIT_COMPLETE' } } as MessageEvent);
-      }, this.delayMs);
-    } else if (msg.type === 'RUN_TRACE') {
-      setTimeout(() => {
-        const dummySnapshots: StepSnapshot[] = [
-          {
-            stepIndex: 0,
-            line: 1,
-            event: 'line',
-            globals: { x: 5 },
-            locals: {},
-            changedVars: ['x'],
-            stdoutDelta: '',
-            stdoutCumulative: '',
-          },
-          {
-            stepIndex: 1,
-            line: 2,
-            event: 'line',
-            globals: { x: 5, y: 3 },
-            locals: {},
-            changedVars: ['y'],
-            stdoutDelta: '',
-            stdoutCumulative: '',
-          },
-          {
-            stepIndex: 2,
-            line: 3,
-            event: 'line',
-            globals: { x: 5, y: 3, total: 8 },
-            locals: {},
-            changedVars: ['total'],
-            stdoutDelta: '8\n',
-            stdoutCumulative: '8\n',
-          },
-        ];
-
-        this.onmessage?.({
-          data: {
-            type: 'TRACE_SUCCESS',
-            result: {
-              snapshots: dummySnapshots,
-              totalSteps: dummySnapshots.length,
-              stdout: '8\n',
-              flowchartNodes: [],
-            },
-          },
-        } as MessageEvent);
-      }, this.delayMs);
-    }
-  });
-
-  terminate = vi.fn();
-}
-
 describe('Challenger M2/M3 ストレステスト・非同期競合・UI状態整合性検証', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal('Worker', MockWorker);
   });
 
   describe('1. UIコンポーネント接続・ステップナビゲーション境界値検証', () => {
@@ -170,7 +101,7 @@ describe('Challenger M2/M3 ストレステスト・非同期競合・UI状態整
       // Pyodide 初期化完了まで待機
       await waitFor(() => {
         expect(screen.queryByTestId('loading-overlay')).toBeNull();
-      });
+      }, { timeout: 10000 });
 
       const runBtn = screen.getByTestId('btn-run');
       expect(runBtn).toBeDefined();
@@ -195,7 +126,7 @@ describe('Challenger M2/M3 ストレステスト・非同期競合・UI状態整
       // 初期化完了を待機
       await waitFor(() => {
         expect(screen.queryByTestId('loading-overlay')).toBeNull();
-      });
+      }, { timeout: 10000 });
 
       const select = screen.getByTestId('preset-select');
 

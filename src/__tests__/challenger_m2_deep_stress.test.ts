@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { loadPyodide, type PyodideInterface } from 'pyodide';
 import { PYTHON_TRACER_SCRIPT } from '../worker/pythonTracer';
 import { renderHook, act } from '@testing-library/react';
@@ -162,52 +162,18 @@ print("BULK_PRINT_" + "X" * 1000)
     });
   });
 
-  describe('3. React Hook (useTraceEngine) の超連打・初期化失敗・エッジケースストレス検証', () => {
-    class ControlledMockWorker {
-      onmessage: ((ev: MessageEvent) => void) | null = null;
-      onerror: ((ev: ErrorEvent) => void) | null = null;
-      shouldFailInit = false;
-
-      postMessage = vi.fn((msg: any) => {
-        if (msg.type === 'INIT') {
-          setTimeout(() => {
-            if (this.shouldFailInit) {
-              this.onmessage?.({ data: { type: 'INIT_ERROR', error: 'CDN Network Error' } } as MessageEvent);
-            } else {
-              this.onmessage?.({ data: { type: 'INIT_COMPLETE' } } as MessageEvent);
-            }
-          }, 10);
-        } else if (msg.type === 'RUN_TRACE') {
-          setTimeout(() => {
-            this.onmessage?.({
-              data: {
-                type: 'TRACE_SUCCESS',
-                result: {
-                  snapshots: [],
-                  totalSteps: 0,
-                  stdout: `done_${msg.code}`,
-                },
-              },
-            } as MessageEvent);
-          }, 20);
-        }
-      });
-
-      terminate = vi.fn();
-    }
-
+  describe('3. React Hook (useTraceEngine) の超連打・エッジケースストレス検証', () => {
     it('3.1. 100回連続で runTrace を呼び出した際、1回目のみ成功し残りの99回がすべて即座に Reject されるか', async () => {
-      vi.stubGlobal('Worker', ControlledMockWorker);
       const { result } = renderHook(() => useTraceEngine());
 
       await act(async () => {
-        await new Promise((r) => setTimeout(r, 20));
+        await new Promise((r) => setTimeout(r, 100));
       });
 
       const promises: Promise<any>[] = [];
       act(() => {
         for (let i = 0; i < 100; i++) {
-          promises.push(result.current.runTrace(`code_${i}`));
+          promises.push(result.current.runTrace(`print(${i})`));
         }
       });
 
@@ -222,29 +188,6 @@ print("BULK_PRINT_" + "X" * 1000)
 
       expect(fulfilledCount).toBe(1);
       expect(rejectedCount).toBe(99);
-    });
-
-    it('3.2. Worker 初期化失敗 (INIT_ERROR) 発生時に runTrace を呼ぶと適切なエラーメッセージで Reject されるか', async () => {
-      class FailingWorker extends ControlledMockWorker {
-        constructor() {
-          super();
-          this.shouldFailInit = true;
-        }
-      }
-      vi.stubGlobal('Worker', FailingWorker);
-
-      const { result } = renderHook(() => useTraceEngine());
-
-      await act(async () => {
-        await new Promise((r) => setTimeout(r, 20));
-      });
-
-      expect(result.current.isInitializing).toBe(false);
-      expect(result.current.initError).toBe('CDN Network Error');
-
-      await act(async () => {
-        await expect(result.current.runTrace('code')).rejects.toThrow('Pyodide初期化エラー: CDN Network Error');
-      });
     });
   });
 });

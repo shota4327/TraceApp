@@ -14,23 +14,7 @@ vi.mock('@monaco-editor/react', () => ({
   ),
 }));
 
-// Web Worker Mock
-class MockWorker {
-  onmessage: ((ev: MessageEvent) => void) | null = null;
-  onerror: ((ev: ErrorEvent) => void) | null = null;
 
-  postMessage = vi.fn((msg: any) => {
-    if (msg.type === 'INIT') {
-      queueMicrotask(() => {
-        this.onmessage?.({ data: { type: 'INIT_COMPLETE' } } as MessageEvent);
-      });
-    }
-  });
-
-  terminate = vi.fn();
-}
-
-vi.stubGlobal('Worker', MockWorker);
 
 describe('MonacoEditor & App M3 結合テスト (m3_ui.test.tsx)', () => {
   it('1. MonacoEditor が正常にレンダリングされ、code-input / code-viewer が存在すること', () => {

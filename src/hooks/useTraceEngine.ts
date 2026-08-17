@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { TraceResult, WorkerRequest, WorkerResponse } from '../types';
-import { runPythonTrace } from '../services/tracer';
-import { generateFlowchartGraph, generateDrawIoXml } from '../services/flowchartGenerator';
-import PyodideWorker from '../worker/pyodideWorker?worker&inline';
+import type { TraceResult } from '../types';
+import { getPyodideInstance, runPythonTrace } from '../services/tracer';
 
 export interface UseTraceEngineReturn {
   /** Pyodide の初期化中フラグ */
@@ -23,15 +21,9 @@ export interface UseTraceEngineReturn {
   resetTrace: () => void;
 }
 
-interface PendingRequest {
-  resolve: (result: TraceResult) => void;
-  reject: (error: Error) => void;
-}
-
 /**
- * Pyodide トレースエンジンと通信・状態同期を行うカスタム React フック
- * Worker 利用環境では Worker 経由、file:/// や Worker 利用不可環境ではメインスレッド直接 Pyodide を実行。
- * どちらの環境でも同一の Python sys.settrace スクリプト（PYTHON_TRACER_SCRIPT）を実行します。
+ * メインスレッド上の Pyodide トレースエンジンと状態同期を行う React フック
+ * Web Worker や環境分岐を介さず、メインスレッド上の単一 Pyodide インスタンスを直接実行します。
  */
 export function useTraceEngine(): UseTraceEngineReturn {
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
@@ -40,174 +32,73 @@ export function useTraceEngine(): UseTraceEngineReturn {
   const [traceResult, setTraceResult] = useState<TraceResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const workerRef = useRef<Worker | null>(null);
-  const pendingRequestRef = useRef<PendingRequest | null>(null);
-  const isDirectPyodideModeRef = useRef<boolean>(false);
   const initErrorRef = useRef<string | null>(null);
   const isInitializingRef = useRef<boolean>(true);
-  const currentCodeRef = useRef<string>('');
+  const isTracingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    let worker: Worker | null = null;
-    try {
-      if (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:') {
-        isDirectPyodideModeRef.current = true;
-        setIsInitializing(false);
-        isInitializingRef.current = false;
-        return;
-      }
-      if (typeof Worker !== 'undefined') {
-        try {
-          worker = new Worker(new URL('../worker/pyodideWorker.ts', import.meta.url), { type: 'module' });
-        } catch {
-          worker = new PyodideWorker();
-        }
-      } else {
-        isDirectPyodideModeRef.current = true;
-        setIsInitializing(false);
-        isInitializingRef.current = false;
-        return;
-      }
-    } catch {
-      isDirectPyodideModeRef.current = true;
-      setIsInitializing(false);
-      isInitializingRef.current = false;
-      return;
-    }
-
-    workerRef.current = worker;
-
-    worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-      const response = event.data;
-      switch (response.type) {
-        case 'INIT_COMPLETE':
+    let isMounted = true;
+    (async () => {
+      try {
+        await getPyodideInstance();
+        if (isMounted) {
           setIsInitializing(false);
           isInitializingRef.current = false;
           setInitError(null);
           initErrorRef.current = null;
-          break;
-        case 'INIT_ERROR':
+        }
+      } catch (err: unknown) {
+        if (isMounted) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error('[TraceEngine] Pyodide init error:', err);
           setIsInitializing(false);
           isInitializingRef.current = false;
-          setInitError(response.error);
-          initErrorRef.current = response.error;
-          if (pendingRequestRef.current) {
-            const req = pendingRequestRef.current;
-            pendingRequestRef.current = null;
-            req.reject(new Error(`Pyodide初期化エラー: ${response.error}`));
-          }
-          break;
-        case 'TRACE_SUCCESS': {
-          setIsTracing(false);
-          const graph = generateFlowchartGraph(currentCodeRef.current);
-          const enrichedResult: TraceResult = {
-            ...response.result,
-            flowchartNodes: graph.nodes,
-            flowchartEdges: graph.edges,
-            flowchartXml: generateDrawIoXml(graph),
-          };
-          setTraceResult(enrichedResult);
-          if (enrichedResult.truncated) {
-            setError(enrichedResult.error || 'ステップ数上限を超過しました。');
-          } else {
-            setError(null);
-          }
-          if (pendingRequestRef.current) {
-            pendingRequestRef.current.resolve(enrichedResult);
-            pendingRequestRef.current = null;
-          }
-          break;
+          setInitError(msg);
+          initErrorRef.current = msg;
         }
-        case 'TRACE_ERROR':
-          setIsTracing(false);
-          setError(response.error);
-          if (pendingRequestRef.current) {
-            pendingRequestRef.current.reject(new Error(response.error));
-            pendingRequestRef.current = null;
-          }
-          break;
       }
-    };
-
-    worker.onerror = () => {
-      isDirectPyodideModeRef.current = true;
-      setIsInitializing(false);
-      isInitializingRef.current = false;
-      setIsTracing(false);
-      if (pendingRequestRef.current) {
-        const req = pendingRequestRef.current;
-        pendingRequestRef.current = null;
-        req.reject(new Error('Worker error'));
-      }
-    };
-
-    worker.postMessage({ type: 'INIT' } satisfies WorkerRequest);
+    })();
 
     return () => {
-      if (workerRef.current) {
-        workerRef.current.terminate();
-        workerRef.current = null;
-      }
-      if (pendingRequestRef.current) {
-        pendingRequestRef.current.reject(new Error('コンポーネントがアンマウントされました。'));
-        pendingRequestRef.current = null;
-      }
+      isMounted = false;
     };
   }, []);
 
   const runTrace = useCallback(
-    (code: string, maxSteps?: number): Promise<TraceResult> => {
-      return new Promise<TraceResult>((resolve, reject) => {
-        if (initErrorRef.current) {
-          reject(new Error(`Pyodide初期化エラー: ${initErrorRef.current}`));
-          return;
-        }
-        if (isInitializingRef.current) {
-          reject(new Error('Pyodideの初期化中です。完了までお待ちください。'));
-          return;
-        }
-        if (isTracing || pendingRequestRef.current !== null) {
-          reject(new Error('現在トレースを実行中です。前の実行が完了するまでお待ちください。'));
-          return;
-        }
+    async (code: string, maxSteps?: number): Promise<TraceResult> => {
+      if (initErrorRef.current) {
+        throw new Error(`Pyodide初期化エラー: ${initErrorRef.current}`);
+      }
+      if (isInitializingRef.current) {
+        throw new Error('Pyodideの初期化中です。完了までお待ちください。');
+      }
+      if (isTracingRef.current) {
+        throw new Error('現在トレースを実行中です。前の実行が完了するまでお待ちください。');
+      }
 
-        if (isDirectPyodideModeRef.current || !workerRef.current) {
-          setIsTracing(true);
+      isTracingRef.current = true;
+      setIsTracing(true);
+      setError(null);
+
+      try {
+        const result = await runPythonTrace(code, maxSteps);
+        setTraceResult(result);
+        if (result.truncated) {
+          setError(result.error || 'ステップ数上限を超過しました。');
+        } else {
           setError(null);
-          runPythonTrace(code, maxSteps)
-            .then((result) => {
-              setIsTracing(false);
-              setTraceResult(result);
-              if (result.truncated) {
-                setError(result.error || 'ステップ数上限を超過しました。');
-              }
-              resolve(result);
-            })
-            .catch((err: unknown) => {
-              setIsTracing(false);
-              const msg = err instanceof Error ? err.message : String(err);
-              setError(msg);
-              reject(err instanceof Error ? err : new Error(msg));
-            });
-          return;
         }
-
-        currentCodeRef.current = code;
-        setIsTracing(true);
-        setError(null);
-        pendingRequestRef.current = { resolve, reject };
-
-        try {
-          const request: WorkerRequest = { type: 'RUN_TRACE', code, maxSteps };
-          workerRef.current.postMessage(request);
-        } catch (err: any) {
-          pendingRequestRef.current = null;
-          setIsTracing(false);
-          reject(err instanceof Error ? err : new Error(String(err)));
-        }
-      });
+        return result;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        throw err instanceof Error ? err : new Error(msg);
+      } finally {
+        isTracingRef.current = false;
+        setIsTracing(false);
+      }
     },
-    [isInitializing, initError, isTracing]
+    []
   );
 
   const resetTrace = useCallback(() => {

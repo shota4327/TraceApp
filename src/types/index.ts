@@ -3,4 +3,4 @@
  */
 export * from './trace';
 export * from './flowchart';
-export * from './worker';
+

@@ -5,12 +5,10 @@ import type {
   TraceResult,
   FlowchartNodeType,
   FlowchartNode,
-  WorkerRequest,
-  WorkerResponse,
 } from '../types';
 
 describe('型定義バレルファイル (src/types/index.ts) および型検証', () => {
-  it('全7つの型が src/types (index.ts) から正常にインポート可能であること', () => {
+  it('主要な型が src/types (index.ts) から正常にインポート可能であること', () => {
     const varSnap: VariableSnapshot = { x: 10, name: 'test', flag: true, val: 'NaN' };
     expect(varSnap.x).toBe(10);
 
@@ -45,12 +43,6 @@ describe('型定義バレルファイル (src/types/index.ts) および型検証
     };
     expect(traceRes.flowchartNodes).toHaveLength(1);
     expect(traceRes.flowchartNodes?.[0]?.id).toBe('node-1');
-
-    const req: WorkerRequest = { type: 'RUN_TRACE', code: 'x = 1' };
-    expect(req.type).toBe('RUN_TRACE');
-
-    const res: WorkerResponse = { type: 'TRACE_SUCCESS', result: traceRes };
-    expect(res.type).toBe('TRACE_SUCCESS');
   });
 
   it('TraceResult.flowchartNodes が FlowchartNode[] 型として厳格に型チェックされること', () => {
