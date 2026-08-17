@@ -43,4 +43,37 @@ test('単一 index.html ファイルを直接開いた際の起動およびト�
   // 6. 「トレース準備」ボタンが無効化（ready状態）であることを確認
   const btnRun = page.locator('#btn-run, [data-testid="btn-run"]').first();
   await expect(btnRun).toBeDisabled();
+
+  // 7. trace2.py (while ループ + 変数代入) を読み込ませてトレース実行
+  const trace2Code = `a = 3
+b = 1
+e = a + b
+if a > b:
+    e = e + 1
+    f = a + b
+else:
+    f = a - b
+e = e * e
+f = f * f
+g = e - f
+h = 1
+j = 1
+while g > j:
+    h = h + 1
+    j = h * h
+print(h)`;
+
+  const codeInput = page.locator('#code-input, [data-testid="code-input"]').first();
+  await codeInput.fill(trace2Code);
+  await expect(btnRun).toBeEnabled();
+  await btnRun.click();
+
+  // TraceLimitExceeded エラーにならず、正常に準備完了となること
+  await expect(statusText).toContainText('準備完了', { timeout: 60000 });
+
+  // 最終ステップ（実行完了状態）まで進めて print 出力 '3' が得られること
+  const btnLast = page.locator('#btn-last, [data-testid="btn-last"]').first();
+  await expect(btnLast).toBeEnabled();
+  await btnLast.click();
+  await expect(consoleOutput).toContainText('3');
 });

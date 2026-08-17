@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TraceResult, WorkerRequest, WorkerResponse } from '../types';
-import { executeTrace } from '../services/tracer';
+import { runPythonTrace } from '../services/tracer';
 import { generateFlowchartGraph, generateDrawIoXml } from '../services/flowchartGenerator';
 import PyodideWorker from '../worker/pyodideWorker?worker&inline';
 
@@ -29,8 +29,9 @@ interface PendingRequest {
 }
 
 /**
- * Web Worker 内で動作する Pyodide トレースエンジンと通信・状態同期を行うカスタム React フック
- * Worker 利用不可環境（file:/// プロトコル等）ではクライアント側 TS トレースエンジンに自動フォールバックします。
+ * Pyodide トレースエンジンと通信・状態同期を行うカスタム React フック
+ * Worker 利用環境では Worker 経由、file:/// や Worker 利用不可環境ではメインスレッド直接 Pyodide を実行。
+ * どちらの環境でも同一の Python sys.settrace スクリプト（PYTHON_TRACER_SCRIPT）を実行します。
  */
 export function useTraceEngine(): UseTraceEngineReturn {
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
@@ -41,38 +42,39 @@ export function useTraceEngine(): UseTraceEngineReturn {
 
   const workerRef = useRef<Worker | null>(null);
   const pendingRequestRef = useRef<PendingRequest | null>(null);
-  const isFallbackModeRef = useRef<boolean>(false);
+  const isDirectPyodideModeRef = useRef<boolean>(false);
   const initErrorRef = useRef<string | null>(null);
   const isInitializingRef = useRef<boolean>(true);
   const currentCodeRef = useRef<string>('');
 
   useEffect(() => {
-    // 動作環境に応じた Web Worker のインスタンス化
     let worker: Worker | null = null;
     try {
       if (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:') {
-        // file:/// プロトコル時はインライン Worker を起動
-        worker = new PyodideWorker();
-      } else {
-        // 通常の Web サーバー環境では ES Module Worker を起動
+        isDirectPyodideModeRef.current = true;
+        setIsInitializing(false);
+        isInitializingRef.current = false;
+        return;
+      }
+      if (typeof Worker !== 'undefined') {
         try {
-          worker = new Worker(
-            new URL('../worker/pyodideWorker.ts', import.meta.url),
-            { type: 'module' }
-          );
+          worker = new Worker(new URL('../worker/pyodideWorker.ts', import.meta.url), { type: 'module' });
         } catch {
           worker = new PyodideWorker();
         }
+      } else {
+        isDirectPyodideModeRef.current = true;
+        setIsInitializing(false);
+        isInitializingRef.current = false;
+        return;
       }
     } catch {
-      // Worker 生成失敗時はフォールバックモードへ
-      isFallbackModeRef.current = true;
+      isDirectPyodideModeRef.current = true;
       setIsInitializing(false);
       isInitializingRef.current = false;
-      setInitError(null);
-      initErrorRef.current = null;
       return;
     }
+
     workerRef.current = worker;
 
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
@@ -85,8 +87,6 @@ export function useTraceEngine(): UseTraceEngineReturn {
           initErrorRef.current = null;
           break;
         case 'INIT_ERROR':
-          // Worker 初期化失敗
-          console.warn('[TraceEngine] Worker init failed:', response.error);
           setIsInitializing(false);
           isInitializingRef.current = false;
           setInitError(response.error);
@@ -129,22 +129,18 @@ export function useTraceEngine(): UseTraceEngineReturn {
       }
     };
 
-    worker.onerror = (err) => {
-      console.warn('[TraceEngine] Web Worker error, switching to fallback trace engine:', err);
-      isFallbackModeRef.current = true;
+    worker.onerror = () => {
+      isDirectPyodideModeRef.current = true;
       setIsInitializing(false);
       isInitializingRef.current = false;
       setIsTracing(false);
-      setInitError(null);
-      initErrorRef.current = null;
       if (pendingRequestRef.current) {
         const req = pendingRequestRef.current;
         pendingRequestRef.current = null;
-        req.reject(new Error(err.message || 'Worker error'));
+        req.reject(new Error('Worker error'));
       }
     };
 
-    // Workerへ初期化メッセージを送信
     worker.postMessage({ type: 'INIT' } satisfies WorkerRequest);
 
     return () => {
@@ -175,32 +171,24 @@ export function useTraceEngine(): UseTraceEngineReturn {
           return;
         }
 
-        // フォールバックモードの場合（Worker が使用不可または file:/// 環境）
-        if (isFallbackModeRef.current || !workerRef.current) {
+        if (isDirectPyodideModeRef.current || !workerRef.current) {
           setIsTracing(true);
           setError(null);
-          try {
-            const execResult = executeTrace(code);
-            const graph = generateFlowchartGraph(code);
-            const lastSnapshot = execResult.snapshots.length > 0 ? execResult.snapshots[execResult.snapshots.length - 1] : undefined;
-            const result: TraceResult = {
-              snapshots: execResult.snapshots,
-              totalSteps: execResult.snapshots.length,
-              stdout: lastSnapshot?.stdoutCumulative || '',
-              flowchartNodes: graph.nodes,
-              flowchartEdges: graph.edges,
-              flowchartXml: generateDrawIoXml(graph),
-              truncated: false,
-            };
-            setIsTracing(false);
-            setTraceResult(result);
-            resolve(result);
-          } catch (err: unknown) {
-            setIsTracing(false);
-            const msg = err instanceof Error ? err.message : String(err);
-            setError(msg);
-            reject(err instanceof Error ? err : new Error(msg));
-          }
+          runPythonTrace(code, maxSteps)
+            .then((result) => {
+              setIsTracing(false);
+              setTraceResult(result);
+              if (result.truncated) {
+                setError(result.error || 'ステップ数上限を超過しました。');
+              }
+              resolve(result);
+            })
+            .catch((err: unknown) => {
+              setIsTracing(false);
+              const msg = err instanceof Error ? err.message : String(err);
+              setError(msg);
+              reject(err instanceof Error ? err : new Error(msg));
+            });
           return;
         }
 
