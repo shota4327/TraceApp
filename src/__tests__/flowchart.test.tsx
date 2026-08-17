@@ -437,5 +437,30 @@ h = 1`;
       const nodeFYes = container.querySelector('[data-node-id="node-6"]'); // f = a + b
       expect(nodeFYes).not.toBeNull();
     });
+
+    it('if-elif-else 分岐で各分岐に複数ブロックが含まれる場合、2つ目以降が隙間なく並び共通の水平合流線で合流すること', () => {
+      const code = `score = 75
+if score >= 80:
+    grade = "A"
+    grade = "A"
+elif score >= 60:
+    grade = "B"
+    grade = "B"
+else:
+    grade = "C"
+    grade = "A"
+print(grade)`;
+      const graph = generateFlowchartGraph(code);
+      const { container } = render(
+        <FlowchartViewer nodes={graph.nodes} edges={graph.edges} code={code} />
+      );
+
+      const mergeEdges = container.querySelectorAll('.edge-merge path');
+      expect(mergeEdges.length).toBeGreaterThan(0);
+
+      // 各分岐のノードが正しく描画されていること
+      const nodes = container.querySelectorAll('.flowchart-node');
+      expect(nodes.length).toBeGreaterThanOrEqual(10);
+    });
   });
 });

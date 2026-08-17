@@ -111,4 +111,40 @@ h = 1`;
     expect(pathD).toContain('V ');
     expect(pathD).toContain('H ');
   });
+
+  test('if-elif-else 分岐で各分岐のブロック数が異なる場合でも、共通の水平合流線で1箇所に合流すること', async ({ page }) => {
+    const codeInput = getEl(page, 'code-input');
+    const btnRun = getEl(page, 'btn-run');
+    const tabFlowchart = getEl(page, 'tab-flowchart');
+    const flowchartViewer = getEl(page, 'flowchart-viewer');
+    const stepCounter = getEl(page, 'step-counter');
+
+    // スクリーンショット1のコード (各分岐に複数ブロック)
+    const customCode = `score = 75
+if score >= 80:
+    grade = "A"
+    grade = "A"
+elif score >= 60:
+    grade = "B"
+    grade = "B"
+else:
+    grade = "C"
+    grade = "A"
+print(grade)`;
+
+    await codeInput.fill(customCode);
+    await btnRun.click();
+    await expect(stepCounter).toContainText('ステップ 0 /');
+
+    // 「流れ図」タブに切り替え
+    await tabFlowchart.click();
+    await expect(flowchartViewer).toBeVisible();
+
+    const svg = flowchartViewer.locator('svg');
+    await expect(svg).toBeVisible();
+
+    // マージエッジがすべて表示されていること
+    const mergeEdges = flowchartViewer.locator('.edge-merge');
+    await expect(mergeEdges).toHaveCount(2); // elifからの合流、elseからの合流
+  });
 });

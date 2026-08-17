@@ -379,8 +379,8 @@ function collectBranchNodes(
   nodeYs: number[],
   decisionY: number,
   stepY: number
-): { processIndices: number[]; maxDecisionY: number } {
-  const processIndices: number[] = [];
+): { firstProcessIndices: number[]; maxDecisionY: number } {
+  const firstProcessIndices: number[] = [];
   let currentDecisionId = startDecisionId;
   let branchDepth = 0;
   let maxDecisionY = decisionY;
@@ -405,18 +405,56 @@ function collectBranchNodes(
       const elifTrue = edges?.find((e) => e.sourceId === tgtNode.id && (e.label === 'True' || e.label === 'Yes'));
       if (elifTrue) {
         const etIdx = nodes.findIndex((n) => n.id === elifTrue.targetId);
-        if (etIdx >= 0) processIndices.push(etIdx);
+        if (etIdx >= 0) firstProcessIndices.push(etIdx);
       }
     } else {
-      processIndices.push(tgtIdx);
+      firstProcessIndices.push(tgtIdx);
       break;
     }
   }
 
-  return { processIndices, maxDecisionY };
+  return { firstProcessIndices, maxDecisionY };
 }
 
-/** if-elif-else 分岐チェーンのひし形を階段状にし、処理ブロックを横並び整列する helper */
+/** 単一カラム内の 2つ目以降の処理ブロックを縦に順次配置する helper */
+function layoutColumnBlocks(
+  firstIdx: number,
+  col: number,
+  processY: number,
+  nodes: FlowchartNode[],
+  nodeCols: number[],
+  nodeHeights: number[],
+  edges: FlowchartEdge[] | undefined,
+  nodeYs: number[],
+  defaultGap: number
+): number {
+  let currentBlockIdx = firstIdx;
+  let currentY = processY + (nodeHeights[firstIdx] ?? 50);
+
+  while (true) {
+    const nextEdge = edges?.find(
+      (e) =>
+        e.sourceId === nodes[currentBlockIdx]!.id &&
+        (e.label === 'Next' || !e.label) &&
+        !e.id.includes('merge') &&
+        !e.id.includes('join')
+    );
+    if (!nextEdge) break;
+    const nextIdx = nodes.findIndex((n) => n.id === nextEdge.targetId);
+    if (nextIdx < 0) break;
+    if (nodeCols[nextIdx] !== col || edges?.some((e) => e.targetId === nodes[nextIdx]!.id && e.id.includes('merge'))) {
+      break;
+    }
+
+    currentY += defaultGap;
+    nodeYs[nextIdx] = currentY;
+    currentY += (nodeHeights[nextIdx] ?? 50);
+    currentBlockIdx = nextIdx;
+  }
+  return currentY;
+}
+
+/** if-elif-else 分岐チェーンのひし形を階段状にし、各分岐の処理ブロック群を縦に整列する helper */
 function layoutBranchChain(
   ifIdx: number,
   nodes: FlowchartNode[],
@@ -426,6 +464,7 @@ function layoutBranchChain(
   nodeYs: number[],
   decisionY: number,
   decisionGap: number,
+  defaultGap = 12,
   stepY = 35
 ): number {
   const ifNode = nodes[ifIdx]!;
@@ -434,7 +473,7 @@ function layoutBranchChain(
   const trueEdge = edges?.find((e) => e.sourceId === ifNode.id && (e.label === 'True' || e.label === 'Yes'));
   const firstProcessIdx = trueEdge ? nodes.findIndex((n) => n.id === trueEdge.targetId) : -1;
 
-  const { processIndices, maxDecisionY } = collectBranchNodes(
+  const { firstProcessIndices, maxDecisionY } = collectBranchNodes(
     ifNode.id,
     nodes,
     nodeCols,
@@ -444,17 +483,24 @@ function layoutBranchChain(
     stepY
   );
   if (firstProcessIdx >= 0 && nodeCols[firstProcessIdx] === 0) {
-    processIndices.unshift(firstProcessIdx);
+    firstProcessIndices.unshift(firstProcessIdx);
   }
 
   const decisionH = nodeHeights[ifIdx] ?? 50;
   const processY = maxDecisionY + decisionH + decisionGap;
-  let maxProcessHeight = 50;
-  for (const pIdx of processIndices) {
+  let maxBranchBottom = processY;
+
+  for (const pIdx of firstProcessIndices) {
     nodeYs[pIdx] = processY;
-    maxProcessHeight = Math.max(maxProcessHeight, nodeHeights[pIdx] ?? 50);
   }
-  return processY + maxProcessHeight;
+
+  for (const pIdx of firstProcessIndices) {
+    const col = nodeCols[pIdx]!;
+    const colBottom = layoutColumnBlocks(pIdx, col, processY, nodes, nodeCols, nodeHeights, edges, nodeYs, defaultGap);
+    if (colBottom > maxBranchBottom) maxBranchBottom = colBottom;
+  }
+
+  return maxBranchBottom;
 }
 
 /** 単一グループのノード Y 座標を上端から順次配置 */
@@ -651,19 +697,16 @@ function getEdgeStyleProps(label?: string, isActive = false) {
   return { stroke: isActive ? '#2563eb' : '#64748b' };
 }
 
-/** 合流先ノード (tgt) の直前にあるメインラインノードの最下部 Y 座標を取得 */
-function getMainLineBottom(
+/** 合流先ノード (tgt) の直前にある全分岐ブロックの最下部 Y 座標を取得 */
+function getBranchMaxBottom(
   tgtIndex: number,
   nodeYs: number[],
-  nodeHeights: number[],
-  nodeCols: number[]
+  nodeHeights: number[]
 ): number {
   let maxBottom = 0;
   for (let i = 0; i < tgtIndex; i++) {
-    if (nodeCols[i] === 0) {
-      const b = nodeYs[i]! + (nodeHeights[i] ?? 50);
-      if (b > maxBottom) maxBottom = b;
-    }
+    const b = nodeYs[i]! + (nodeHeights[i] ?? 50);
+    if (b > maxBottom) maxBottom = b;
   }
   return maxBottom;
 }
@@ -675,7 +718,6 @@ function renderFalseEdgeElement(
   tgt: NodeBox,
   nodeYs: number[],
   nodeHeights: number[],
-  nodeCols: number[],
   stroke: string,
   isActive: boolean
 ): React.ReactNode {
@@ -696,8 +738,8 @@ function renderFalseEdgeElement(
 
   // 同一カラムまたはメインラインへの合流の場合（単一 if 等）
   const rightX = src.x + src.w + 40;
-  const mainLineBottom = getMainLineBottom(tgt.index, nodeYs, nodeHeights, nodeCols);
-  const prevBottom = mainLineBottom > 0 ? mainLineBottom : (src.y + src.h);
+  const branchBottom = getBranchMaxBottom(tgt.index, nodeYs, nodeHeights);
+  const prevBottom = branchBottom > 0 ? branchBottom : (src.y + src.h);
   const mergeY = prevBottom + (tgt.y - prevBottom) / 2;
   const mergeX = tgt.x + tgt.w / 2;
   const pathD = `M ${startX} ${startY} H ${rightX} V ${mergeY} H ${mergeX}`;
@@ -717,15 +759,14 @@ function renderMergeEdgeElement(
   tgt: NodeBox,
   nodeYs: number[],
   nodeHeights: number[],
-  nodeCols: number[],
   stroke: string,
   isActive: boolean
 ): React.ReactNode {
   const startX = src.x + src.w / 2;
   const startY = src.y + src.h;
-  const mainLineBottom = getMainLineBottom(tgt.index, nodeYs, nodeHeights, nodeCols);
-  const branchBottom = Math.max(mainLineBottom, startY);
-  const mergeY = branchBottom + (tgt.y - branchBottom) / 2;
+  const branchBottom = getBranchMaxBottom(tgt.index, nodeYs, nodeHeights);
+  const prevBottom = Math.max(branchBottom, startY);
+  const mergeY = prevBottom + (tgt.y - prevBottom) / 2;
   const mergeX = tgt.x + tgt.w / 2;
   const pathD = `M ${startX} ${startY} V ${mergeY} H ${mergeX}`;
 
@@ -759,11 +800,11 @@ function renderSingleEdge(
   const { stroke } = getEdgeStyleProps(edge.label, isActive);
 
   if (edge.label === 'False' || edge.label === 'No' || edge.id.includes('edge-false-')) {
-    return renderFalseEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, nodeCols, stroke, isActive);
+    return renderFalseEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, stroke, isActive);
   }
 
   if (src.col > tgt.col || (edge.id.includes('merge') && src.col > 0)) {
-    return renderMergeEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, nodeCols, stroke, isActive);
+    return renderMergeEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, stroke, isActive);
   }
 
   const isYes = edge.label === 'True' || edge.label === 'Yes';
