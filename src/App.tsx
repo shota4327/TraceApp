@@ -21,7 +21,7 @@ const LoadingOverlay: React.FC = () => (
 
 /**
  * メインアプリケーションコンポーネント
- * アプリ全体のレイアウト構築、Pyodide Worker接続および状態管理を統括
+ * アプリ全体のレイアウト構築、Pyodide トレースエンジンおよび状態管理を統括
  */
 export const App: React.FC = () => {
   const [selectedSampleId, setSelectedSampleId] = useState<string>(DEFAULT_SAMPLE.id);
