@@ -54,6 +54,28 @@ print(total)`,
     code: `print("Hello TraceApp!")
 print("Pyodide stdout capture test")`,
   },
+  {
+    id: 'zensho-2-73-4',
+    name: '２級 第73回【４】',
+    description: '全商情報処理検定 ２級 第73回【４】トレース演習',
+    code: `a = 3
+b = 1
+e = a + b
+if a > b:
+    e = e + 1
+    f = a + b
+else:
+    f = a - b
+e = e * e
+f = f * f
+g = e - f
+h = 1
+j = 1
+while g > j:
+    h = h + 1
+    j = h * h #(ア)
+print(h) #(イ)`,
+  },
 ];
 
 /**

@@ -13,5 +13,5 @@ h = 1
 j = 1
 while g > j:
     h = h + 1
-    j = h * h
-print(h)
+    j = h * h #(ア)
+print(h) #(イ)
