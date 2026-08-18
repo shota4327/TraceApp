@@ -172,4 +172,29 @@ print(a)`;
     await expect(node2).toBeVisible();
     await expect(node2).toContainText('a ＋ 2 → a');
   });
+
+  test('長い変数名の累加代入文 (total_score += 100) で単語が途中で切れることなく描画されること', async ({ page }) => {
+    const codeInput = getEl(page, 'code-input');
+    const btnRun = getEl(page, 'btn-run');
+    const tabFlowchart = getEl(page, 'tab-flowchart');
+    const flowchartViewer = getEl(page, 'flowchart-viewer');
+    const stepCounter = getEl(page, 'step-counter');
+
+    const customCode = `total_score = 0
+total_score += 100
+print(total_score)`;
+
+    await codeInput.fill(customCode);
+    await btnRun.click();
+    await expect(stepCounter).toContainText('ステップ 0 /');
+
+    // 「流れ図」タブに切り替え
+    await tabFlowchart.click();
+    await expect(flowchartViewer).toBeVisible();
+
+    // 2行目の処理ブロックのテキスト検証
+    const node2 = flowchartViewer.locator('[data-node-id="node-2"]');
+    await expect(node2).toBeVisible();
+    await expect(node2).toContainText('total_score');
+  });
 });

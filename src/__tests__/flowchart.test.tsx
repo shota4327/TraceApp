@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { generateFlowchartNodes, generateFlowchartGraph, generateDrawIoXml, formatProcessLabel } from '../services/flowchartGenerator';
-import { renderFlowchartSvg, isNodeActive } from '../services/flowchartRenderer';
+import { renderFlowchartSvg, isNodeActive, wrapProcessLabel } from '../services/flowchartRenderer';
 import { FlowchartViewer } from '../components/FlowchartViewer';
 import { LeftPanel } from '../components/LeftPanel';
 import { FlowchartNode } from '../types/flowchart';
@@ -482,6 +482,18 @@ print(a)`;
       const node2 = graph.nodes.find((n) => n.id === 'node-2');
       expect(node2).toBeDefined();
       expect(node2?.label).toBe('a ＋ 2 → a');
+    });
+
+    it('wrapProcessLabel が変数名などの単語の途中で改行せずトークン単位で改行すること', () => {
+      // "total ＋ 2 → total" は、"total" の途中で改行されず単語境界で改行されること
+      const lines = wrapProcessLabel('total ＋ 2 → total', 6.0);
+      expect(lines.length).toBeGreaterThan(1);
+      // 各行に分断された "tot" や "al" 等が存在せず、"total" が完全に維持されていること
+      for (const line of lines) {
+        if (line.includes('tot')) {
+          expect(line).toContain('total');
+        }
+      }
     });
   });
 });

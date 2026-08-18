@@ -166,32 +166,69 @@ export function renderDefaultNode(
   );
 }
 
-/** 改行コードおよび文字幅換算単位（全角=1, 半角=0.55）に基づき行分割 */
+/** トークンの表示幅ユニット（全角=1.0, 半角=0.55）を算出 */
+function calcTokenUnits(token: string): number {
+  let units = 0;
+  for (let i = 0; i < token.length; i++) {
+    units += token.charCodeAt(i) <= 0x7e ? 0.55 : 1.0;
+  }
+  return units;
+}
+
+/** 文字列を変数名・数値・演算子・記号・空白のトークン列に分割 */
+function tokenizeLabel(text: string): string[] {
+  const matches = text.match(/[a-zA-Z_][a-zA-Z0-9_]*|\d+(?:\.\d+)?|→|＝|＋|－|×|÷|\^|％|≠|≦|≧|[=+\-*/%^<>!]+|\s+|[^\s\w]/gu);
+  return matches ? Array.from(matches) : [text];
+}
+
+/** トークン列を行幅制限（maxUnitsPerLine）に収まるよう行分割 */
+function wrapTokensIntoLines(tokens: string[], maxUnitsPerLine: number): string[] {
+  const lines: string[] = [];
+  let currentLine = '';
+  let currentUnits = 0;
+
+  for (const token of tokens) {
+    const isSpace = /^\s+$/.test(token);
+    const tokenUnits = calcTokenUnits(token);
+
+    if (currentLine.length === 0) {
+      if (isSpace) continue;
+      currentLine = token;
+      currentUnits = tokenUnits;
+    } else if (currentUnits + tokenUnits <= maxUnitsPerLine) {
+      currentLine += token;
+      currentUnits += tokenUnits;
+    } else {
+      lines.push(currentLine.trimEnd());
+      if (isSpace) {
+        currentLine = '';
+        currentUnits = 0;
+      } else {
+        currentLine = token;
+        currentUnits = tokenUnits;
+      }
+    }
+  }
+  if (currentLine.trimEnd().length > 0) {
+    lines.push(currentLine.trimEnd());
+  }
+  return lines.length > 0 ? lines : [''];
+}
+
+/** 改行コードおよびトークン単位（単語・記号区切り）に基づき行分割 */
 export function wrapProcessLabel(text: string, maxUnitsPerLine = 9.5): string[] {
   if (!text) return [''];
   const rawLines = text.split('\n');
   const allLines: string[] = [];
 
   for (const rawLine of rawLines) {
-    if (!rawLine) {
+    if (!rawLine.trim()) {
       allLines.push('');
       continue;
     }
-    let currentLine = '';
-    let currentUnits = 0;
-    for (let i = 0; i < rawLine.length; i++) {
-      const char = rawLine[i]!;
-      const unit = char.charCodeAt(0) <= 0x7e ? 0.55 : 1.0;
-      if (currentUnits + unit > maxUnitsPerLine && currentLine.length > 0) {
-        allLines.push(currentLine);
-        currentLine = char;
-        currentUnits = unit;
-      } else {
-        currentLine += char;
-        currentUnits += unit;
-      }
-    }
-    if (currentLine.length > 0) allLines.push(currentLine);
+    const tokens = tokenizeLabel(rawLine);
+    const wrapped = wrapTokensIntoLines(tokens, maxUnitsPerLine);
+    allLines.push(...wrapped);
   }
   return allLines;
 }
