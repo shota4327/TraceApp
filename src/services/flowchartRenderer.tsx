@@ -289,6 +289,40 @@ function createNodeTextElement(
   );
 }
 
+/** 各ノードのコメント注釈テキスト要素を生成 */
+function createNodeCommentElement(
+  node: FlowchartNode,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): React.ReactNode {
+  if (!node.comment) return null;
+  const commentX = x + width + 10;
+  const isDecision = node.type === 'decision';
+  const commentY = isDecision ? y + height - 6 : y + height / 2;
+
+  return (
+    <text
+      x={commentX}
+      y={commentY}
+      textAnchor="start"
+      dominantBaseline="central"
+      fill="#475569"
+      fontSize={14}
+      fontWeight={600}
+      className="flowchart-comment"
+      style={{
+        pointerEvents: 'none',
+        userSelect: 'none',
+        fontFamily: '"BIZ UDPGothic", "BIZ UDPゴシック", sans-serif',
+      }}
+    >
+      {node.comment}
+    </text>
+  );
+}
+
 /** 各ノードタイプに応じた SVG 要素の描画振り分けメイン関数 */
 export function renderNodeShape(
   node: FlowchartNode,
@@ -308,15 +342,25 @@ export function renderNodeShape(
     'aria-label': `ノード ${node.label} (${node.type})`,
   };
   const textElement = createNodeTextElement(node, cx, cy, isActive);
+  const commentElement = createNodeCommentElement(node, x, y, width, height);
 
+  let shapeElement: React.ReactNode;
   switch (node.type) {
-    case 'terminal': return renderTerminalNode(node, x, y, width, height, isActive, commonProps, textElement);
-    case 'process': return renderProcessNode(node, x, y, width, height, isActive, commonProps, textElement);
-    case 'decision': return renderDecisionNode(node, x, y, width, height, isActive, commonProps, textElement, cx, cy);
-    case 'loop': return renderLoopNode(node, x, y, width, height, isActive, commonProps, textElement, cy);
-    case 'subroutine': return renderSubroutineNode(node, x, y, width, height, isActive, commonProps, textElement);
-    default: return renderDefaultNode(node, x, y, width, height, isActive, commonProps, textElement);
+    case 'terminal': shapeElement = renderTerminalNode(node, x, y, width, height, isActive, commonProps, textElement); break;
+    case 'process': shapeElement = renderProcessNode(node, x, y, width, height, isActive, commonProps, textElement); break;
+    case 'decision': shapeElement = renderDecisionNode(node, x, y, width, height, isActive, commonProps, textElement, cx, cy); break;
+    case 'loop': shapeElement = renderLoopNode(node, x, y, width, height, isActive, commonProps, textElement, cy); break;
+    case 'subroutine': shapeElement = renderSubroutineNode(node, x, y, width, height, isActive, commonProps, textElement); break;
+    default: shapeElement = renderDefaultNode(node, x, y, width, height, isActive, commonProps, textElement); break;
   }
+
+  if (!commentElement) return shapeElement;
+  return (
+    <g key={`node-group-${node.id}`}>
+      {shapeElement}
+      {commentElement}
+    </g>
+  );
 }
 
 /** SVG の defs 定義描画 */
@@ -630,8 +674,52 @@ function layoutAllNodeGroups(
   return maxGroupHeight;
 }
 
+/** コメント文字列の表示幅（px）を概算 */
+function calcCommentWidth(comment?: string): number {
+  if (!comment) return 0;
+  let w = 10;
+  for (let i = 0; i < comment.length; i++) {
+    w += comment.charCodeAt(i) <= 0x7e ? 8 : 14;
+  }
+  return w;
+}
+
+/** カラムごとの開始 X 座標配列を算出 */
+function computeColumnStartX(
+  nodes: FlowchartNode[],
+  nodeCols: number[],
+  nodeWidth: number,
+  baseColGap: number,
+  paddingX: number
+): { colStartX: number[]; extraCommentRight: number } {
+  const maxCol = Math.max(0, ...nodeCols);
+  const colCommentWidths = new Array<number>(maxCol + 1).fill(0);
+
+  for (let i = 0; i < nodes.length; i++) {
+    const col = nodeCols[i]!;
+    const cw = calcCommentWidth(nodes[i]?.comment);
+    if (cw > colCommentWidths[col]!) {
+      colCommentWidths[col] = cw;
+    }
+  }
+
+  const colStartX = new Array<number>(maxCol + 1).fill(paddingX);
+  for (let c = 1; c <= maxCol; c++) {
+    const prevCommentW = colCommentWidths[c - 1]!;
+    const effectiveGap = Math.max(baseColGap, prevCommentW + 16);
+    colStartX[c] = colStartX[c - 1]! + nodeWidth + effectiveGap;
+  }
+
+  const lastCol = maxCol;
+  const lastCommentW = colCommentWidths[lastCol] ?? 0;
+  const extraCommentRight = lastCommentW > 0 ? lastCommentW + 16 : 0;
+
+  return { colStartX, extraCommentRight };
+}
+
 /** 最終的な SVG 幅と高さを計算 */
 function computeLayoutDimensions(
+  nodes: FlowchartNode[],
   nodeCols: number[],
   nodeYs: number[],
   nodeHeights: number[],
@@ -643,8 +731,10 @@ function computeLayoutDimensions(
   paddingX: number,
   paddingY: number
 ): { nodeXs: number[]; totalWidth: number; totalHeight: number } {
-  const nodeXs = nodeCols.map((col) => paddingX + col * (nodeWidth + colGap));
+  const { colStartX, extraCommentRight } = computeColumnStartX(nodes, nodeCols, nodeWidth, colGap, paddingX);
+  const nodeXs = nodeCols.map((col) => colStartX[col]!);
   const maxCol = Math.max(0, ...nodeCols);
+
   const hasBranchOrMerge = edges?.some(
     (e) =>
       !e.id.includes('loop-exit') &&
@@ -652,8 +742,8 @@ function computeLayoutDimensions(
       e.label !== 'Loop' &&
       (e.label === 'False' || e.label === 'No' || e.id.includes('merge') || e.id.includes('edge-false-'))
   );
-  const extraRightMargin = hasBranchOrMerge ? 48 : 16;
-  const totalWidth = (maxCol + 1) * (nodeWidth + colGap) - colGap + paddingX + extraRightMargin;
+  const extraRightMargin = Math.max(hasBranchOrMerge ? 48 : 16, extraCommentRight);
+  const totalWidth = colStartX[maxCol]! + nodeWidth + extraRightMargin;
   const maxYWithHeight = Math.max(...nodeYs.map((y, idx) => y + (nodeHeights[idx] ?? baseNodeHeight)));
   const totalHeight = Math.max(maxGroupHeight + paddingY, maxYWithHeight + paddingY);
 
@@ -690,6 +780,7 @@ function calculateNodeLayouts(
   );
 
   const { nodeXs, totalWidth, totalHeight } = computeLayoutDimensions(
+    nodes,
     nodeCols,
     nodeYs,
     nodeHeights,

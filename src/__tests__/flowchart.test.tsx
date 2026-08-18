@@ -495,5 +495,49 @@ print(a)`;
         }
       }
     });
+
+    it('ソースコードの命令行末尾のコメントが抽出され、流れ図ブロック横にアノテーションとして描画されること', () => {
+      const code = `a = a + 1 #(ア)
+if a > 10: #(イ)
+    print(a)
+# 単体コメント行`;
+      const graph = generateFlowchartGraph(code);
+
+      // 1. ノードに comment プロパティが設定されていること
+      const node1 = graph.nodes.find((n) => n.id === 'node-1');
+      const node2 = graph.nodes.find((n) => n.id === 'node-2');
+      expect(node1?.comment).toBe('(ア)');
+      expect(node2?.comment).toBe('(イ)');
+
+      // 2. 単体コメント行からノードは生成されないこと
+      expect(graph.nodes.some((n) => n.label.includes('単体コメント行'))).toBe(false);
+
+      // 3. SVG 描画テスト
+      const { container } = render(
+        <FlowchartViewer nodes={graph.nodes} edges={graph.edges} code={code} />
+      );
+      const comments = container.querySelectorAll('.flowchart-comment');
+      expect(comments.length).toBe(2);
+      expect(comments[0]?.textContent).toBe('(ア)');
+      expect(comments[1]?.textContent).toBe('(イ)');
+    });
+
+    it('複数カラムレイアウトにおいてコメント幅に応じてカラム間隔とSVG幅が適切に拡張されること', () => {
+      const codeWithLongComment = `score = 75
+if score >= 80: # 【極めて優秀なスコア】
+    grade = "A"
+else: # 【再試験対象】
+    grade = "B"
+print(grade)`;
+      const graph = generateFlowchartGraph(codeWithLongComment);
+      const { container } = render(
+        <FlowchartViewer nodes={graph.nodes} edges={graph.edges} code={codeWithLongComment} />
+      );
+
+      const svg = container.querySelector('svg');
+      const width = Number(svg?.getAttribute('width'));
+      // コメントなしのデフォルト2列幅（約 440px）よりも広く拡張されていること
+      expect(width).toBeGreaterThan(400);
+    });
   });
 });

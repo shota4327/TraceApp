@@ -197,4 +197,32 @@ print(total_score)`;
     await expect(node2).toBeVisible();
     await expect(node2).toContainText('total_score');
   });
+
+  test('行末コメント (a = a + 1 #(ア)) が流れ図ブロックの横にアノテーションとして描画されること', async ({ page }) => {
+    const codeInput = getEl(page, 'code-input');
+    const btnRun = getEl(page, 'btn-run');
+    const tabFlowchart = getEl(page, 'tab-flowchart');
+    const flowchartViewer = getEl(page, 'flowchart-viewer');
+    const stepCounter = getEl(page, 'step-counter');
+
+    const customCode = `a = 0
+a = a + 1 #(ア)
+if a > 0: #(イ)
+    print(a)
+# 単体コメント`;
+
+    await codeInput.fill(customCode);
+    await btnRun.click();
+    await expect(stepCounter).toContainText('ステップ 0 /');
+
+    // 「流れ図」タブに切り替え
+    await tabFlowchart.click();
+    await expect(flowchartViewer).toBeVisible();
+
+    // コメント要素の検証
+    const comments = flowchartViewer.locator('.flowchart-comment');
+    await expect(comments).toHaveCount(2);
+    await expect(comments.nth(0)).toHaveText('(ア)');
+    await expect(comments.nth(1)).toHaveText('(イ)');
+  });
 });

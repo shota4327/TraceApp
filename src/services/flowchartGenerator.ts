@@ -224,6 +224,40 @@ interface ParsedLineInfo {
   text: string;
   lineNo: number;
   indent: number;
+  comment?: string;
+}
+
+/** 行文字列からコード部分と末尾コメント（# ...）を分離（文字列リテラル内の # は保護） */
+function splitLineComment(lineText: string): { codePart: string; comment?: string } {
+  let inSingle = false;
+  let inDouble = false;
+  let escapeNext = false;
+  let commentIndex = -1;
+
+  for (let i = 0; i < lineText.length; i++) {
+    const char = lineText[i]!;
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+    if (char === "'" && !inDouble) inSingle = !inSingle;
+    else if (char === '"' && !inSingle) inDouble = !inDouble;
+    else if (char === '#' && !inSingle && !inDouble) {
+      commentIndex = i;
+      break;
+    }
+  }
+
+  if (commentIndex >= 0) {
+    const codePart = lineText.slice(0, commentIndex).trim();
+    const rawComment = lineText.slice(commentIndex + 1).trim();
+    return { codePart, comment: rawComment || undefined };
+  }
+  return { codePart: lineText.trim() };
 }
 
 /** コード内のループ行番号と通し番号 (1, 2, ...) のマップを構築 */
@@ -250,8 +284,10 @@ function parseValidLines(code: string): ParsedLineInfo[] {
     const text = rawLines[i] || '';
     const trimmed = text.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
+    const { codePart, comment } = splitLineComment(trimmed);
+    if (!codePart) continue;
     const indent = text.search(/\S/);
-    validLines.push({ text: trimmed, lineNo: i + 1, indent: indent >= 0 ? indent : 0 });
+    validLines.push({ text: codePart, lineNo: i + 1, indent: indent >= 0 ? indent : 0, comment });
   }
   return validLines;
 }
@@ -608,7 +644,8 @@ function createNodeForLine(
   yPos: number,
   loopNumber?: number,
   totalLoops = 1,
-  definedFuncNames?: Set<string>
+  definedFuncNames?: Set<string>,
+  comment?: string
 ): FlowchartNode {
   const { type, label, subType } = classifyLine(trimmed, loopNumber, totalLoops, definedFuncNames);
   const id = `node-${lineNo}`;
@@ -621,6 +658,7 @@ function createNodeForLine(
     type,
     label,
     subType,
+    comment,
     lineRange: [lineNo, lineNo],
     x: 100,
     y: yPos,
@@ -652,7 +690,7 @@ function buildLinearGraph(
       const loopNumber = loopNumberByLine.get(line.lineNo);
       const { inheritedMergeTargets, lastPoppedId } = handleBlockStackUnwind(line, `node-${line.lineNo}`, blockStack, edges, nodes);
       const effectivePrevId = lastPoppedId || prevNodeId;
-      const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20, loopNumber, totalLoops, definedFuncNames);
+      const node = createNodeForLine(line.text, line.lineNo, nodes.length * 60 + 20, loopNumber, totalLoops, definedFuncNames, line.comment);
       nodes.push(node);
       processLineNodeEdge(node, effectivePrevId, startNode.id, lines[i + 1], line.indent, blockStack, edges, inheritedMergeTargets, loopNumber, totalLoops);
 
@@ -690,7 +728,7 @@ function buildFunctionGraphs(
   const allEdges: FlowchartEdge[] = [];
 
   for (const fn of functionBlocks) {
-    const defNode = createNodeForLine(fn.defLine.text, fn.defLine.lineNo, 20, undefined, totalLoops, definedFuncNames);
+    const defNode = createNodeForLine(fn.defLine.text, fn.defLine.lineNo, 20, undefined, totalLoops, definedFuncNames, fn.defLine.comment);
     const lastBodyLine = fn.bodyLines[fn.bodyLines.length - 1];
     const hasReturnAtEnd = lastBodyLine && (lastBodyLine.text.startsWith('return ') || lastBodyLine.text === 'return');
 
