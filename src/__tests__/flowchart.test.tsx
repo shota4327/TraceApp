@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { generateFlowchartNodes, generateFlowchartGraph, generateDrawIoXml } from '../services/flowchartGenerator';
+import { generateFlowchartNodes, generateFlowchartGraph, generateDrawIoXml, formatProcessLabel } from '../services/flowchartGenerator';
 import { renderFlowchartSvg, isNodeActive } from '../services/flowchartRenderer';
 import { FlowchartViewer } from '../components/FlowchartViewer';
 import { LeftPanel } from '../components/LeftPanel';
@@ -461,6 +461,27 @@ print(grade)`;
       // 各分岐のノードが正しく描画されていること
       const nodes = container.querySelectorAll('.flowchart-node');
       expect(nodes.length).toBeGreaterThanOrEqual(10);
+    });
+
+    it('formatProcessLabel が累加代入文（+=, -=, *=, /=, %=）を正しく展開・表記変換すること', () => {
+      expect(formatProcessLabel('a += 2')).toBe('a ＋ 2 → a');
+      expect(formatProcessLabel('total += i')).toBe('total ＋ i → total');
+      expect(formatProcessLabel('x -= 5')).toBe('x － 5 → x');
+      expect(formatProcessLabel('count *= 2')).toBe('count × 2 → count');
+      expect(formatProcessLabel('val /= 4')).toBe('val ÷ 4 → val');
+      expect(formatProcessLabel('num //= 2')).toBe('num ÷ 2 → num');
+      expect(formatProcessLabel('rem %= 3')).toBe('rem % 3 → rem');
+      expect(formatProcessLabel('power **= 2')).toBe('power ^ 2 → power');
+    });
+
+    it('累加代入文を含むPythonコードの流れ図ノードが期待通りの表記で生成されること', () => {
+      const code = `a = 5
+a += 2
+print(a)`;
+      const graph = generateFlowchartGraph(code);
+      const node2 = graph.nodes.find((n) => n.id === 'node-2');
+      expect(node2).toBeDefined();
+      expect(node2?.label).toBe('a ＋ 2 → a');
     });
   });
 });

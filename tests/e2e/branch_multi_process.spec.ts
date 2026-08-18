@@ -147,4 +147,29 @@ print(grade)`;
     const mergeEdges = flowchartViewer.locator('.edge-merge');
     await expect(mergeEdges).toHaveCount(2); // elifからの合流、elseからの合流
   });
+
+  test('累加代入文 (a += 2) が流れ図で「a ＋ 2 → a」として正しく描画されること', async ({ page }) => {
+    const codeInput = getEl(page, 'code-input');
+    const btnRun = getEl(page, 'btn-run');
+    const tabFlowchart = getEl(page, 'tab-flowchart');
+    const flowchartViewer = getEl(page, 'flowchart-viewer');
+    const stepCounter = getEl(page, 'step-counter');
+
+    const customCode = `a = 5
+a += 2
+print(a)`;
+
+    await codeInput.fill(customCode);
+    await btnRun.click();
+    await expect(stepCounter).toContainText('ステップ 0 /');
+
+    // 「流れ図」タブに切り替え
+    await tabFlowchart.click();
+    await expect(flowchartViewer).toBeVisible();
+
+    // 2行目の処理ブロックに「a ＋ 2 → a」が表示されていること
+    const node2 = flowchartViewer.locator('[data-node-id="node-2"]');
+    await expect(node2).toBeVisible();
+    await expect(node2).toContainText('a ＋ 2 → a');
+  });
 });

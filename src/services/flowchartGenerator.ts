@@ -135,13 +135,26 @@ export function replaceMathOperators(expr: string): string {
 /**
  * 処理ブロックのラベル生成
  * 1. print文（例: print(grade)）→ 「gradeを表示」
- * 2. 代入文（例: a = 4）→ 「4 → a」
+ * 2. 累加代入文（例: a += 2）→ 「a ＋ 2 → a」
+ * 3. 単純代入文（例: a = 4）→ 「4 → a」
  */
 export function formatProcessLabel(trimmed: string): string {
   const printLabel = formatPrintLabel(trimmed);
   if (printLabel !== null) return printLabel;
 
-  const assignMatch = trimmed.match(/^([^=<>!]+?)\s*=\s*([^=].*)$/);
+  // 累加代入文 (+=, -=, *=, /=, //=, %=, **= 等)
+  const augAssignMatch = trimmed.match(/^([^=<>!+\-*/%^&|]+?)\s*(\/\/|\*\*|[+\-*/%^&|]|<<|>>)=\s*(.+)$/);
+  if (augAssignMatch && augAssignMatch[1] && augAssignMatch[2] && augAssignMatch[3]) {
+    const lhsRaw = augAssignMatch[1].trim();
+    const op = augAssignMatch[2].trim();
+    const rhsRaw = augAssignMatch[3].trim();
+    const lhs = replaceMathOperators(lhsRaw);
+    const expandedRhs = replaceMathOperators(`${lhsRaw} ${op} ${rhsRaw}`);
+    return `${expandedRhs} → ${lhs}`;
+  }
+
+  // 単純代入文 (=)
+  const assignMatch = trimmed.match(/^([^=<>!+\-*/%^&|]+?)\s*=\s*([^=].*)$/);
   if (assignMatch && assignMatch[1] && assignMatch[2]) {
     const lhs = replaceMathOperators(assignMatch[1].trim());
     const rhs = replaceMathOperators(assignMatch[2].trim());
