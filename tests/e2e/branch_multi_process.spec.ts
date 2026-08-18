@@ -225,4 +225,42 @@ if a > 0: #(イ)
     await expect(comments.nth(0)).toHaveText('(ア)');
     await expect(comments.nth(1)).toHaveText('(イ)');
   });
+
+  test('合流後の処理ブロックにコメントがある場合でも、分岐内のelseブロックは通常の間隔で詰めて描画されること', async ({ page }) => {
+    const codeInput = getEl(page, 'code-input');
+    const btnRun = getEl(page, 'btn-run');
+    const tabFlowchart = getEl(page, 'tab-flowchart');
+    const flowchartViewer = getEl(page, 'flowchart-viewer');
+    const stepCounter = getEl(page, 'step-counter');
+
+    const customCode = `a = 3
+b = 1
+e = a + b
+if a > b:
+    e = e + 1
+    f = a + b
+else:
+    f = a - b
+e = e * e
+f = f * f #※小数点以下切り捨て
+e = e - f
+h = 1`;
+
+    await codeInput.fill(customCode);
+    await btnRun.click();
+    await expect(stepCounter).toContainText('ステップ 0 /');
+
+    // 「流れ図」タブに切り替え
+    await tabFlowchart.click();
+    await expect(flowchartViewer).toBeVisible();
+
+    // else ノード (node-8) の存在と表示
+    const elseNode = flowchartViewer.locator('[data-node-id="node-8"]');
+    await expect(elseNode).toBeVisible();
+
+    // コメント「※小数点以下切り捨て」が表示されていること
+    const commentEl = flowchartViewer.locator('.flowchart-comment');
+    await expect(commentEl).toHaveCount(1);
+    await expect(commentEl).toHaveText('※小数点以下切り捨て');
+  });
 });

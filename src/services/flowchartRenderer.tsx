@@ -684,37 +684,54 @@ function calcCommentWidth(comment?: string): number {
   return w;
 }
 
-/** カラムごとの開始 X 座標配列を算出 */
+/** 特定カラムとY方向で重なる左側カラムノードの最大コメント幅を算出 */
+function calcOverlapCommentWidth(
+  col: number,
+  nodes: FlowchartNode[],
+  nodeCols: number[],
+  nodeYs: number[],
+  nodeHeights: number[]
+): number {
+  const nodesInCol = nodes.map((_, i) => i).filter((i) => nodeCols[i] === col);
+  let maxOverlapW = 0;
+
+  for (const tgtIdx of nodesInCol) {
+    const tgtY = nodeYs[tgtIdx]!;
+    const tgtH = nodeHeights[tgtIdx] ?? 50;
+
+    for (let srcIdx = 0; srcIdx < nodes.length; srcIdx++) {
+      if (nodeCols[srcIdx] === col - 1) {
+        const srcY = nodeYs[srcIdx]!;
+        const srcH = nodeHeights[srcIdx] ?? 50;
+        if (srcY + srcH >= tgtY - 20 && srcY <= tgtY + tgtH + 20) {
+          const cw = calcCommentWidth(nodes[srcIdx]?.comment);
+          if (cw > maxOverlapW) maxOverlapW = cw;
+        }
+      }
+    }
+  }
+  return maxOverlapW;
+}
+
+/** カラムごとの開始 X 座標配列を算出（Y方向で重なる左側ノードのコメント幅のみを考慮） */
 function computeColumnStartX(
   nodes: FlowchartNode[],
   nodeCols: number[],
+  nodeYs: number[],
+  nodeHeights: number[],
   nodeWidth: number,
   baseColGap: number,
   paddingX: number
-): { colStartX: number[]; extraCommentRight: number } {
+): number[] {
   const maxCol = Math.max(0, ...nodeCols);
-  const colCommentWidths = new Array<number>(maxCol + 1).fill(0);
-
-  for (let i = 0; i < nodes.length; i++) {
-    const col = nodeCols[i]!;
-    const cw = calcCommentWidth(nodes[i]?.comment);
-    if (cw > colCommentWidths[col]!) {
-      colCommentWidths[col] = cw;
-    }
-  }
-
   const colStartX = new Array<number>(maxCol + 1).fill(paddingX);
+
   for (let c = 1; c <= maxCol; c++) {
-    const prevCommentW = colCommentWidths[c - 1]!;
-    const effectiveGap = Math.max(baseColGap, prevCommentW + 16);
+    const maxOverlapW = calcOverlapCommentWidth(c, nodes, nodeCols, nodeYs, nodeHeights);
+    const effectiveGap = Math.max(baseColGap, maxOverlapW + 16);
     colStartX[c] = colStartX[c - 1]! + nodeWidth + effectiveGap;
   }
-
-  const lastCol = maxCol;
-  const lastCommentW = colCommentWidths[lastCol] ?? 0;
-  const extraCommentRight = lastCommentW > 0 ? lastCommentW + 16 : 0;
-
-  return { colStartX, extraCommentRight };
+  return colStartX;
 }
 
 /** 最終的な SVG 幅と高さを計算 */
@@ -731,7 +748,7 @@ function computeLayoutDimensions(
   paddingX: number,
   paddingY: number
 ): { nodeXs: number[]; totalWidth: number; totalHeight: number } {
-  const { colStartX, extraCommentRight } = computeColumnStartX(nodes, nodeCols, nodeWidth, colGap, paddingX);
+  const colStartX = computeColumnStartX(nodes, nodeCols, nodeYs, nodeHeights, nodeWidth, colGap, paddingX);
   const nodeXs = nodeCols.map((col) => colStartX[col]!);
   const maxCol = Math.max(0, ...nodeCols);
 
@@ -742,8 +759,17 @@ function computeLayoutDimensions(
       e.label !== 'Loop' &&
       (e.label === 'False' || e.label === 'No' || e.id.includes('merge') || e.id.includes('edge-false-'))
   );
-  const extraRightMargin = Math.max(hasBranchOrMerge ? 48 : 16, extraCommentRight);
-  const totalWidth = colStartX[maxCol]! + nodeWidth + extraRightMargin;
+  const baseExtraRight = hasBranchOrMerge ? 48 : 16;
+  let maxRightEdge = colStartX[maxCol]! + nodeWidth + baseExtraRight;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const x = nodeXs[i]!;
+    const cw = calcCommentWidth(nodes[i]?.comment);
+    const rightEdge = x + nodeWidth + (cw > 0 ? cw + 24 : 0);
+    if (rightEdge > maxRightEdge) maxRightEdge = rightEdge;
+  }
+
+  const totalWidth = maxRightEdge;
   const maxYWithHeight = Math.max(...nodeYs.map((y, idx) => y + (nodeHeights[idx] ?? baseNodeHeight)));
   const totalHeight = Math.max(maxGroupHeight + paddingY, maxYWithHeight + paddingY);
 

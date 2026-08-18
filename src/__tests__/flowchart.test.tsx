@@ -539,5 +539,34 @@ print(grade)`;
       // コメントなしのデフォルト2列幅（約 440px）よりも広く拡張されていること
       expect(width).toBeGreaterThan(400);
     });
+
+    it('合流後のブロックに長いコメントがある場合でも、分岐内のelseブロックは通常の間隔（余白なし）で配置されること', () => {
+      const code = `a = 3
+b = 1
+e = a + b
+if a > b:
+    e = e + 1
+    f = a + b
+else:
+    f = a - b
+e = e * e
+f = f * f #※小数点以下切り捨て
+e = e - f
+1 -> h`;
+      const graph = generateFlowchartGraph(code);
+      const { container } = render(
+        <FlowchartViewer nodes={graph.nodes} edges={graph.edges} code={code} />
+      );
+
+      // else ブロック (f = a - b, node-8) の X 座標
+      const elseNode = container.querySelector('[data-node-id="node-8"]');
+      expect(elseNode).not.toBeNull();
+      const rect = elseNode?.querySelector('rect');
+      const elseX = Number(rect?.getAttribute('x'));
+
+      // paddingX (16) + nodeWidth (180) + colGap (40) = 236
+      // Yes側にコメントがないため、通常間隔 236px に配置されていること（過剰に離れていない）
+      expect(elseX).toBe(236);
+    });
   });
 });
