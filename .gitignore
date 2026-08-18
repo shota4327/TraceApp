@@ -4,3 +4,6 @@ playwright-report/
 blob-report/
 .vite/
 *.log
+.agents/
+.agent/
+
