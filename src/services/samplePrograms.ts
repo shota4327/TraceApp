@@ -98,6 +98,44 @@ while g > j:
     j = h * h #(ア)
 print(h) #(イ)`,
   },
+  {
+    id: 'zensho-2-74-4-1-2',
+    name: '２級 第74回【４】(１)(２)',
+    description: '全商情報処理検定 ２級 第74回【４】(１)(２) トレース演習',
+    code: `a = 4
+b = a
+c = 1
+while b >= c:
+    b = b - c
+    c = c + 2
+e = a
+f = 2
+while e >= f:
+    e = e - f
+    f = f + 2
+g = b - e
+h = g * g
+print(h)`,
+  },
+  {
+    id: 'zensho-2-74-4-3-4',
+    name: '２級 第74回【４】(３)(４)',
+    description: '全商情報処理検定 ２級 第74回【４】(３)(４) トレース演習',
+    code: `a = 32
+b = a
+c = 1
+while b >= c:
+    b = b - c
+    c = c + 2
+e = a
+f = 2
+while e >= f:
+    e = e - f
+    f = f + 2
+g = b - e
+h = g * g
+print(h)`,
+  },
 ];
 
 /**
