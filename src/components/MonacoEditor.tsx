@@ -38,7 +38,7 @@ const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number; fontSize?:
  * Monaco Editor 表示コンポーネント
  * Python コード編集、実行行デコレーションハイライト、ズーム連動および .py ファイルドロップ機能を提供
  */
-export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, highlightLine, zoom = 100 }) => {
+const MonacoEditorComponent: React.FC<MonacoEditorProps> = ({ code, onChange, highlightLine, zoom = 100 }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
@@ -129,6 +129,8 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({ code, onChange, high
     </div>
   );
 };
+
+export const MonacoEditor = React.memo(MonacoEditorComponent);
 
 const containerStyle: React.CSSProperties = {
   display: 'flex',

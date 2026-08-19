@@ -215,9 +215,15 @@ function wrapTokensIntoLines(tokens: string[], maxUnitsPerLine: number): string[
   return lines.length > 0 ? lines : [''];
 }
 
+const labelWrapCache = new Map<string, string[]>();
+
 /** 改行コードおよびトークン単位（単語・記号区切り）に基づき行分割 */
 export function wrapProcessLabel(text: string, maxUnitsPerLine = 9.5): string[] {
   if (!text) return [''];
+  const cacheKey = `${maxUnitsPerLine}:${text}`;
+  const cached = labelWrapCache.get(cacheKey);
+  if (cached) return cached;
+
   const rawLines = text.split('\n');
   const allLines: string[] = [];
 
@@ -230,6 +236,8 @@ export function wrapProcessLabel(text: string, maxUnitsPerLine = 9.5): string[] 
     const wrapped = wrapTokensIntoLines(tokens, maxUnitsPerLine);
     allLines.push(...wrapped);
   }
+  if (labelWrapCache.size > 2000) labelWrapCache.clear();
+  labelWrapCache.set(cacheKey, allLines);
   return allLines;
 }
 
@@ -822,6 +830,108 @@ function calculateNodeLayouts(
   return { nodeXs, nodeYs, nodeHeights, nodeCols, totalWidth, totalHeight };
 }
 
+interface NodeLayoutResult {
+  nodeXs: number[];
+  nodeYs: number[];
+  nodeHeights: number[];
+  nodeCols: number[];
+  totalWidth: number;
+  totalHeight: number;
+  inactiveNodes: React.ReactNode[];
+  activeNodes: React.ReactNode[];
+  inactiveConnections: React.ReactNode[];
+  activeConnections: React.ReactNode[];
+}
+
+const layoutCache = new WeakMap<FlowchartNode[], Map<FlowchartEdge[] | undefined, NodeLayoutResult>>();
+
+function buildCachedLayoutResult(
+  nodes: FlowchartNode[],
+  edges?: FlowchartEdge[],
+  defaultGap = 12,
+  mergeGap = 45,
+  decisionGap = 20,
+  nodeWidth = 180,
+  baseNodeHeight = 50,
+  colGap = 40,
+  paddingX = 16,
+  paddingY = 40
+): NodeLayoutResult {
+  const layout = calculateNodeLayouts(
+    nodes,
+    edges,
+    defaultGap,
+    mergeGap,
+    decisionGap,
+    nodeWidth,
+    baseNodeHeight,
+    colGap,
+    paddingX,
+    paddingY
+  );
+
+  const inactiveNodes = nodes.map((node, i) =>
+    renderNodeShape(node, layout.nodeXs[i]!, layout.nodeYs[i]!, nodeWidth, layout.nodeHeights[i] ?? 50, false)
+  );
+  const activeNodes = nodes.map((node, i) =>
+    renderNodeShape(node, layout.nodeXs[i]!, layout.nodeYs[i]!, nodeWidth, layout.nodeHeights[i] ?? 50, true)
+  );
+
+  const inactiveConnections: React.ReactNode[] = [];
+  const activeConnections: React.ReactNode[] = [];
+  for (let i = 0; i < nodes.length - 1; i++) {
+    const node = nodes[i]!;
+    const currentY = layout.nodeYs[i]!;
+    const nextY = layout.nodeYs[i + 1]!;
+    const h = layout.nodeHeights[i] ?? 50;
+    const startX = layout.nodeXs[i]! + nodeWidth / 2;
+    inactiveConnections.push(
+      <line key={`line-${node.id}-${i}`} x1={startX} y1={currentY + h} x2={startX} y2={nextY} stroke="#94a3b8" strokeWidth={2} />
+    );
+    activeConnections.push(
+      <line key={`line-${node.id}-${i}`} x1={startX} y1={currentY + h} x2={startX} y2={nextY} stroke="#2563eb" strokeWidth={3} />
+    );
+  }
+
+  return { ...layout, inactiveNodes, activeNodes, inactiveConnections, activeConnections };
+}
+
+function getCachedNodeLayouts(
+  nodes: FlowchartNode[],
+  edges?: FlowchartEdge[],
+  defaultGap = 12,
+  mergeGap = 45,
+  decisionGap = 20,
+  nodeWidth = 180,
+  baseNodeHeight = 50,
+  colGap = 40,
+  paddingX = 16,
+  paddingY = 40
+): NodeLayoutResult {
+  let edgeMap = layoutCache.get(nodes);
+  if (!edgeMap) {
+    edgeMap = new Map();
+    layoutCache.set(nodes, edgeMap);
+  }
+  let cached = edgeMap.get(edges);
+  if (!cached) {
+    cached = buildCachedLayoutResult(
+      nodes,
+      edges,
+      defaultGap,
+      mergeGap,
+      decisionGap,
+      nodeWidth,
+      baseNodeHeight,
+      colGap,
+      paddingX,
+      paddingY
+    );
+    edgeMap.set(edges, cached);
+  }
+  return cached;
+}
+
 function getNodeBox(
   nodeId: string,
   nodes: FlowchartNode[],
@@ -991,51 +1101,24 @@ function renderFlowchartEdges(
 
 /** 接続線（フォールバック）の描画 */
 function renderFlowchartConnections(
-  nodes: FlowchartNode[],
-  nodeXs: number[],
-  nodeYs: number[],
-  nodeHeights: number[],
-  activeFlags: boolean[],
-  nodeWidth: number
+  cachedLayout: NodeLayoutResult,
+  activeFlags: boolean[]
 ): React.ReactNode[] {
   const elements: React.ReactNode[] = [];
-  for (let i = 0; i < nodes.length - 1; i++) {
-    const node = nodes[i]!;
-    const currentY = nodeYs[i]!;
-    const nextY = nodeYs[i + 1]!;
-    const h = nodeHeights[i] ?? 50;
+  const len = cachedLayout.inactiveConnections.length;
+  for (let i = 0; i < len; i++) {
     const lineIsActive = activeFlags[i]! && activeFlags[i + 1]!;
-    const startX = nodeXs[i]! + nodeWidth / 2;
-    elements.push(
-      <line
-        key={`line-${node.id}-${i}`}
-        x1={startX}
-        y1={currentY + h}
-        x2={startX}
-        y2={nextY}
-        stroke={lineIsActive ? '#2563eb' : '#94a3b8'}
-        strokeWidth={lineIsActive ? 3 : 2}
-      />
-    );
+    elements.push(lineIsActive ? cachedLayout.activeConnections[i] : cachedLayout.inactiveConnections[i]);
   }
   return elements;
 }
 
 /** ノード群の描画 */
 function renderFlowchartNodeList(
-  nodes: FlowchartNode[],
-  nodeXs: number[],
-  nodeYs: number[],
-  nodeHeights: number[],
-  activeFlags: boolean[],
-  nodeWidth: number
+  cachedLayout: NodeLayoutResult,
+  activeFlags: boolean[]
 ): React.ReactNode[] {
-  return nodes.map((node, i) => {
-    const x = nodeXs[i]!;
-    const y = nodeYs[i]!;
-    const h = nodeHeights[i] ?? 50;
-    return renderNodeShape(node, x, y, nodeWidth, h, activeFlags[i]!);
-  });
+  return activeFlags.map((isActive, i) => (isActive ? cachedLayout.activeNodes[i] : cachedLayout.inactiveNodes[i]));
 }
 
 /** 流れ図全体の SVG を生成するメイン関数 */
@@ -1050,7 +1133,7 @@ export function renderFlowchartSvg(
   const paddingX = 16;
   const paddingY = 40;
 
-  const { nodeXs, nodeYs, nodeHeights, nodeCols, totalWidth, totalHeight } = calculateNodeLayouts(
+  const cached = getCachedNodeLayouts(
     nodes,
     edges,
     12,
@@ -1069,16 +1152,16 @@ export function renderFlowchartSvg(
     <svg
       role="img"
       aria-label="アルゴリズム流れ図"
-      width={totalWidth}
-      height={totalHeight}
-      viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+      width={cached.totalWidth}
+      height={cached.totalHeight}
+      viewBox={`0 0 ${cached.totalWidth} ${cached.totalHeight}`}
       style={{ display: 'block', margin: '0 auto', flexShrink: 0 }}
     >
       {renderSvgDefs()}
       {edges && edges.length > 0
-        ? renderFlowchartEdges(edges, nodes, nodeXs, nodeYs, nodeHeights, nodeCols, activeFlags, nodeWidth)
-        : renderFlowchartConnections(nodes, nodeXs, nodeYs, nodeHeights, activeFlags, nodeWidth)}
-      {renderFlowchartNodeList(nodes, nodeXs, nodeYs, nodeHeights, activeFlags, nodeWidth)}
+        ? renderFlowchartEdges(edges, nodes, cached.nodeXs, cached.nodeYs, cached.nodeHeights, cached.nodeCols, activeFlags, nodeWidth)
+        : renderFlowchartConnections(cached, activeFlags)}
+      {renderFlowchartNodeList(cached, activeFlags)}
     </svg>
   );
 }
