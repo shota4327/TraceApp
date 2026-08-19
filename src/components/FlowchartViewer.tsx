@@ -99,7 +99,7 @@ function useFlowchartPan(containerRef: React.RefObject<HTMLDivElement>) {
  * 流れ図（フローチャート）表示コンポーネント
  * SVG レンダラー、拡大率（ズーム）、マウスドラッグパン、およびアクティブノード自動追従を提供
  */
-export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
+const FlowchartViewerComponent: React.FC<FlowchartViewerProps> = ({
   nodes,
   edges,
   activeLine,
@@ -182,6 +182,8 @@ export const FlowchartViewer: React.FC<FlowchartViewerProps> = ({
     </div>
   );
 };
+
+export const FlowchartViewer = React.memo(FlowchartViewerComponent);
 
 const containerStyle: React.CSSProperties = {
   display: 'flex',
