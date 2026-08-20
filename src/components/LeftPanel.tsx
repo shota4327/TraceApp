@@ -28,6 +28,8 @@ interface LeftPanelProps {
   isTracing?: boolean;
   isCodeDirty?: boolean;
   executionStatus?: 'not_started' | 'running' | 'ended';
+  activeTab?: LeftPanelTab;
+  onChangeTab?: (tab: LeftPanelTab) => void;
 }
 
 /** ステップスライダー＆カウンターサブコンポーネント */
@@ -172,9 +174,14 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   isTracing = false,
   isCodeDirty = false,
   executionStatus,
+  activeTab: externalActiveTab,
+  onChangeTab: externalOnChangeTab,
 }) => {
-  const [activeTab, setActiveTab] = useState<LeftPanelTab>('code');
+  const [internalActiveTab, setInternalActiveTab] = useState<LeftPanelTab>('code');
   const [zoom, setZoom] = useState<number>(100);
+
+  const activeTab = externalActiveTab ?? internalActiveTab;
+  const setActiveTab = externalOnChangeTab ?? setInternalActiveTab;
 
   const memoizedGraph = useMemo(() => {
     if (flowchartNodes && flowchartNodes.length > 0) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
-import { LeftPanel } from './components/LeftPanel';
+import { LeftPanel, LeftPanelTab } from './components/LeftPanel';
 import { RightPanel } from './components/RightPanel';
 import { SAMPLE_PROGRAMS, DEFAULT_SAMPLE } from './services/samplePrograms';
 import { StepSnapshot } from './types/trace';
@@ -34,6 +34,7 @@ export const App: React.FC = () => {
   const [snapshots, setSnapshots] = useState<StepSnapshot[]>([]);
   const [flowchartNodes, setFlowchartNodes] = useState<FlowchartNode[]>([]);
   const [flowchartEdges, setFlowchartEdges] = useState<FlowchartEdge[]>([]);
+  const [activeTab, setActiveTab] = useState<LeftPanelTab>('code');
   const [statusText, setStatusText] = useState<string>('Pyodide初期化中...');
 
   const { isInitializing, initError, isTracing, runTrace: executeTraceEngine } = useTraceEngine();
@@ -88,6 +89,7 @@ export const App: React.FC = () => {
 
   const handleSelectSample = (id: string) => {
     setSelectedSampleId(id);
+    setActiveTab('code');
     const target = SAMPLE_PROGRAMS.find((s) => s.id === id);
     if (target) {
       setCode(target.code);
@@ -98,6 +100,7 @@ export const App: React.FC = () => {
   const handleFileUpload = (newCode: string) => {
     setCode(newCode);
     setSelectedSampleId('custom');
+    setActiveTab('code');
     if (!isInitializing) runTrace(newCode);
   };
 
@@ -112,6 +115,7 @@ export const App: React.FC = () => {
     setCode(res.code);
     const reverseRes = pythonToVba(res.code);
     setPyToVbaLineMap(reverseRes.lineMap);
+    setActiveTab('code');
     if (!isInitializing) {
       runTrace(res.code);
     }
@@ -177,6 +181,8 @@ export const App: React.FC = () => {
             isTracing={isTracing || isInitializing}
             isCodeDirty={isCodeDirty}
             executionStatus={executionStatus}
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
           />
         </div>
         <div

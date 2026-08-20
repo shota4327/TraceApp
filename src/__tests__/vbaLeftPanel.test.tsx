@@ -137,4 +137,26 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
     expect(vbaEditor.getAttribute('data-highlight')).toBe('3');
     expect(vbaEditor.getAttribute('data-language')).toBe('vba');
   });
+
+  it('respects external activeTab and triggers onChangeTab on click', () => {
+    const onChangeTab = vi.fn();
+    const { rerender } = render(
+      <LeftPanel {...defaultProps} activeTab="flowchart" onChangeTab={onChangeTab} />
+    );
+
+    const pyTab = screen.getByRole('tab', { name: 'コード(Python)' });
+    const flowTab = screen.getByRole('tab', { name: '流れ図' });
+
+    expect(flowTab.getAttribute('aria-selected')).toBe('true');
+    expect(pyTab.getAttribute('aria-selected')).toBe('false');
+
+    // Pythonタブをクリックすると onChangeTab('code') が呼ばれること
+    fireEvent.click(pyTab);
+    expect(onChangeTab).toHaveBeenCalledWith('code');
+
+    // 外部から activeTab="code" に更新されたら Python タブが選択状態になること
+    rerender(<LeftPanel {...defaultProps} activeTab="code" onChangeTab={onChangeTab} />);
+    expect(pyTab.getAttribute('aria-selected')).toBe('true');
+    expect(flowTab.getAttribute('aria-selected')).toBe('false');
+  });
 });
