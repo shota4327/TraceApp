@@ -68,7 +68,7 @@ function useFlowchartPan(containerRef: React.RefObject<HTMLDivElement>) {
       try {
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       } catch {
-        // ignore
+        // ポインターキャプチャ設定失敗時は無視
       }
     }
   }, [containerRef]);
@@ -87,7 +87,7 @@ function useFlowchartPan(containerRef: React.RefObject<HTMLDivElement>) {
       try {
         (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
       } catch {
-        // ignore
+        // ポインターキャプチャ解除失敗時は無視
       }
     }
   }, []);

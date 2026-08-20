@@ -37,7 +37,7 @@ function getPyodideIndexURL(): string {
         return nodePath.resolve(process.cwd(), 'node_modules/pyodide');
       }
     } catch {
-      // ignore
+      // パス解決失敗時はフォールバックURLを使用
     }
   }
   return 'https://cdn.jsdelivr.net/pyodide/v314.0.5/full/';
