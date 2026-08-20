@@ -5,9 +5,15 @@ import { StepNavigation } from './StepNavigation';
 import { FlowchartNode, FlowchartEdge } from '../types/flowchart';
 import { generateFlowchartGraph } from '../services/flowchartGenerator';
 
+export type LeftPanelTab = 'code' | 'vba' | 'flowchart';
+
 interface LeftPanelProps {
   code: string;
   onChangeCode: (code: string) => void;
+  vbaCode?: string;
+  onChangeVbaCode?: (vbaCode: string) => void;
+  onConvertToVba?: () => void;
+  onConvertToPython?: () => void;
   currentStep: number;
   totalSteps: number;
   onStepChange: (step: number) => void;
@@ -15,6 +21,7 @@ interface LeftPanelProps {
   onRun?: () => void;
   onLast?: () => void;
   activeLine?: number;
+  activeVbaLine?: number;
   activeNodeId?: string;
   flowchartNodes?: FlowchartNode[];
   flowchartEdges?: FlowchartEdge[];
@@ -55,11 +62,12 @@ const TabBarStepControl: React.FC<{
   );
 };
 
-/** 左パネルのコード/流れ図タブバー */
+/** 左パネルのコード/マクロ言語/流れ図タブバー */
 const LeftPanelTabBar: React.FC<{
-  activeTab: 'code' | 'flowchart';
-  onSelectTab: (tab: 'code' | 'flowchart') => void;
+  activeTab: LeftPanelTab;
+  onSelectTab: (tab: LeftPanelTab) => void;
   activeLine?: number;
+  activeVbaLine?: number;
   executionStatus?: 'not_started' | 'running' | 'ended';
   currentStep: number;
   totalSteps: number;
@@ -70,6 +78,7 @@ const LeftPanelTabBar: React.FC<{
   activeTab,
   onSelectTab,
   activeLine,
+  activeVbaLine,
   executionStatus,
   currentStep,
   totalSteps,
@@ -77,11 +86,12 @@ const LeftPanelTabBar: React.FC<{
   isTracing,
   isCodeDirty,
 }) => {
+  const currentLine = activeTab === 'vba' ? (activeVbaLine ?? activeLine) : activeLine;
   let badgeText = '実行行: (未実行)';
   if (executionStatus === 'ended') {
     badgeText = '実行行: (実行終了)';
-  } else if (executionStatus === 'running' || (activeLine !== undefined && activeLine > 0)) {
-    badgeText = `実行行: Line ${activeLine}`;
+  } else if (executionStatus === 'running' || (currentLine !== undefined && currentLine > 0)) {
+    badgeText = `実行行: Line ${currentLine}`;
   }
 
   return (
@@ -97,6 +107,17 @@ const LeftPanelTabBar: React.FC<{
           style={activeTab === 'code' ? activeTabStyle : tabStyle}
         >
           コード(Python)
+        </button>
+        <button
+          id="tab-vba"
+          data-testid="tab-vba"
+          role="tab"
+          aria-selected={activeTab === 'vba'}
+          aria-controls="panel-vba"
+          onClick={() => onSelectTab('vba')}
+          style={activeTab === 'vba' ? activeTabStyle : tabStyle}
+        >
+          コード(マクロ言語)
         </button>
         <button
           id="tab-flowchart"
@@ -128,11 +149,15 @@ const LeftPanelTabBar: React.FC<{
 
 /**
  * 左パネルコンポーネント
- * コード/流れ図のタブ切り替え、ステップナビゲーション、ズーム倍率管理を統括
+ * Python/VBA/流れ図のタブ切り替え、ステップナビゲーション、ズーム倍率管理、相互変換を統括
  */
 export const LeftPanel: React.FC<LeftPanelProps> = ({
   code,
   onChangeCode,
+  vbaCode = '',
+  onChangeVbaCode = () => {},
+  onConvertToVba,
+  onConvertToPython,
   currentStep,
   totalSteps,
   onStepChange,
@@ -140,6 +165,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onRun,
   onLast,
   activeLine,
+  activeVbaLine,
   activeNodeId,
   flowchartNodes,
   flowchartEdges,
@@ -147,7 +173,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   isCodeDirty = false,
   executionStatus,
 }) => {
-  const [activeTab, setActiveTab] = useState<'code' | 'flowchart'>('code');
+  const [activeTab, setActiveTab] = useState<LeftPanelTab>('code');
   const [zoom, setZoom] = useState<number>(100);
 
   const memoizedGraph = useMemo(() => {
@@ -163,6 +189,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         activeLine={activeLine}
+        activeVbaLine={activeVbaLine}
         executionStatus={executionStatus}
         currentStep={currentStep}
         totalSteps={totalSteps}
@@ -171,11 +198,82 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         isCodeDirty={isCodeDirty}
       />
       <div style={contentStyle}>
-        <div id="panel-code" role="tabpanel" aria-labelledby="tab-code" style={{ height: '100%', display: activeTab === 'code' ? 'block' : 'none' }}>
-          <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} zoom={zoom} />
+        {/* Python コードエディタパネル */}
+        <div
+          id="panel-code"
+          data-testid="panel-code"
+          role="tabpanel"
+          aria-labelledby="tab-code"
+          aria-label="コード(Python)"
+          style={{ height: '100%', display: activeTab === 'code' ? 'block' : 'none' }}
+        >
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {onConvertToVba && (
+              <div style={editorToolbarStyle}>
+                <button
+                  id="btn-convert-to-vba"
+                  data-testid="btn-convert-to-vba"
+                  onClick={onConvertToVba}
+                  style={convertButtonStyle}
+                  title="Pythonコードをマクロ言語(VBA)コードに変換します"
+                >
+                  マクロ言語へ変換 ➔
+                </button>
+              </div>
+            )}
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} zoom={zoom} language="python" />
+            </div>
+          </div>
         </div>
+
+        {/* VBA マクロ言語エディタパネル */}
+        <div
+          id="panel-vba"
+          data-testid="panel-vba"
+          role="tabpanel"
+          aria-labelledby="tab-vba"
+          aria-label="コード(マクロ言語)"
+          style={{ height: '100%', display: activeTab === 'vba' ? 'block' : 'none' }}
+        >
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {onConvertToPython && (
+              <div style={editorToolbarStyle}>
+                <button
+                  id="btn-convert-to-py"
+                  data-testid="btn-convert-to-py"
+                  onClick={onConvertToPython}
+                  style={convertButtonStyle}
+                  title="VBA(マクロ言語)コードをPythonコードに変換します"
+                >
+                  ⬅ Pythonへ変換
+                </button>
+              </div>
+            )}
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <MonacoEditor
+                code={vbaCode}
+                onChange={onChangeVbaCode}
+                highlightLine={activeVbaLine}
+                zoom={zoom}
+                language="vba"
+                id="monaco-editor-vba"
+                testId="monaco-editor-vba"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 流れ図ビューアパネル */}
         <div style={{ height: '100%', display: activeTab === 'flowchart' ? 'block' : 'none' }}>
-          <FlowchartViewer nodes={memoizedGraph.nodes} edges={memoizedGraph.edges} activeLine={activeLine} activeNodeId={activeNodeId} code={code} zoom={zoom} />
+          <FlowchartViewer
+            nodes={memoizedGraph.nodes}
+            edges={memoizedGraph.edges}
+            activeLine={activeLine}
+            activeNodeId={activeNodeId}
+            code={code}
+            zoom={zoom}
+          />
         </div>
       </div>
       <StepNavigation
@@ -298,6 +396,30 @@ const activeTabStyle: React.CSSProperties = {
   color: '#2563eb',
   borderBottom: '2px solid #2563eb',
   fontWeight: 600,
+};
+
+const editorToolbarStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  alignItems: 'center',
+  padding: '4px 10px',
+  backgroundColor: '#f8fafc',
+  borderBottom: '1px solid #e2e8f0',
+  gap: '8px',
+};
+
+const convertButtonStyle: React.CSSProperties = {
+  padding: '4px 10px',
+  fontSize: '0.78rem',
+  fontWeight: 600,
+  color: '#2563eb',
+  backgroundColor: '#eff6ff',
+  border: '1px solid #bfdbfe',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
 };
 
 const contentStyle: React.CSSProperties = {

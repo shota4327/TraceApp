@@ -6,6 +6,7 @@ import { SAMPLE_PROGRAMS, DEFAULT_SAMPLE } from './services/samplePrograms';
 import { StepSnapshot } from './types/trace';
 import { FlowchartNode, FlowchartEdge } from './types/flowchart';
 import { generateFlowchartGraph } from './services/flowchartGenerator';
+import { pythonToVba, vbaToPython } from './services/vbaConverter';
 import { useTraceEngine } from './hooks/useTraceEngine';
 import { useHorizontalResize } from './hooks/useHorizontalResize';
 
@@ -26,6 +27,8 @@ const LoadingOverlay: React.FC = () => (
 export const App: React.FC = () => {
   const [selectedSampleId, setSelectedSampleId] = useState<string>(DEFAULT_SAMPLE.id);
   const [code, setCode] = useState<string>(DEFAULT_SAMPLE.code);
+  const [vbaCode, setVbaCode] = useState<string>('');
+  const [pyToVbaLineMap, setPyToVbaLineMap] = useState<Record<number, number>>({});
   const [lastTracedCode, setLastTracedCode] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [snapshots, setSnapshots] = useState<StepSnapshot[]>([]);
@@ -98,13 +101,25 @@ export const App: React.FC = () => {
     if (!isInitializing) runTrace(newCode);
   };
 
+  const handleConvertToVba = useCallback(() => {
+    const res = pythonToVba(code);
+    setVbaCode(res.code);
+    setPyToVbaLineMap(res.lineMap);
+  }, [code]);
+
+  const handleConvertToPython = useCallback(() => {
+    const res = vbaToPython(vbaCode);
+    setCode(res.code);
+    const reverseRes = pythonToVba(res.code);
+    setPyToVbaLineMap(reverseRes.lineMap);
+    if (!isInitializing) {
+      runTrace(res.code);
+    }
+  }, [vbaCode, isInitializing, runTrace]);
+
   const isCodeDirty = !isInitializing && !initError && lastTracedCode !== '' && code !== lastTracedCode;
 
   // 実行状態の計算:
-  // isCodeDirty === true: コード変更未準備（Line 0, 開始ノード）
-  // currentStep === 0: 未実行状態（Line 0, 開始ノード, 変数履歴なし）
-  // currentStep === snapshots.length (かつ snapshots.length > 0): 全行実行終了（ハイライトなし, 終了ノード）
-  // 1 <= currentStep <= snapshots.length - 1: ステップ実行中（その行を実行した結果）
   const isEnded = !isCodeDirty && snapshots.length > 0 && currentStep === snapshots.length;
   const isNotStarted = isCodeDirty || currentStep === 0;
   const executionStatus: 'not_started' | 'running' | 'ended' = isNotStarted
@@ -114,6 +129,7 @@ export const App: React.FC = () => {
     : 'running';
 
   const activeLine = isNotStarted || isEnded ? 0 : (snapshots[currentStep - 1]?.line ?? 0);
+  const activeVbaLine = activeLine > 0 ? (pyToVbaLineMap[activeLine] ?? activeLine) : 0;
   const activeNodeId = isNotStarted
     ? 'node-start'
     : isEnded
@@ -143,6 +159,10 @@ export const App: React.FC = () => {
           <LeftPanel
             code={code}
             onChangeCode={setCode}
+            vbaCode={vbaCode}
+            onChangeVbaCode={setVbaCode}
+            onConvertToVba={handleConvertToVba}
+            onConvertToPython={handleConvertToPython}
             currentStep={isCodeDirty ? 0 : currentStep}
             totalSteps={isCodeDirty ? 0 : snapshots.length + 1}
             onStepChange={setCurrentStep}
@@ -150,6 +170,7 @@ export const App: React.FC = () => {
             onRun={() => runTrace(code)}
             onLast={() => snapshots.length > 0 && setCurrentStep(snapshots.length)}
             activeLine={activeLine}
+            activeVbaLine={activeVbaLine}
             activeNodeId={activeNodeId}
             flowchartNodes={flowchartNodes}
             flowchartEdges={flowchartEdges}
