@@ -212,26 +212,20 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           role="tabpanel"
           aria-labelledby="tab-code"
           aria-label="コード(Python)"
-          style={{ height: '100%', display: activeTab === 'code' ? 'block' : 'none' }}
+          style={{ height: '100%', position: 'relative', display: activeTab === 'code' ? 'block' : 'none' }}
         >
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {onConvertToVba && (
-              <div style={editorToolbarStyle}>
-                <button
-                  id="btn-convert-to-vba"
-                  data-testid="btn-convert-to-vba"
-                  onClick={onConvertToVba}
-                  style={convertButtonStyle}
-                  title="Pythonコードをマクロ言語(VBA)コードに変換します"
-                >
-                  マクロ言語へ変換 ➔
-                </button>
-              </div>
-            )}
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} zoom={zoom} language="python" />
-            </div>
-          </div>
+          {onConvertToVba && (
+            <button
+              id="btn-convert-to-vba"
+              data-testid="btn-convert-to-vba"
+              onClick={onConvertToVba}
+              style={floatingConvertButtonStyle}
+              title="Pythonコードをマクロ言語(VBA)コードに変換します"
+            >
+              マクロ言語へ変換 ➔
+            </button>
+          )}
+          <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} zoom={zoom} language="python" />
         </div>
 
         {/* VBA マクロ言語エディタパネル */}
@@ -241,34 +235,28 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           role="tabpanel"
           aria-labelledby="tab-vba"
           aria-label="コード(マクロ言語)"
-          style={{ height: '100%', display: activeTab === 'vba' ? 'block' : 'none' }}
+          style={{ height: '100%', position: 'relative', display: activeTab === 'vba' ? 'block' : 'none' }}
         >
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {onConvertToPython && (
-              <div style={editorToolbarStyle}>
-                <button
-                  id="btn-convert-to-py"
-                  data-testid="btn-convert-to-py"
-                  onClick={onConvertToPython}
-                  style={convertButtonStyle}
-                  title="VBA(マクロ言語)コードをPythonコードに変換します"
-                >
-                  ⬅ Pythonへ変換
-                </button>
-              </div>
-            )}
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <MonacoEditor
-                code={vbaCode}
-                onChange={onChangeVbaCode}
-                highlightLine={activeVbaLine}
-                zoom={zoom}
-                language="vba"
-                id="monaco-editor-vba"
-                testId="monaco-editor-vba"
-              />
-            </div>
-          </div>
+          {onConvertToPython && (
+            <button
+              id="btn-convert-to-py"
+              data-testid="btn-convert-to-py"
+              onClick={onConvertToPython}
+              style={floatingConvertButtonStyle}
+              title="VBA(マクロ言語)コードをPythonコードに変換します"
+            >
+              ⬅ Pythonへ変換
+            </button>
+          )}
+          <MonacoEditor
+            code={vbaCode}
+            onChange={onChangeVbaCode}
+            highlightLine={activeVbaLine}
+            zoom={zoom}
+            language="vba"
+            id="monaco-editor-vba"
+            testId="monaco-editor-vba"
+          />
         </div>
 
         {/* 流れ図ビューアパネル */}
@@ -405,28 +393,25 @@ const activeTabStyle: React.CSSProperties = {
   fontWeight: 600,
 };
 
-const editorToolbarStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  alignItems: 'center',
-  padding: '4px 10px',
-  backgroundColor: '#f8fafc',
-  borderBottom: '1px solid #e2e8f0',
-  gap: '8px',
-};
-
-const convertButtonStyle: React.CSSProperties = {
+const floatingConvertButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '8px',
+  right: '16px',
+  zIndex: 10,
   padding: '4px 10px',
   fontSize: '0.78rem',
   fontWeight: 600,
   color: '#2563eb',
-  backgroundColor: '#eff6ff',
+  backgroundColor: 'rgba(239, 246, 255, 0.92)',
+  backdropFilter: 'blur(4px)',
   border: '1px solid #bfdbfe',
-  borderRadius: '4px',
+  borderRadius: '6px',
+  boxShadow: '0 2px 5px rgba(0, 0, 0, 0.08)',
   cursor: 'pointer',
   display: 'inline-flex',
   alignItems: 'center',
   gap: '4px',
+  transition: 'all 0.15s ease',
 };
 
 const contentStyle: React.CSSProperties = {
