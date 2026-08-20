@@ -108,6 +108,7 @@ export const App: React.FC = () => {
     const res = pythonToVba(code);
     setVbaCode(res.code);
     setPyToVbaLineMap(res.lineMap);
+    setActiveTab('vba');
   }, [code]);
 
   const handleConvertToPython = useCallback(() => {
