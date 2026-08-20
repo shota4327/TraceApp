@@ -92,7 +92,7 @@ while i < 5:
     print(i)`;
     const result = pythonToVba(py);
     expect(result.code).toContain('    Dim i As Integer');
-    expect(result.code).toContain('    For i = 0 To 5 - 1');
+    expect(result.code).toContain('    For i = 0 To 4');
     expect(result.code).toContain('        MsgBox (i)');
     expect(result.code).toContain('    Next i');
   });
@@ -124,7 +124,7 @@ print(total)`;
     expect(result.code).toContain('    Dim total As Integer');
     expect(result.code).toContain('    Dim i As Integer');
     expect(result.code).toContain('    total = 0');
-    expect(result.code).toContain('    For i = 1 To 4 - 1');
+    expect(result.code).toContain('    For i = 1 To 3');
     expect(result.code).toContain('        total = add(total, i)');
     expect(result.code).toContain('    Next i');
     expect(result.code).toContain('    MsgBox (total)');
@@ -213,7 +213,7 @@ Do While i < 10
     i = i + 1
 Loop`;
     const result = vbaToPython(vba);
-    expect(result.code).toContain('for i in range(4 + 1):');
+    expect(result.code).toContain('for i in range(5):');
     expect(result.code).toContain('while i < 10:');
   });
 
@@ -229,7 +229,7 @@ Sub Program()
     Dim i As Integer
 
     total = 0
-    For i = 1 To 4 - 1
+    For i = 1 To 3
         total = add(total, i)
     Next i
     MsgBox (total)

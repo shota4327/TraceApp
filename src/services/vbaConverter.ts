@@ -140,6 +140,35 @@ function convertVbaExprToPython(expr: string): string {
   });
 }
 
+/**
+ * stop 値から 1 引いた式または数値を生成
+ */
+function computeVbaStopExpr(stopExpr: string): string {
+  const vbaStop = convertPythonExprToVba(stopExpr);
+  // 整数リテラルの場合は直接計算 (例: "4" -> "3", "10" -> "9")
+  if (/^-?\d+$/.test(vbaStop.trim())) {
+    const num = parseInt(vbaStop.trim(), 10);
+    return (num - 1).toString();
+  }
+  return `${vbaStop} - 1`;
+}
+
+/**
+ * stop 値に 1 加算した式または数値を生成
+ */
+function computePyStopExpr(rawStop: string): string {
+  const trimmed = rawStop.trim();
+  const minusOneMatch = trimmed.match(/^(.*?)\s*-\s*1$/);
+  if (minusOneMatch && minusOneMatch[1]) {
+    return convertVbaExprToPython(minusOneMatch[1].trim());
+  }
+  if (/^-?\d+$/.test(trimmed)) {
+    const num = parseInt(trimmed, 10);
+    return (num + 1).toString();
+  }
+  return `${convertVbaExprToPython(trimmed)} + 1`;
+}
+
 interface BlockContext {
   type: 'if' | 'for' | 'while';
   indent: number;
@@ -495,17 +524,17 @@ export function pythonToVba(
         let forClause = '';
 
         if (args.length === 1 && args[0]) {
-          const n = convertPythonExprToVba(args[0]);
-          forClause = `For ${loopVar} = 0 To ${n} - 1`;
+          const stop = computeVbaStopExpr(args[0]);
+          forClause = `For ${loopVar} = 0 To ${stop}`;
         } else if (args.length === 2 && args[0] && args[1]) {
           const start = convertPythonExprToVba(args[0]);
-          const stop = convertPythonExprToVba(args[1]);
-          forClause = `For ${loopVar} = ${start} To ${stop} - 1`;
+          const stop = computeVbaStopExpr(args[1]);
+          forClause = `For ${loopVar} = ${start} To ${stop}`;
         } else if (args.length >= 3 && args[0] && args[1] && args[2]) {
           const start = convertPythonExprToVba(args[0]);
-          const stop = convertPythonExprToVba(args[1]);
+          const stop = computeVbaStopExpr(args[1]);
           const step = convertPythonExprToVba(args[2]);
-          forClause = `For ${loopVar} = ${start} To ${stop} - 1 Step ${step}`;
+          forClause = `For ${loopVar} = ${start} To ${stop} Step ${step}`;
         }
 
         vbaLines.push(`${indentStr}${forClause}${inlineCommentSuffix}`);
@@ -799,14 +828,7 @@ export function vbaToPython(
       const rawStop = forMatch[3].trim();
       const step = forMatch[4] ? convertVbaExprToPython(forMatch[4].trim()) : null;
 
-      // "X - 1" の場合は X に復元、それ以外は "stop + 1"
-      let stop = '';
-      const minusOneMatch = rawStop.match(/^(.*?)\s*-\s*1$/);
-      if (minusOneMatch && minusOneMatch[1]) {
-        stop = convertVbaExprToPython(minusOneMatch[1].trim());
-      } else {
-        stop = `${convertVbaExprToPython(rawStop)} + 1`;
-      }
+      const stop = computePyStopExpr(rawStop);
 
       let rangeStr = '';
       if (start === '0' && !step) {
