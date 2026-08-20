@@ -215,9 +215,9 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   data-testid="btn-convert-to-vba"
                   onClick={onConvertToVba}
                   style={convertButtonStyle}
-                  title="PythonコードをVBA(マクロ言語)コードに変換します"
+                  title="Pythonコードをマクロ言語(VBA)コードに変換します"
                 >
-                  VBAへ変換 ➔
+                  マクロ言語へ変換 ➔
                 </button>
               </div>
             )}

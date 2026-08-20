@@ -107,8 +107,9 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
       />
     );
 
-    // Pythonタブ内のVBAへ変換ボタンをクリック
+    // Pythonタブ内のマクロ言語へ変換ボタンをクリック
     const btnToVba = screen.getByTestId('btn-convert-to-vba');
+    expect(btnToVba.textContent?.trim()).toBe('マクロ言語へ変換 ➔');
     fireEvent.click(btnToVba);
     expect(onConvertToVba).toHaveBeenCalledTimes(1);
 
