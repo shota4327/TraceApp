@@ -396,7 +396,7 @@ const activeTabStyle: React.CSSProperties = {
 const floatingConvertButtonStyle: React.CSSProperties = {
   position: 'absolute',
   top: '8px',
-  right: '16px',
+  right: '8px',
   zIndex: 10,
   padding: '4px 10px',
   fontSize: '0.78rem',
