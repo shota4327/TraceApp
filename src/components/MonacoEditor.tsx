@@ -3,7 +3,7 @@ import Editor from '@monaco-editor/react';
 import type * as monaco from 'monaco-editor';
 
 interface MonacoEditorProps {
-  /** 編集対象の Python コード文字列 */
+  /** 編集対象のコード文字列 */
   code: string;
   /** コード変更時コールバック */
   onChange: (value: string) => void;
@@ -11,15 +11,22 @@ interface MonacoEditorProps {
   highlightLine?: number;
   /** 拡大率 (50〜400, デフォルト 100) */
   zoom?: number;
+  /** 言語 ('python' | 'vb'、デフォルト: 'python') */
+  language?: string;
+  /** 要素IDプレフィックス */
+  id?: string;
+  /** テスト用IDプレフィックス */
+  testId?: string;
 }
 
 /** E2E テスト・フォールバック用コードビューア */
-const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number; fontSize?: number }> = ({
+const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number; fontSize?: number; testId?: string }> = ({
   lines,
   highlightLine,
   fontSize = 18,
+  testId = 'code-viewer',
 }) => (
-  <div id="code-viewer" data-testid="code-viewer" style={{ ...codeViewerStyle, fontSize: `${fontSize}px` }}>
+  <div id={testId} data-testid={testId} style={{ ...codeViewerStyle, fontSize: `${fontSize}px` }}>
     <div style={codeViewerTitleStyle}>実行行デコレーションプレビュー</div>
     {lines.map((lineText, idx) => {
       const lineNum = idx + 1;
@@ -36,9 +43,17 @@ const CodeViewer: React.FC<{ lines: string[]; highlightLine?: number; fontSize?:
 
 /**
  * Monaco Editor 表示コンポーネント
- * Python コード編集、実行行デコレーションハイライト、ズーム連動および .py ファイルドロップ機能を提供
+ * Python/VB.NET コード編集、シンタックスハイライト、コード補完、実行行デコレーションハイライト、ズーム連動およびファイルドロップ機能を提供
  */
-const MonacoEditorComponent: React.FC<MonacoEditorProps> = ({ code, onChange, highlightLine, zoom = 100 }) => {
+const MonacoEditorComponent: React.FC<MonacoEditorProps> = ({
+  code,
+  onChange,
+  highlightLine,
+  zoom = 100,
+  language = 'python',
+  id = 'monaco-editor',
+  testId = 'monaco-editor',
+}) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
@@ -74,7 +89,10 @@ const MonacoEditorComponent: React.FC<MonacoEditorProps> = ({ code, onChange, hi
     e.preventDefault();
     e.stopPropagation();
     const file = e.dataTransfer.files?.[0];
-    if (file && file.name.endsWith('.py')) {
+    if (!file) return;
+    const isPy = language === 'python' && file.name.endsWith('.py');
+    const isVb = (language === 'vb' || language === 'vba') && (file.name.endsWith('.bas') || file.name.endsWith('.vba') || file.name.endsWith('.vb') || file.name.endsWith('.txt'));
+    if (isPy || isVb) {
       const reader = new FileReader();
       reader.onload = (evt) => {
         const text = evt.target?.result;
@@ -85,13 +103,15 @@ const MonacoEditorComponent: React.FC<MonacoEditorProps> = ({ code, onChange, hi
   };
 
   const lines = code.split('\n');
+  const inputId = language === 'vb' ? 'vba-code-input' : 'code-input';
+  const placeholder = language === 'vb' ? 'VB/VBAコードを入力してください...' : 'Pythonコードを入力してください...';
 
   return (
-    <div id="monaco-editor" data-testid="monaco-editor" onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }} onDrop={handleDrop} style={containerStyle}>
+    <div id={id} data-testid={testId} onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }} onDrop={handleDrop} style={containerStyle}>
       <div style={editorWrapperStyle}>
         <Editor
           height="100%"
-          language="python"
+          language={language}
           theme="vs"
           value={code}
           onChange={(val) => onChange(val ?? '')}
@@ -100,12 +120,24 @@ const MonacoEditorComponent: React.FC<MonacoEditorProps> = ({ code, onChange, hi
             monacoRef.current = monacoInstance;
             applyLineHighlight(highlightLine);
           }}
-          options={{ fontSize: calculatedFontSize, minimap: { enabled: false }, scrollBeyondLastLine: false, lineNumbers: 'on', automaticLayout: true, tabSize: 4 }}
+          options={{
+            fontSize: calculatedFontSize,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            lineNumbers: 'on',
+            automaticLayout: true,
+            tabSize: 4,
+            quickSuggestions: { other: true, comments: false, strings: false },
+            suggestOnTriggerCharacters: true,
+            acceptSuggestionOnEnter: 'on',
+            tabCompletion: 'on',
+            wordBasedSuggestions: 'allDocuments',
+          }}
           loading={<div style={loadingStyle}>Monaco Editor を読み込んでいます...</div>}
         />
         <textarea
-          id="code-input"
-          data-testid="code-input"
+          id={inputId}
+          data-testid={inputId}
           value={code}
           onChange={(e) => {
             onChange(e.target.value);
@@ -121,11 +153,16 @@ const MonacoEditorComponent: React.FC<MonacoEditorProps> = ({ code, onChange, hi
             }
           }}
           style={hiddenTextareaStyle}
-          placeholder="Pythonコードを入力してください..."
+          placeholder={placeholder}
           spellCheck={false}
         />
       </div>
-      <CodeViewer lines={lines} highlightLine={highlightLine} fontSize={calculatedFontSize} />
+      <CodeViewer
+        lines={lines}
+        highlightLine={highlightLine}
+        fontSize={calculatedFontSize}
+        testId={testId === 'monaco-editor' ? 'code-viewer' : `${testId}-viewer`}
+      />
     </div>
   );
 };
@@ -159,15 +196,6 @@ const hiddenTextareaStyle: React.CSSProperties = {
   zIndex: -1,
 };
 
-const loadingStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: '100%',
-  color: '#64748b',
-  fontSize: '0.875rem',
-};
-
 const codeViewerStyle: React.CSSProperties = {
   display: 'none',
   padding: '8px',
@@ -192,9 +220,12 @@ const lineStyle: React.CSSProperties = {
 };
 
 const activeLineStyle: React.CSSProperties = {
-  ...lineStyle,
+  display: 'flex',
+  lineHeight: '1.5',
   backgroundColor: '#fef08a',
+  color: '#854d0e',
   fontWeight: 600,
+  borderRadius: '2px',
 };
 
 const lineNumStyle: React.CSSProperties = {
@@ -208,4 +239,13 @@ const lineNumStyle: React.CSSProperties = {
 const lineContentStyle: React.CSSProperties = {
   flex: 1,
   whiteSpace: 'pre',
+};
+
+const loadingStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '100%',
+  color: '#64748b',
+  fontSize: '0.875rem',
 };
