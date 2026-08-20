@@ -19,7 +19,7 @@ vi.mock('../components/MonacoEditor', () => ({
   }) => (
     <div data-testid={testId || 'monaco-editor'} data-language={language} data-highlight={highlightLine}>
       <textarea
-        data-testid={language === 'vb' ? 'vba-textarea' : 'py-textarea'}
+        data-testid={language === 'vba' || language === 'vb' ? 'vba-textarea' : 'py-textarea'}
         value={code}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -134,6 +134,6 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
 
     const vbaEditor = screen.getByTestId('monaco-editor-vba');
     expect(vbaEditor.getAttribute('data-highlight')).toBe('3');
-    expect(vbaEditor.getAttribute('data-language')).toBe('vb');
+    expect(vbaEditor.getAttribute('data-language')).toBe('vba');
   });
 });

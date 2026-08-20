@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import type * as monaco from 'monaco-editor';
+import { registerVbaLanguage } from '../services/vbaLanguage';
 
 interface MonacoEditorProps {
   /** 編集対象のコード文字列 */
@@ -103,8 +104,9 @@ const MonacoEditorComponent: React.FC<MonacoEditorProps> = ({
   };
 
   const lines = code.split('\n');
-  const inputId = language === 'vb' ? 'vba-code-input' : 'code-input';
-  const placeholder = language === 'vb' ? 'VB/VBAコードを入力してください...' : 'Pythonコードを入力してください...';
+  const isVbLang = language === 'vb' || language === 'vba';
+  const inputId = isVbLang ? 'vba-code-input' : 'code-input';
+  const placeholder = isVbLang ? 'VB/VBAコードを入力してください...' : 'Pythonコードを入力してください...';
 
   return (
     <div id={id} data-testid={testId} onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }} onDrop={handleDrop} style={containerStyle}>
@@ -115,9 +117,13 @@ const MonacoEditorComponent: React.FC<MonacoEditorProps> = ({
           theme="vs"
           value={code}
           onChange={(val) => onChange(val ?? '')}
+          beforeMount={(monacoInstance) => {
+            registerVbaLanguage(monacoInstance as unknown as typeof monaco);
+          }}
           onMount={(editor, monacoInstance) => {
             editorRef.current = editor;
             monacoRef.current = monacoInstance;
+            registerVbaLanguage(monacoInstance);
             applyLineHighlight(highlightLine);
           }}
           options={{

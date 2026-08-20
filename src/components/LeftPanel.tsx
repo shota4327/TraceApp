@@ -256,7 +256,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 onChange={onChangeVbaCode}
                 highlightLine={activeVbaLine}
                 zoom={zoom}
-                language="vb"
+                language="vba"
                 id="monaco-editor-vba"
                 testId="monaco-editor-vba"
               />
