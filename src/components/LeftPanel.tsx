@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { MonacoEditor } from './MonacoEditor';
 import { FlowchartViewer } from './FlowchartViewer';
-import { ZoomSlider } from './StepNavigation';
+import { ZoomSlider } from './ZoomSlider';
 import { FlowchartNode, FlowchartEdge } from '../types/flowchart';
 import { generateFlowchartGraph } from '../services/flowchartGenerator';
 import { SAMPLE_PROGRAMS } from '../services/samplePrograms';

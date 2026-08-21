@@ -1,7 +1,7 @@
 import React from 'react';
 import { StepSnapshot } from '../types/trace';
 import { extractLineComments } from '../services/commentExtractor';
-import { ZoomSlider } from './StepNavigation';
+import { ZoomSlider } from './ZoomSlider';
 
 interface VariableTableProps {
   snapshots?: StepSnapshot[];
