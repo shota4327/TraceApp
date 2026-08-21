@@ -120,34 +120,45 @@ const LeftPanelTabBar: React.FC<{
   return (
     <div style={tabContainerStyle} role="tablist" aria-label="表示モード切り替え">
       <div style={tabButtonGroupStyle}>
-        {/* コードトグルボタングループ (Python | マクロ言語) */}
-        <div style={isCodeActive ? codeToggleContainerActiveStyle : codeToggleContainerStyle}>
-          <span style={codeToggleLabelStyle}>コード:</span>
-          <button
-            id="tab-code"
-            data-testid="tab-code"
-            role="tab"
-            aria-selected={activeTab === 'code'}
-            aria-controls="panel-code"
-            onClick={() => onSelectTab('code')}
-            style={activeTab === 'code' ? activeSegmentButtonStyle : segmentButtonStyle}
-          >
-            Python
-          </button>
-          <button
-            id="tab-vba"
-            data-testid="tab-vba"
-            role="tab"
-            aria-selected={activeTab === 'vba'}
-            aria-controls="panel-vba"
-            onClick={() => onSelectTab('vba')}
-            style={activeTab === 'vba' ? activeSegmentButtonStyle : segmentButtonStyle}
-          >
-            マクロ言語
-          </button>
+        {/* コードタブ（下線付きタブ枠内に Python | マクロ言語 のトグルピルを埋め込み） */}
+        <div
+          style={isCodeActive ? activeTabUnderlineStyle : baseTabStyle}
+          onClick={() => !isCodeActive && onSelectTab('code')}
+        >
+          <span style={{ fontSize: '0.84rem' }}>コード:</span>
+          <div style={togglePillContainerStyle}>
+            <button
+              id="tab-code"
+              data-testid="tab-code"
+              role="tab"
+              aria-selected={activeTab === 'code'}
+              aria-controls="panel-code"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectTab('code');
+              }}
+              style={activeTab === 'code' ? activeTogglePillItemStyle : togglePillItemStyle}
+            >
+              Python
+            </button>
+            <button
+              id="tab-vba"
+              data-testid="tab-vba"
+              role="tab"
+              aria-selected={activeTab === 'vba'}
+              aria-controls="panel-vba"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectTab('vba');
+              }}
+              style={activeTab === 'vba' ? activeTogglePillItemStyle : togglePillItemStyle}
+            >
+              マクロ言語
+            </button>
+          </div>
         </div>
 
-        {/* 流れ図タブボタン */}
+        {/* 流れ図タブボタン（以前と同様の下線付きタブ） */}
         <button
           id="tab-flowchart"
           data-testid="tab-flowchart"
@@ -155,7 +166,7 @@ const LeftPanelTabBar: React.FC<{
           aria-selected={activeTab === 'flowchart'}
           aria-controls="flowchart-viewer"
           onClick={() => onSelectTab('flowchart')}
-          style={activeTab === 'flowchart' ? activeFlowchartTabStyle : flowchartTabStyle}
+          style={activeTab === 'flowchart' ? activeTabUnderlineStyle : baseTabStyle}
         >
           流れ図
         </button>
@@ -307,82 +318,72 @@ const tabContainerStyle: React.CSSProperties = {
   alignItems: 'center',
   backgroundColor: '#f1f5f9',
   borderBottom: '1px solid #e2e8f0',
-  padding: '0 12px',
-  height: '42px',
-  minHeight: '42px',
+  paddingRight: '12px',
+  height: '38px',
+  minHeight: '38px',
   boxSizing: 'border-box',
-  gap: '12px',
 };
 
 const tabButtonGroupStyle: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
   height: '100%',
 };
 
-const codeToggleContainerStyle: React.CSSProperties = {
+const baseTabStyle: React.CSSProperties = {
+  padding: '0 14px',
+  height: '100%',
   display: 'inline-flex',
   alignItems: 'center',
-  backgroundColor: '#e2e8f0',
-  borderRadius: '6px',
-  padding: '2px',
-  gap: '2px',
-  border: '1px solid transparent',
-};
-
-const codeToggleContainerActiveStyle: React.CSSProperties = {
-  ...codeToggleContainerStyle,
-  borderColor: '#bfdbfe',
-  backgroundColor: '#dbeafe',
-};
-
-const codeToggleLabelStyle: React.CSSProperties = {
-  fontSize: '0.78rem',
-  fontWeight: 600,
-  color: '#475569',
-  padding: '0 6px',
-  userSelect: 'none',
-};
-
-const segmentButtonStyle: React.CSSProperties = {
-  padding: '3px 10px',
-  borderRadius: '4px',
-  border: 'none',
+  justifyContent: 'center',
+  borderTop: 'none',
+  borderLeft: 'none',
+  borderRight: 'none',
+  borderBottom: '2px solid transparent',
   backgroundColor: 'transparent',
   color: '#64748b',
   cursor: 'pointer',
-  fontSize: '0.80rem',
+  fontSize: '0.85rem',
   fontWeight: 500,
+  boxSizing: 'border-box',
   transition: 'all 0.15s ease',
+  gap: '8px',
 };
 
-const activeSegmentButtonStyle: React.CSSProperties = {
-  ...segmentButtonStyle,
+const activeTabUnderlineStyle: React.CSSProperties = {
+  ...baseTabStyle,
   backgroundColor: '#ffffff',
   color: '#2563eb',
+  borderBottom: '2px solid #2563eb',
   fontWeight: 600,
-  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
 };
 
-const flowchartTabStyle: React.CSSProperties = {
-  padding: '4px 12px',
-  borderRadius: '6px',
-  border: '1px solid #cbd5e1',
-  backgroundColor: '#ffffff',
-  color: '#64748b',
+const togglePillContainerStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  backgroundColor: '#e2e8f0',
+  borderRadius: '4px',
+  padding: '2px',
+  gap: '2px',
+};
+
+const togglePillItemStyle: React.CSSProperties = {
+  padding: '2px 8px',
+  borderRadius: '3px',
+  border: 'none',
+  backgroundColor: 'transparent',
+  color: '#475569',
   cursor: 'pointer',
-  fontSize: '0.80rem',
+  fontSize: '0.78rem',
   fontWeight: 500,
   transition: 'all 0.15s ease',
 };
 
-const activeFlowchartTabStyle: React.CSSProperties = {
-  ...flowchartTabStyle,
-  borderColor: '#2563eb',
-  backgroundColor: '#eff6ff',
-  color: '#2563eb',
+const activeTogglePillItemStyle: React.CSSProperties = {
+  ...togglePillItemStyle,
+  backgroundColor: '#2563eb',
+  color: '#ffffff',
   fontWeight: 600,
+  boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
 };
 
 const tabBarRightAreaStyle: React.CSSProperties = {
