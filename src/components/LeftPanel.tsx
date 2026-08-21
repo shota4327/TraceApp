@@ -38,25 +38,13 @@ interface LeftPanelProps {
   executionStatus?: 'not_started' | 'running' | 'ended';
 }
 
-/** サンプル選択・ファイル読込・ズームコントロールサブコンポーネント */
+/** サンプル選択・ズームコントロールサブコンポーネント */
 const TabBarControls: React.FC<{
   selectedSampleId?: string;
   onSelectSample?: (id: string) => void;
-  onFileUpload?: (code: string) => void;
   zoom: number;
   onZoomChange: (zoom: number) => void;
-}> = ({ selectedSampleId, onSelectSample, onFileUpload, zoom, onZoomChange }) => {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const content = evt.target?.result as string;
-      if (content && onFileUpload) onFileUpload(content);
-    };
-    reader.readAsText(file);
-  };
-
+}> = ({ selectedSampleId, onSelectSample, zoom, onZoomChange }) => {
   return (
     <div style={tabBarRightAreaStyle}>
       {onSelectSample && (
@@ -78,19 +66,6 @@ const TabBarControls: React.FC<{
             ))}
           </select>
         </div>
-      )}
-      {onFileUpload && (
-        <label style={uploadButtonStyle}>
-          .py 読込
-          <input
-            id="file-upload-input"
-            data-testid="file-upload-input"
-            type="file"
-            accept=".py"
-            onChange={handleFileChange}
-            style={{ display: 'none' }}
-          />
-        </label>
       )}
       <ZoomSlider zoom={zoom} onZoomChange={onZoomChange} />
     </div>
@@ -167,7 +142,6 @@ const LeftPanelTabBar: React.FC<{
   onSelectTab: (tab: LeftPanelTab) => void;
   selectedSampleId?: string;
   onSelectSample?: (id: string) => void;
-  onFileUpload?: (code: string) => void;
   zoom: number;
   onZoomChange: (zoom: number) => void;
 }> = ({
@@ -175,7 +149,6 @@ const LeftPanelTabBar: React.FC<{
   onSelectTab,
   selectedSampleId,
   onSelectSample,
-  onFileUpload,
   zoom,
   onZoomChange,
 }) => {
@@ -232,7 +205,6 @@ const LeftPanelTabBar: React.FC<{
       <TabBarControls
         selectedSampleId={selectedSampleId}
         onSelectSample={onSelectSample}
-        onFileUpload={onFileUpload}
         zoom={zoom}
         onZoomChange={onZoomChange}
       />
@@ -270,6 +242,19 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   const zoom = externalZoom ?? internalZoom;
   const setZoom = externalOnZoomChange ?? setInternalZoom;
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const content = evt.target?.result as string;
+      if (content && onFileUpload) onFileUpload(content);
+    };
+    reader.readAsText(file);
+    // 同じファイルを再選択できるようにリセット
+    e.target.value = '';
+  };
+
   const memoizedGraph = useMemo(() => {
     if (flowchartNodes && flowchartNodes.length > 0) {
       return { nodes: flowchartNodes, edges: flowchartEdges || [] };
@@ -284,7 +269,6 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         onSelectTab={setActiveTab}
         selectedSampleId={selectedSampleId}
         onSelectSample={onSelectSample}
-        onFileUpload={onFileUpload}
         zoom={zoom}
         onZoomChange={setZoom}
       />
@@ -298,6 +282,24 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           aria-label="コード(Python)"
           style={{ height: '100%', position: 'relative', display: activeTab === 'code' ? 'block' : 'none' }}
         >
+          {onFileUpload && (
+            <label
+              id="file-upload-label"
+              data-testid="file-upload-label"
+              style={floatingUploadButtonStyle}
+              title=".pyファイルを読み込みます"
+            >
+              📁 .py 読込
+              <input
+                id="file-upload-input"
+                data-testid="file-upload-input"
+                type="file"
+                accept=".py"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+            </label>
+          )}
           <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} zoom={zoom} language="python" />
         </div>
 
@@ -473,15 +475,26 @@ const selectStyle: React.CSSProperties = {
   maxWidth: '140px',
 };
 
-const uploadButtonStyle: React.CSSProperties = {
-  padding: '3px 8px',
-  borderRadius: '4px',
-  backgroundColor: '#2563eb',
-  color: '#ffffff',
+const floatingUploadButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '8px',
+  right: '20px',
+  zIndex: 10,
+  padding: '4px 10px',
   fontSize: '0.78rem',
   fontWeight: 500,
+  color: '#2563eb',
+  backgroundColor: 'rgba(255, 255, 255, 0.85)',
+  backdropFilter: 'blur(4px)',
+  border: '1px solid #bfdbfe',
+  borderRadius: '6px',
+  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.06)',
   cursor: 'pointer',
-  whiteSpace: 'nowrap',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
+  userSelect: 'none',
+  transition: 'all 0.15s ease',
 };
 
 const contentStyle: React.CSSProperties = {
