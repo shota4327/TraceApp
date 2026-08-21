@@ -96,16 +96,28 @@ export const App: React.FC = () => {
 
   const handleSelectSample = (id: string) => {
     setSelectedSampleId(id);
-    setActiveTab('code');
     const target = SAMPLE_PROGRAMS.find((s) => s.id === id);
     if (target) {
-      setCode(target.code);
-      const vbaRes = pythonToVba(target.code);
-      setVbaCode(vbaRes.code);
-      setPyToVbaLineMap(vbaRes.lineMap);
-      setLastConvertedPyCode(target.code);
-      setLastConvertedVbaCode(vbaRes.code);
-      if (!isInitializing) runTrace(target.code);
+      if (target.language === 'vba') {
+        setActiveTab('vba');
+        setVbaCode(target.code);
+        const pyRes = vbaToPython(target.code);
+        setCode(pyRes.code);
+        const vbaRes = pythonToVba(pyRes.code);
+        setPyToVbaLineMap(vbaRes.lineMap);
+        setLastConvertedPyCode(pyRes.code);
+        setLastConvertedVbaCode(target.code);
+        if (!isInitializing) runTrace(pyRes.code);
+      } else {
+        setActiveTab('code');
+        setCode(target.code);
+        const vbaRes = pythonToVba(target.code);
+        setVbaCode(vbaRes.code);
+        setPyToVbaLineMap(vbaRes.lineMap);
+        setLastConvertedPyCode(target.code);
+        setLastConvertedVbaCode(vbaRes.code);
+        if (!isInitializing) runTrace(target.code);
+      }
     }
   };
 
