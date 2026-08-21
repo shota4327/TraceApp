@@ -423,9 +423,10 @@ const slideSwitchTrackStyle: React.CSSProperties = {
   padding: '2px',
   cursor: 'pointer',
   userSelect: 'none',
-  width: '136px',
+  width: '154px',
   height: '24px',
   boxSizing: 'border-box',
+  flexShrink: 0,
 };
 
 const slideSwitchIndicatorStyle: React.CSSProperties = {
@@ -451,12 +452,13 @@ const slideLabelStyle: React.CSSProperties = {
   backgroundColor: 'transparent',
   color: '#64748b',
   cursor: 'pointer',
-  fontSize: '0.76rem',
+  fontSize: '0.78rem',
   fontWeight: 500,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '0 4px',
+  padding: '0 6px',
+  whiteSpace: 'nowrap',
   transition: 'color 0.15s ease',
 };
 
