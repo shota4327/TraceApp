@@ -44,9 +44,17 @@ describe('サンプル選択のコード種別表示・レイアウト検証 (Is
     expect(onSelectSample).toHaveBeenCalledWith('branch');
   });
 
+  it('VBAサンプル選択時、言語バッジに「マクロ言語」が表示されること', () => {
+    render(<LeftPanel {...defaultProps} selectedSampleId="zensho-2-74-4-1-2-vba" />);
+
+    const badge = screen.getByTestId('badge-sample-language');
+    expect(badge).toBeDefined();
+    expect(badge.textContent).toBe('マクロ言語');
+  });
+
   it('サンプルプログラム定義に language 属性がサポートされていること', () => {
     expect(SAMPLE_PROGRAMS.length).toBeGreaterThan(0);
-    // 既存サンプルは未指定（Python扱い）または 'python' であること
+    // 登録されたサンプルは 'python' または 'vba' であること
     SAMPLE_PROGRAMS.forEach((sample) => {
       expect(sample.language === undefined || sample.language === 'python' || sample.language === 'vba').toBe(true);
     });

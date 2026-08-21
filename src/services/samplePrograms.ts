@@ -134,6 +134,37 @@ g = b - e
 h = g * g
 print(h)`,
   },
+  {
+    id: 'zensho-2-74-4-1-2-vba',
+    name: '2級 第74回【4】(1)(2)',
+    language: 'vba',
+    description: '全商情報処理検定 2級 第74回【4】(1)(2) マクロ言語トレース演習',
+    code: `Sub Program()
+    Dim a As Long
+    Dim b As Long
+    Dim c As Long
+    Dim e As Long
+    Dim f As Long
+    Dim g As Long
+    Dim h As Long
+    a = 4
+    b = a
+    c = 1
+    Do While b >= c
+        b = b - c '(ア)
+        c = c + 2
+    Loop
+    e = a
+    f = 2
+    Do While e >= f
+        e = e - f
+        f = f + 2
+    Loop
+    g = b - e
+    h = g * g
+    MsgBox (h) '(イ)
+End Sub`,
+  },
 ];
 
 /**
