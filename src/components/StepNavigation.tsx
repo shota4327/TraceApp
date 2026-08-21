@@ -124,14 +124,21 @@ export const StepSeekBar: React.FC<StepSeekBarProps> = ({
 export interface ZoomSliderProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  id?: string;
+  testId?: string;
 }
 
-export const ZoomSlider: React.FC<ZoomSliderProps> = ({ zoom, onZoomChange }) => (
+export const ZoomSlider: React.FC<ZoomSliderProps> = ({
+  zoom,
+  onZoomChange,
+  id = 'zoom-slider',
+  testId = 'zoom-slider',
+}) => (
   <div style={sliderContainerStyle}>
     <span style={zoomIconLabelStyle}>拡大率:</span>
     <input
-      id="zoom-slider"
-      data-testid="zoom-slider"
+      id={id}
+      data-testid={testId}
       type="range"
       min={50}
       max={400}
@@ -141,7 +148,11 @@ export const ZoomSlider: React.FC<ZoomSliderProps> = ({ zoom, onZoomChange }) =>
       style={sliderStyle}
       aria-label="拡大率スライダー"
     />
-    <span id="zoom-counter" data-testid="zoom-counter" style={zoomLabelStyle}>
+    <span
+      id={id === 'zoom-slider' ? 'zoom-counter' : `${id}-counter`}
+      data-testid={testId === 'zoom-slider' ? 'zoom-counter' : `${testId}-counter`}
+      style={zoomLabelStyle}
+    >
       {`${zoom}%`}
     </span>
   </div>
@@ -294,6 +305,7 @@ const sliderStyle: React.CSSProperties = {
 const zoomIconLabelStyle: React.CSSProperties = {
   fontSize: '0.78rem',
   color: '#64748b',
+  fontWeight: 400,
   whiteSpace: 'nowrap',
 };
 
