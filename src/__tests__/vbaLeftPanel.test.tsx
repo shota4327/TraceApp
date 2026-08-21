@@ -153,4 +153,30 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
     expect(pyTab.getAttribute('aria-selected')).toBe('true');
     expect(flowTab.getAttribute('aria-selected')).toBe('false');
   });
+
+  it('restores last active code language when switching back from flowchart', () => {
+    const onChangeTab = vi.fn();
+    const { rerender } = render(
+      <LeftPanel {...defaultProps} activeTab="vba" onChangeTab={onChangeTab} />
+    );
+
+    // VBA が選択中
+    const vbaTab = screen.getByRole('tab', { name: 'マクロ言語' });
+    expect(vbaTab.getAttribute('aria-selected')).toBe('true');
+
+    // 流れ図に切り替え
+    const flowTab = screen.getByRole('tab', { name: '流れ図' });
+    fireEvent.click(flowTab);
+    expect(onChangeTab).toHaveBeenCalledWith('flowchart');
+
+    // 流れ図アクティブ状態で再描画
+    rerender(<LeftPanel {...defaultProps} activeTab="flowchart" onChangeTab={onChangeTab} />);
+
+    // コードタブのコンテナ領域をクリック（Python/マクロ直接でなくコード枠）
+    const codeTab = screen.getByRole('tab', { name: 'Python' });
+    fireEvent.click(codeTab);
+
+    // 直前に開いていた 'vba' で復帰すること
+    expect(onChangeTab).toHaveBeenLastCalledWith('vba');
+  });
 });

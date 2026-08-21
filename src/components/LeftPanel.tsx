@@ -97,6 +97,70 @@ const TabBarControls: React.FC<{
   );
 };
 
+/** 言語切り替えスライドスイッチサブコンポーネント */
+const LanguageSlideSwitch: React.FC<{
+  activeTab: LeftPanelTab;
+  isCodeActive: boolean;
+  onSelectLanguage: (lang: 'code' | 'vba') => void;
+}> = ({ activeTab, isCodeActive, onSelectLanguage }) => {
+  const isVba = activeTab === 'vba';
+
+  return (
+    <div
+      style={slideSwitchTrackStyle}
+      onClick={(e) => {
+        if (isCodeActive) {
+          e.stopPropagation();
+          onSelectLanguage(isVba ? 'code' : 'vba');
+        }
+      }}
+      title="クリックでPythonとマクロ言語を切り替えます"
+    >
+      {/* スライドする青いピル背景インジケーター */}
+      {isCodeActive && (
+        <div
+          style={{
+            ...slideSwitchIndicatorStyle,
+            transform: isVba ? 'translateX(100%)' : 'translateX(0%)',
+          }}
+        />
+      )}
+      <button
+        id="tab-code"
+        data-testid="tab-code"
+        role="tab"
+        aria-selected={activeTab === 'code'}
+        aria-controls="panel-code"
+        onClick={(e) => {
+          if (isCodeActive) {
+            e.stopPropagation();
+            onSelectLanguage('code');
+          }
+        }}
+        style={activeTab === 'code' && isCodeActive ? activeSlideLabelStyle : slideLabelStyle}
+      >
+        Python
+      </button>
+      <button
+        id="tab-vba"
+        data-testid="tab-vba"
+        role="tab"
+        aria-selected={activeTab === 'vba'}
+        aria-controls="panel-vba"
+        onClick={(e) => {
+          if (isCodeActive) {
+            e.stopPropagation();
+            onSelectLanguage('vba');
+          }
+        }}
+        style={activeTab === 'vba' && isCodeActive ? activeSlideLabelStyle : slideLabelStyle}
+      >
+        マクロ言語
+      </button>
+    </div>
+  );
+};
+
 /** 左パネルのトグル式タブバー */
 const LeftPanelTabBar: React.FC<{
   activeTab: LeftPanelTab;
@@ -116,46 +180,39 @@ const LeftPanelTabBar: React.FC<{
   onZoomChange,
 }) => {
   const isCodeActive = activeTab === 'code' || activeTab === 'vba';
+  const [lastCodeTab, setLastCodeTab] = useState<'code' | 'vba'>('code');
+
+  React.useEffect(() => {
+    if (activeTab === 'code' || activeTab === 'vba') {
+      setLastCodeTab(activeTab);
+    }
+  }, [activeTab]);
+
+  const handleCodeTabContainerClick = () => {
+    if (!isCodeActive) {
+      onSelectTab(lastCodeTab);
+    }
+  };
+
+  const handleSelectLanguage = (lang: 'code' | 'vba') => {
+    setLastCodeTab(lang);
+    onSelectTab(lang);
+  };
 
   return (
     <div style={tabContainerStyle} role="tablist" aria-label="表示モード切り替え">
       <div style={tabButtonGroupStyle}>
-        {/* コードタブ（下線付きタブ枠内に Python | マクロ言語 のトグルピルを埋め込み） */}
+        {/* コードタブ（下線付きタブ枠内にスライドスイッチを埋め込み） */}
         <div
           style={isCodeActive ? activeTabUnderlineStyle : baseTabStyle}
-          onClick={() => !isCodeActive && onSelectTab('code')}
+          onClick={handleCodeTabContainerClick}
         >
-          <span style={{ fontSize: '0.84rem' }}>コード:</span>
-          <div style={togglePillContainerStyle}>
-            <button
-              id="tab-code"
-              data-testid="tab-code"
-              role="tab"
-              aria-selected={activeTab === 'code'}
-              aria-controls="panel-code"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectTab('code');
-              }}
-              style={activeTab === 'code' ? activeTogglePillItemStyle : togglePillItemStyle}
-            >
-              Python
-            </button>
-            <button
-              id="tab-vba"
-              data-testid="tab-vba"
-              role="tab"
-              aria-selected={activeTab === 'vba'}
-              aria-controls="panel-vba"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectTab('vba');
-              }}
-              style={activeTab === 'vba' ? activeTogglePillItemStyle : togglePillItemStyle}
-            >
-              マクロ言語
-            </button>
-          </div>
+          <span style={{ fontSize: '0.84rem' }}>コード</span>
+          <LanguageSlideSwitch
+            activeTab={activeTab}
+            isCodeActive={isCodeActive}
+            onSelectLanguage={handleSelectLanguage}
+          />
         </div>
 
         {/* 流れ図タブボタン（以前と同様の下線付きタブ） */}
@@ -357,33 +414,56 @@ const activeTabUnderlineStyle: React.CSSProperties = {
   fontWeight: 600,
 };
 
-const togglePillContainerStyle: React.CSSProperties = {
+const slideSwitchTrackStyle: React.CSSProperties = {
+  position: 'relative',
   display: 'inline-flex',
   alignItems: 'center',
   backgroundColor: '#e2e8f0',
-  borderRadius: '4px',
+  borderRadius: '14px',
   padding: '2px',
-  gap: '2px',
+  cursor: 'pointer',
+  userSelect: 'none',
+  width: '136px',
+  height: '24px',
+  boxSizing: 'border-box',
 };
 
-const togglePillItemStyle: React.CSSProperties = {
-  padding: '2px 8px',
-  borderRadius: '3px',
+const slideSwitchIndicatorStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '2px',
+  left: '2px',
+  width: 'calc(50% - 2px)',
+  height: 'calc(100% - 4px)',
+  backgroundColor: '#2563eb',
+  borderRadius: '12px',
+  transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.15)',
+  pointerEvents: 'none',
+  zIndex: 1,
+};
+
+const slideLabelStyle: React.CSSProperties = {
+  position: 'relative',
+  zIndex: 2,
+  flex: 1,
+  height: '100%',
   border: 'none',
   backgroundColor: 'transparent',
-  color: '#475569',
+  color: '#64748b',
   cursor: 'pointer',
-  fontSize: '0.78rem',
+  fontSize: '0.76rem',
   fontWeight: 500,
-  transition: 'all 0.15s ease',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '0 4px',
+  transition: 'color 0.15s ease',
 };
 
-const activeTogglePillItemStyle: React.CSSProperties = {
-  ...togglePillItemStyle,
-  backgroundColor: '#2563eb',
+const activeSlideLabelStyle: React.CSSProperties = {
+  ...slideLabelStyle,
   color: '#ffffff',
   fontWeight: 600,
-  boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
 };
 
 const tabBarRightAreaStyle: React.CSSProperties = {
