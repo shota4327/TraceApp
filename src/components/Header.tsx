@@ -115,7 +115,6 @@ export const Header: React.FC<HeaderProps> = ({
         isCodeDirty={isCodeDirty}
       />
       <div style={headerNavContainerStyle}>
-        <div style={headerDividerStyle} />
         <NavButtons
           onPrev={() => onStepChange(currentStep - 1)}
           onNext={() => onStepChange(currentStep + 1)}
@@ -186,11 +185,4 @@ const headerNavContainerStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '12px',
   flexShrink: 0,
-};
-
-const headerDividerStyle: React.CSSProperties = {
-  width: '1px',
-  height: '24px',
-  backgroundColor: '#cbd5e1',
-  margin: '0 4px',
 };
