@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavButtons, StepSeekBar } from './StepNavigation';
+import { NavButtons, StepSeekBar, primaryButtonStyle, disabledRunButtonStyle } from './StepNavigation';
 
 export interface HeaderProps {
   statusText?: string;
@@ -16,8 +16,13 @@ export interface HeaderProps {
   onFileUpload?: (code: string) => void;
 }
 
-/** タイトルおよびステータス表示サブコンポーネント */
-const HeaderTitleGroup: React.FC<{ statusText: string }> = ({ statusText }) => {
+/** タイトル、ステータス表示およびトレース準備ボタンサブコンポーネント */
+const HeaderTitleGroup: React.FC<{
+  statusText: string;
+  onRun?: () => void;
+  isTracing?: boolean;
+  isCodeDirty?: boolean;
+}> = ({ statusText, onRun, isTracing = false, isCodeDirty = false }) => {
   const isDirty = statusText.includes('コードが変更されました') || statusText.includes('not ready');
   const isReady = !isDirty && (statusText.includes('準備完了') || statusText.includes('ready'));
   const isInitializing = statusText.includes('初期化中') || statusText.includes('トレース実行中') || statusText.includes('loading');
@@ -58,6 +63,7 @@ const HeaderTitleGroup: React.FC<{ statusText: string }> = ({ statusText }) => {
   };
 
   const statusClass = isDirty ? 'dirty not-ready' : isReady ? 'ready' : isInitializing ? 'initializing' : 'error';
+  const isRunDisabled = isTracing || !isCodeDirty;
 
   return (
     <div style={titleGroupStyle}>
@@ -67,13 +73,24 @@ const HeaderTitleGroup: React.FC<{ statusText: string }> = ({ statusText }) => {
           {statusText}
         </span>
       </div>
+      {onRun && (
+        <button
+          id="btn-run"
+          data-testid="btn-run"
+          onClick={onRun}
+          disabled={isRunDisabled}
+          style={isRunDisabled ? disabledRunButtonStyle : primaryButtonStyle}
+        >
+          {isTracing ? '準備中...' : 'トレース準備'}
+        </button>
+      )}
     </div>
   );
 };
 
 /**
  * ヘッダーコンポーネント
- * アプリタイトル、ステータス、ステップナビゲーションボタン群およびシークバーを統括
+ * アプリタイトル、ステータス、トレース準備ボタン、ステップナビゲーションボタン群およびシークバーを統括
  */
 export const Header: React.FC<HeaderProps> = ({
   statusText = '準備完了 (ready)',
@@ -91,11 +108,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header id="header" data-testid="header" className="header-container" style={headerStyle}>
-      <HeaderTitleGroup statusText={statusText} />
+      <HeaderTitleGroup
+        statusText={statusText}
+        onRun={onRun}
+        isTracing={isTracing}
+        isCodeDirty={isCodeDirty}
+      />
       <div style={headerNavContainerStyle}>
-        <div style={headerDividerStyle} />
         <NavButtons
-          onRun={onRun}
           onPrev={() => onStepChange(currentStep - 1)}
           onNext={() => onStepChange(currentStep + 1)}
           onReset={onReset}
@@ -165,11 +185,4 @@ const headerNavContainerStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '12px',
   flexShrink: 0,
-};
-
-const headerDividerStyle: React.CSSProperties = {
-  width: '1px',
-  height: '24px',
-  backgroundColor: '#cbd5e1',
-  margin: '0 4px',
 };

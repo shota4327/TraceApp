@@ -31,15 +31,17 @@ export const NavButtons: React.FC<NavButtonsProps> = ({
 
   return (
     <div style={buttonGroupStyle}>
-      <button
-        id="btn-run"
-        data-testid="btn-run"
-        onClick={onRun}
-        disabled={isRunDisabled}
-        style={isRunDisabled ? disabledRunButtonStyle : primaryButtonStyle}
-      >
-        トレース準備
-      </button>
+      {onRun && (
+        <button
+          id="btn-run"
+          data-testid="btn-run"
+          onClick={onRun}
+          disabled={isRunDisabled}
+          style={isRunDisabled ? disabledRunButtonStyle : primaryButtonStyle}
+        >
+          {isTracing ? '準備中...' : 'トレース準備'}
+        </button>
+      )}
       <button
         id="btn-reset"
         data-testid="btn-first"
@@ -207,7 +209,7 @@ const disabledButtonStyle: React.CSSProperties = {
   opacity: 0.5,
 };
 
-const primaryButtonStyle: React.CSSProperties = {
+export const primaryButtonStyle: React.CSSProperties = {
   ...baseButtonStyle,
   borderColor: '#2563eb',
   backgroundColor: '#2563eb',
@@ -217,7 +219,7 @@ const primaryButtonStyle: React.CSSProperties = {
   opacity: 1,
 };
 
-const disabledRunButtonStyle: React.CSSProperties = {
+export const disabledRunButtonStyle: React.CSSProperties = {
   ...baseButtonStyle,
   borderColor: '#e2e8f0',
   backgroundColor: '#f1f5f9',
