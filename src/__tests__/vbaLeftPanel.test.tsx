@@ -92,32 +92,12 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
     expect(vbaTab.getAttribute('aria-selected')).toBe('false');
   });
 
-  it('triggers conversion handlers on button clicks', () => {
-    const onConvertToVba = vi.fn();
-    const onConvertToPython = vi.fn();
+  it('does not render floating convert buttons anymore', () => {
+    render(<LeftPanel {...defaultProps} />);
 
-    render(
-      <LeftPanel
-        {...defaultProps}
-        onConvertToVba={onConvertToVba}
-        onConvertToPython={onConvertToPython}
-      />
-    );
-
-    // Pythonタブ内のマクロ言語へ変換ボタンをクリック
-    const btnToVba = screen.getByTestId('btn-convert-to-vba');
-    expect(btnToVba.textContent?.trim()).toBe('マクロ言語へ変換 ➔');
-    fireEvent.click(btnToVba);
-    expect(onConvertToVba).toHaveBeenCalledTimes(1);
-
-    // VBAタブへ切り替え
-    const vbaTab = screen.getByRole('tab', { name: 'マクロ言語' });
-    fireEvent.click(vbaTab);
-
-    // VBAタブ内のPythonへ変換ボタンをクリック
-    const btnToPy = screen.getByTestId('btn-convert-to-py');
-    fireEvent.click(btnToPy);
-    expect(onConvertToPython).toHaveBeenCalledTimes(1);
+    // フローティングボタンが削除されていること
+    expect(screen.queryByTestId('btn-convert-to-vba')).toBeNull();
+    expect(screen.queryByTestId('btn-convert-to-py')).toBeNull();
   });
 
   it('passes activeVbaLine to VBA MonacoEditor on VBA tab', () => {
