@@ -569,13 +569,16 @@ const dropdownTriggerStyle: React.CSSProperties = {
   backgroundColor: '#ffffff',
   fontSize: '0.78rem',
   cursor: 'pointer',
-  maxWidth: '240px',
+  minWidth: '220px',
+  maxWidth: '260px',
   boxSizing: 'border-box',
   userSelect: 'none',
   transition: 'border-color 0.15s ease',
 };
 
 const triggerLabelStyle: React.CSSProperties = {
+  flex: 1,
+  textAlign: 'left',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
