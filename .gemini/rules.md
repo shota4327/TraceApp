@@ -64,6 +64,7 @@
 ---
 
 ## 6. 品質基準・完了条件
-- コード変更後は必ず以下を実行し、エラー0件であることを確認すること：
-  1. `npm test`: 全テストスイート（Vitest）がすべて PASS すること
-  2. `npm run build`: TypeScript型チェック（`tsc`）および Vite ビルドがエラーなく成功すること
+- コード変更後およびタスク完了時は必ず以下を実行し、エラー0件であることを確認すること：
+  1. `npm test`: 全単体・結合テストスイート（Vitest）がすべて PASS すること
+  2. `npx playwright test`: 全ブラウザE2Eテスト（Playwright）がすべて PASS すること
+  3. `npm run build`: TypeScript型チェック（`tsc`）および Vite ビルドがエラーなく成功すること
