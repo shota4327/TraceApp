@@ -305,6 +305,7 @@ const sliderStyle: React.CSSProperties = {
 const zoomIconLabelStyle: React.CSSProperties = {
   fontSize: '0.78rem',
   color: '#64748b',
+  fontWeight: 400,
   whiteSpace: 'nowrap',
 };
 
