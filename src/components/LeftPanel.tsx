@@ -249,8 +249,6 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onChangeCode,
   vbaCode = '',
   onChangeVbaCode = () => {},
-  onConvertToVba,
-  onConvertToPython,
   activeLine,
   activeVbaLine,
   activeNodeId,
@@ -300,17 +298,6 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           aria-label="コード(Python)"
           style={{ height: '100%', position: 'relative', display: activeTab === 'code' ? 'block' : 'none' }}
         >
-          {onConvertToVba && (
-            <button
-              id="btn-convert-to-vba"
-              data-testid="btn-convert-to-vba"
-              onClick={onConvertToVba}
-              style={floatingConvertButtonStyle}
-              title="Pythonコードをマクロ言語(VBA)コードに変換します"
-            >
-              マクロ言語へ変換 ➔
-            </button>
-          )}
           <MonacoEditor code={code} onChange={onChangeCode} highlightLine={activeLine} zoom={zoom} language="python" />
         </div>
 
@@ -323,17 +310,6 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           aria-label="コード(マクロ言語)"
           style={{ height: '100%', position: 'relative', display: activeTab === 'vba' ? 'block' : 'none' }}
         >
-          {onConvertToPython && (
-            <button
-              id="btn-convert-to-py"
-              data-testid="btn-convert-to-py"
-              onClick={onConvertToPython}
-              style={floatingConvertButtonStyle}
-              title="VBA(マクロ言語)コードをPythonコードに変換します"
-            >
-              ⬅ Pythonへ変換
-            </button>
-          )}
           <MonacoEditor
             code={vbaCode}
             onChange={onChangeVbaCode}
@@ -506,27 +482,6 @@ const uploadButtonStyle: React.CSSProperties = {
   fontWeight: 500,
   cursor: 'pointer',
   whiteSpace: 'nowrap',
-};
-
-const floatingConvertButtonStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '8px',
-  right: '22px',
-  zIndex: 10,
-  padding: '4px 10px',
-  fontSize: '0.78rem',
-  fontWeight: 600,
-  color: '#2563eb',
-  backgroundColor: 'rgba(239, 246, 255, 0.92)',
-  backdropFilter: 'blur(4px)',
-  border: '1px solid #bfdbfe',
-  borderRadius: '6px',
-  boxShadow: '0 2px 5px rgba(0, 0, 0, 0.08)',
-  cursor: 'pointer',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '4px',
-  transition: 'all 0.15s ease',
 };
 
 const contentStyle: React.CSSProperties = {

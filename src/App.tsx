@@ -30,6 +30,8 @@ export const App: React.FC = () => {
   const [vbaCode, setVbaCode] = useState<string>('');
   const [pyToVbaLineMap, setPyToVbaLineMap] = useState<Record<number, number>>({});
   const [lastTracedCode, setLastTracedCode] = useState<string>('');
+  const [lastConvertedPyCode, setLastConvertedPyCode] = useState<string>('');
+  const [lastConvertedVbaCode, setLastConvertedVbaCode] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [snapshots, setSnapshots] = useState<StepSnapshot[]>([]);
   const [flowchartNodes, setFlowchartNodes] = useState<FlowchartNode[]>([]);
@@ -79,6 +81,11 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!isInitializing && !initError && !isInitializedRef.current) {
       isInitializedRef.current = true;
+      const initialVba = pythonToVba(code);
+      setVbaCode(initialVba.code);
+      setPyToVbaLineMap(initialVba.lineMap);
+      setLastConvertedPyCode(code);
+      setLastConvertedVbaCode(initialVba.code);
       runTrace(code);
     }
   }, [isInitializing, initError, code, runTrace]);
@@ -93,6 +100,11 @@ export const App: React.FC = () => {
     const target = SAMPLE_PROGRAMS.find((s) => s.id === id);
     if (target) {
       setCode(target.code);
+      const vbaRes = pythonToVba(target.code);
+      setVbaCode(vbaRes.code);
+      setPyToVbaLineMap(vbaRes.lineMap);
+      setLastConvertedPyCode(target.code);
+      setLastConvertedVbaCode(vbaRes.code);
       if (!isInitializing) runTrace(target.code);
     }
   };
@@ -101,26 +113,68 @@ export const App: React.FC = () => {
     setCode(newCode);
     setSelectedSampleId('custom');
     setActiveTab('code');
+    const vbaRes = pythonToVba(newCode);
+    setVbaCode(vbaRes.code);
+    setPyToVbaLineMap(vbaRes.lineMap);
+    setLastConvertedPyCode(newCode);
+    setLastConvertedVbaCode(vbaRes.code);
     if (!isInitializing) runTrace(newCode);
   };
 
-  const handleConvertToVba = useCallback(() => {
-    const res = pythonToVba(code);
-    setVbaCode(res.code);
-    setPyToVbaLineMap(res.lineMap);
-    setActiveTab('vba');
-  }, [code]);
+  /** タブ切り替え時のスマート自動変換および流れ図・トレース再同期ハンドラー */
+  const handleTabChange = useCallback(
+    (newTab: LeftPanelTab) => {
+      setActiveTab(newTab);
 
-  const handleConvertToPython = useCallback(() => {
-    const res = vbaToPython(vbaCode);
-    setCode(res.code);
-    const reverseRes = pythonToVba(res.code);
-    setPyToVbaLineMap(reverseRes.lineMap);
-    setActiveTab('code');
-    if (!isInitializing) {
-      runTrace(res.code);
-    }
-  }, [vbaCode, isInitializing, runTrace]);
+      // 1. Python -> マクロ言語 (vba) タブへの切り替え
+      if (newTab === 'vba') {
+        if (code !== lastConvertedPyCode) {
+          const res = pythonToVba(code);
+          setVbaCode(res.code);
+          setPyToVbaLineMap(res.lineMap);
+          setLastConvertedPyCode(code);
+          setLastConvertedVbaCode(res.code);
+        }
+      }
+      // 2. マクロ言語 (vba) -> Python (code) タブへの切り替え
+      else if (newTab === 'code') {
+        if (vbaCode && vbaCode !== lastConvertedVbaCode) {
+          const res = vbaToPython(vbaCode);
+          setCode(res.code);
+          const reverseRes = pythonToVba(res.code);
+          setPyToVbaLineMap(reverseRes.lineMap);
+          setLastConvertedVbaCode(vbaCode);
+          setLastConvertedPyCode(res.code);
+          if (!isInitializing) {
+            runTrace(res.code);
+          }
+        }
+      }
+      // 3. 流れ図 (flowchart) タブへの切り替え
+      else if (newTab === 'flowchart') {
+        let currentTargetCode = code;
+        // マクロ言語が編集されていた場合はまず Python へ逆変換
+        if (vbaCode && vbaCode !== lastConvertedVbaCode) {
+          const res = vbaToPython(vbaCode);
+          currentTargetCode = res.code;
+          setCode(currentTargetCode);
+          const reverseRes = pythonToVba(currentTargetCode);
+          setPyToVbaLineMap(reverseRes.lineMap);
+          setLastConvertedVbaCode(vbaCode);
+          setLastConvertedPyCode(currentTargetCode);
+        }
+        // 流れ図生成
+        const graph = generateFlowchartGraph(currentTargetCode);
+        setFlowchartNodes(graph.nodes);
+        setFlowchartEdges(graph.edges);
+        // トレース再同期
+        if (currentTargetCode !== lastTracedCode && !isInitializing) {
+          runTrace(currentTargetCode);
+        }
+      }
+    },
+    [code, vbaCode, lastConvertedPyCode, lastConvertedVbaCode, lastTracedCode, isInitializing, runTrace]
+  );
 
   const isCodeDirty = !isInitializing && !initError && lastTracedCode !== '' && code !== lastTracedCode;
 
@@ -173,15 +227,13 @@ export const App: React.FC = () => {
             onChangeCode={setCode}
             vbaCode={vbaCode}
             onChangeVbaCode={setVbaCode}
-            onConvertToVba={handleConvertToVba}
-            onConvertToPython={handleConvertToPython}
             activeLine={activeLine}
             activeVbaLine={activeVbaLine}
             activeNodeId={activeNodeId}
             flowchartNodes={flowchartNodes}
             flowchartEdges={flowchartEdges}
             activeTab={activeTab}
-            onChangeTab={setActiveTab}
+            onChangeTab={handleTabChange}
             selectedSampleId={selectedSampleId}
             onSelectSample={handleSelectSample}
             onFileUpload={handleFileUpload}
