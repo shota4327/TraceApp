@@ -8,6 +8,8 @@ interface RightPanelProps {
   snapshots?: StepSnapshot[];
   currentStepIndex?: number;
   stdout?: string;
+  code?: string;
+  lineComments?: Record<number, string>;
 }
 
 /**
@@ -18,6 +20,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   snapshots = [],
   currentStepIndex = 0,
   stdout = '',
+  code,
+  lineComments,
 }) => {
   const { containerRef, topRatio, isDragging, handlePointerDown } = useVerticalResize({
     initialRatio: 0.8,
@@ -40,7 +44,12 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       }}
     >
       <div style={{ ...topPanelStyle, flex: `0 0 ${topPercent}`, height: topPercent }}>
-        <VariableTable snapshots={snapshots} currentStepIndex={currentStepIndex} />
+        <VariableTable
+          snapshots={snapshots}
+          currentStepIndex={currentStepIndex}
+          code={code}
+          lineComments={lineComments}
+        />
       </div>
 
       <div
