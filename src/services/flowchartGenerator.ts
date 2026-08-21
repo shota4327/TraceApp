@@ -1,4 +1,5 @@
 import { FlowchartNode, FlowchartNodeType, FlowchartEdge, FlowchartGraph } from '../types/flowchart';
+import { splitLineComment } from './commentExtractor';
 
 /**
  * ノード種別ごとの draw.io mxGraph スタイル文字列を返却
@@ -225,39 +226,6 @@ interface ParsedLineInfo {
   lineNo: number;
   indent: number;
   comment?: string;
-}
-
-/** 行文字列からコード部分と末尾コメント（# ...）を分離（文字列リテラル内の # は保護） */
-function splitLineComment(lineText: string): { codePart: string; comment?: string } {
-  let inSingle = false;
-  let inDouble = false;
-  let escapeNext = false;
-  let commentIndex = -1;
-
-  for (let i = 0; i < lineText.length; i++) {
-    const char = lineText[i]!;
-    if (escapeNext) {
-      escapeNext = false;
-      continue;
-    }
-    if (char === '\\') {
-      escapeNext = true;
-      continue;
-    }
-    if (char === "'" && !inDouble) inSingle = !inSingle;
-    else if (char === '"' && !inSingle) inDouble = !inDouble;
-    else if (char === '#' && !inSingle && !inDouble) {
-      commentIndex = i;
-      break;
-    }
-  }
-
-  if (commentIndex >= 0) {
-    const codePart = lineText.slice(0, commentIndex).trim();
-    const rawComment = lineText.slice(commentIndex + 1).trim();
-    return { codePart, comment: rawComment || undefined };
-  }
-  return { codePart: lineText.trim() };
 }
 
 /** コード内のループ行番号と通し番号 (1, 2, ...) のマップを構築 */

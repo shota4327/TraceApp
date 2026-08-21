@@ -1,9 +1,12 @@
 import React from 'react';
 import { StepSnapshot } from '../types/trace';
+import { extractLineComments } from '../services/commentExtractor';
 
 interface VariableTableProps {
   snapshots?: StepSnapshot[];
   currentStepIndex?: number;
+  code?: string;
+  lineComments?: Record<number, string>;
 }
 
 /** テーブルヘッダー行コンポーネント */
@@ -35,8 +38,9 @@ const VariableTableRow = React.forwardRef<
     varNames: string[];
     currentChangedVars: string[];
     latestChangedStepByVar: Record<string, number>;
+    lineComment?: string;
   }
->(({ stepNumber, snapshot, executedLine, isCurrent, varNames, currentChangedVars, latestChangedStepByVar }, ref) => (
+>(({ stepNumber, snapshot, executedLine, isCurrent, varNames, currentChangedVars, latestChangedStepByVar, lineComment }, ref) => (
   <tr ref={ref} style={isCurrent ? activeRowStyle : trStyle}>
     <td style={metaTdStyle}>{stepNumber}</td>
     <td style={lineTdStyle}>{executedLine}</td>
@@ -56,8 +60,13 @@ const VariableTableRow = React.forwardRef<
 
       return (
         <td key={name} style={cellStyle} title={isChanged ? (isLocal ? `${name} (ローカル変数)` : `${name} (グローバル変数)`) : undefined}>
-          {isChanged && val !== undefined ? String(val) : ''}
-          {isChanged && isLocal ? <span style={localBadgeStyle}>L</span> : null}
+          {isChanged && val !== undefined ? (
+            <span style={cellContentWrapperStyle}>
+              <span>{String(val)}</span>
+              {isLocal ? <span style={localBadgeStyle}>L</span> : null}
+              {lineComment ? <span style={commentBadgeStyle} data-testid="var-comment-badge">{lineComment}</span> : null}
+            </span>
+          ) : ''}
         </td>
       );
     })}
@@ -93,9 +102,17 @@ function extractAllVarNames(snapshots: StepSnapshot[]): string[] {
 export const VariableTable: React.FC<VariableTableProps> = ({
   snapshots = [],
   currentStepIndex = 0,
+  code,
+  lineComments,
 }) => {
   const [hideUnchanged, setHideUnchanged] = React.useState(true);
   const activeRowRef = React.useRef<HTMLTableRowElement | null>(null);
+
+  const lineCommentsMap = React.useMemo(() => {
+    if (lineComments) return lineComments;
+    if (code) return extractLineComments(code);
+    return {};
+  }, [code, lineComments]);
 
   const allVarNames = extractAllVarNames(snapshots);
   // currentStepIndex < 0 の場合は未実行状態 (0件)
@@ -154,6 +171,7 @@ export const VariableTable: React.FC<VariableTableProps> = ({
                 const stepNo = s.stepIndex + 1;
                 const isCurrent = currentSnapshot?.stepIndex === s.stepIndex && currentSnapshot.changedVars.length > 0;
                 const shouldAttachRef = isCurrent || idx === displayedSnapshots.length - 1;
+                const lineComment = lineCommentsMap[s.line];
                 return (
                   <VariableTableRow
                     key={s.stepIndex}
@@ -165,6 +183,7 @@ export const VariableTable: React.FC<VariableTableProps> = ({
                     varNames={allVarNames}
                     currentChangedVars={currentChangedVars}
                     latestChangedStepByVar={latestChangedStepByVar}
+                    lineComment={lineComment}
                   />
                 );
               })}
@@ -324,11 +343,28 @@ const changedTdStyle: React.CSSProperties = {
 };
 
 const localBadgeStyle: React.CSSProperties = {
-  marginLeft: '6px',
+  marginLeft: '2px',
   fontSize: '0.7rem',
   padding: '1px 4px',
   backgroundColor: '#10b981',
   color: '#ffffff',
   borderRadius: '3px',
   fontWeight: 700,
+};
+
+const cellContentWrapperStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '4px',
+};
+
+const commentBadgeStyle: React.CSSProperties = {
+  fontSize: '0.72rem',
+  padding: '1px 5px',
+  backgroundColor: '#e0e7ff',
+  color: '#3730a3',
+  borderRadius: '3px',
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
 };

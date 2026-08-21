@@ -209,6 +209,7 @@ export const App: React.FC = () => {
             snapshots={snapshots}
             currentStepIndex={isNotStarted ? -1 : currentStep - 1}
             stdout={activeSnapshot?.stdoutCumulative ?? ''}
+            code={lastTracedCode || code}
           />
         </div>
       </main>
