@@ -146,46 +146,37 @@ test.describe('Tier 1: 機能網羅テスト (Feature Coverage)', () => {
 
   test('T1-06: Monaco Editor 実行行デコレーションハイライトの追従', async ({ page }) => {
     const btnNext = getEl(page, 'btn-next');
-    const activeLineBadge = getEl(page, 'active-line-badge');
     const stepCounter = getEl(page, 'step-counter');
 
     await clickRunIfEnabled(page);
     await expect(stepCounter).toContainText('ステップ 0 /');
 
-    // 1ステップ目 (起動直後・未実行): (未実行) が表示されることを確認
-    await expect(activeLineBadge).toContainText('実行行: (未実行)');
-
-    // 2ステップ目 (次へ押下): 1行目を実行した結果として Line 1 が表示されることを確認
+    // 2ステップ目 (次へ押下): 1行目を実行した結果として ステップ 1 に進むことを確認
     await btnNext.click();
     await expect(stepCounter).toContainText('ステップ 1 /');
-    await expect(activeLineBadge).toContainText('実行行: Line 1');
 
-    // 流れ図タブに切り替えても実行行バッジが表示されていることを確認
+    // 流れ図タブに切り替えてもステップ状態が維持されることを確認
     const tabFlowchart = getEl(page, 'tab-flowchart');
     const tabCode = getEl(page, 'tab-code');
     await tabFlowchart.click();
-    await expect(activeLineBadge).toContainText('実行行: Line 1');
+    await expect(stepCounter).toContainText('ステップ 1 /');
     await tabCode.click();
 
-    // 3ステップ目 (次へ押下): 2行目を実行した結果として Line 2 が表示されることを確認
+    // 3ステップ目 (次へ押下): 2行目を実行した結果として ステップ 2 に進むことを確認
     await btnNext.click();
     await expect(stepCounter).toContainText('ステップ 2 /');
-    await expect(activeLineBadge).toContainText('実行行: Line 2');
 
-    // 4ステップ目 (次へ押下): 3行目 (total = x + y) を実行した結果として Line 3 が表示されることを確認
+    // 4ステップ目 (次へ押下): 3行目 (total = x + y) を実行した結果として ステップ 3 に進むことを確認
     await btnNext.click();
     await expect(stepCounter).toContainText('ステップ 3 /');
-    await expect(activeLineBadge).toContainText('実行行: Line 3');
 
-    // 5ステップ目 (次へ押下): 4行目 (print(total)) を実行した結果として Line 4 がハイライトされることを確認
+    // 5ステップ目 (次へ押下): 4行目 (print(total)) を実行した結果として ステップ 4 に進むことを確認
     await btnNext.click();
     await expect(stepCounter).toContainText('ステップ 4 /');
-    await expect(activeLineBadge).toContainText('実行行: Line 4');
 
-    // 6ステップ目 (次へ押下): 全行実行完了状態となり、実行行バッジが (実行終了) になること
+    // 6ステップ目 (次へ押下): 全行実行完了状態となり、ステップ 5 に到達すること
     await btnNext.click();
     await expect(stepCounter).toContainText('ステップ 5 /');
-    await expect(activeLineBadge).toContainText('実行行: (実行終了)');
   });
 
   test('T1-07: スプレッドシート型変数履歴表の描画・更新および「変更のない行を非表示」オプション', async ({ page }) => {

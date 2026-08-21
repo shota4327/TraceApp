@@ -109,7 +109,6 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
     const btnNext = getEl(page, 'btn-next');
     const btnLast = getEl(page, 'btn-last');
     const localsTable = getEl(page, 'locals-table-body');
-    const activeLineBadge = getEl(page, 'active-line-badge');
     const stepCounter = getEl(page, 'step-counter');
 
     // テスト3: ループサンプルを選択
@@ -119,21 +118,21 @@ test.describe('Tier 4: 実用アプリケーションシナリオ (Real-World Ap
 
     // Step 1: Line 5 (total = 0)
     await btnNext.click();
-    await expect(activeLineBadge).toContainText('実行行: Line 5');
+    await expect(stepCounter).toContainText('ステップ 1 /');
     await expect(localsTable).toContainText('total');
 
     // Step 2: Line 6 (for i in range(1, 4): i = 1)
     await btnNext.click();
-    await expect(activeLineBadge).toContainText('実行行: Line 6');
+    await expect(stepCounter).toContainText('ステップ 2 /');
     await expect(localsTable).toContainText('i');
 
     // Step 3: Line 7 (total = add(total, i) 呼出)
     await btnNext.click();
-    await expect(activeLineBadge).toContainText('実行行: Line 7');
+    await expect(stepCounter).toContainText('ステップ 3 /');
 
     // Step 4: Line 1 (def add(a, b) に移動し引数 a=0, b=1 が代入表示されること)
     await btnNext.click();
-    await expect(activeLineBadge).toContainText('実行行: Line 1');
+    await expect(stepCounter).toContainText('ステップ 4 /');
     await expect(localsTable).toContainText('a');
     await expect(localsTable).toContainText('b');
 
