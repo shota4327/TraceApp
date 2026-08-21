@@ -25,16 +25,19 @@ const VariableTableHeader: React.FC<{
 );
 
 /** テーブル本体行コンポーネント */
-const VariableTableRow: React.FC<{
-  stepNumber: number;
-  snapshot: StepSnapshot;
-  executedLine: number;
-  isCurrent: boolean;
-  varNames: string[];
-  currentChangedVars: string[];
-  latestChangedStepByVar: Record<string, number>;
-}> = ({ stepNumber, snapshot, executedLine, isCurrent, varNames, currentChangedVars, latestChangedStepByVar }) => (
-  <tr style={isCurrent ? activeRowStyle : trStyle}>
+const VariableTableRow = React.forwardRef<
+  HTMLTableRowElement,
+  {
+    stepNumber: number;
+    snapshot: StepSnapshot;
+    executedLine: number;
+    isCurrent: boolean;
+    varNames: string[];
+    currentChangedVars: string[];
+    latestChangedStepByVar: Record<string, number>;
+  }
+>(({ stepNumber, snapshot, executedLine, isCurrent, varNames, currentChangedVars, latestChangedStepByVar }, ref) => (
+  <tr ref={ref} style={isCurrent ? activeRowStyle : trStyle}>
     <td style={metaTdStyle}>{stepNumber}</td>
     <td style={lineTdStyle}>{executedLine}</td>
     {varNames.map((name) => {
@@ -59,7 +62,8 @@ const VariableTableRow: React.FC<{
       );
     })}
   </tr>
-);
+));
+VariableTableRow.displayName = 'VariableTableRow';
 
 /** 値が関数・モジュールオブジェクトであるかを判定 */
 function isFunctionValue(val: unknown): boolean {
@@ -91,6 +95,8 @@ export const VariableTable: React.FC<VariableTableProps> = ({
   currentStepIndex = 0,
 }) => {
   const [hideUnchanged, setHideUnchanged] = React.useState(true);
+  const activeRowRef = React.useRef<HTMLTableRowElement | null>(null);
+
   const allVarNames = extractAllVarNames(snapshots);
   // currentStepIndex < 0 の場合は未実行状態 (0件)
   const count = currentStepIndex >= 0 ? currentStepIndex + 1 : 0;
@@ -109,6 +115,17 @@ export const VariableTable: React.FC<VariableTableProps> = ({
       latestChangedStepByVar[v] = stepNo;
     }
   });
+
+  // ステップ進行時にアクティブ行へ自動スクロール
+  React.useEffect(() => {
+    if (activeRowRef.current && typeof activeRowRef.current.scrollIntoView === 'function') {
+      activeRowRef.current.scrollIntoView({
+        block: 'nearest',
+        inline: 'nearest',
+        behavior: 'smooth',
+      });
+    }
+  }, [currentStepIndex, displayedSnapshots.length, hideUnchanged]);
 
   return (
     <div id="variable-table" data-testid="variable-table" style={containerStyle}>
@@ -133,12 +150,14 @@ export const VariableTable: React.FC<VariableTableProps> = ({
           <table style={tableStyle}>
             <VariableTableHeader varNames={allVarNames} changedVars={currentChangedVars} />
             <tbody>
-              {displayedSnapshots.map((s) => {
+              {displayedSnapshots.map((s, idx) => {
                 const stepNo = s.stepIndex + 1;
                 const isCurrent = currentSnapshot?.stepIndex === s.stepIndex && currentSnapshot.changedVars.length > 0;
+                const shouldAttachRef = isCurrent || idx === displayedSnapshots.length - 1;
                 return (
                   <VariableTableRow
                     key={s.stepIndex}
+                    ref={shouldAttachRef ? activeRowRef : undefined}
                     stepNumber={stepNo}
                     snapshot={s}
                     executedLine={s.line}
