@@ -127,11 +127,6 @@ export const App: React.FC = () => {
   // 実行状態の計算:
   const isEnded = !isCodeDirty && snapshots.length > 0 && currentStep === snapshots.length;
   const isNotStarted = isCodeDirty || currentStep === 0;
-  const executionStatus: 'not_started' | 'running' | 'ended' = isNotStarted
-    ? 'not_started'
-    : isEnded
-    ? 'ended'
-    : 'running';
 
   const activeLine = isNotStarted || isEnded ? 0 : (snapshots[currentStep - 1]?.line ?? 0);
   const activeVbaLine = activeLine > 0 ? (pyToVbaLineMap[activeLine] ?? activeLine) : 0;
@@ -141,6 +136,8 @@ export const App: React.FC = () => {
     ? 'node-end'
     : (snapshots[currentStep - 1]?.astNodeId ?? 'node-start');
   const activeSnapshot = isNotStarted ? undefined : (isEnded ? snapshots[snapshots.length - 1] : snapshots[currentStep - 1]);
+
+  const [zoom, setZoom] = useState<number>(100);
 
   let displayStatusText = statusText;
   if (isInitializing) {
@@ -158,7 +155,17 @@ export const App: React.FC = () => {
   return (
     <div style={appContainerStyle}>
       {isInitializing && <LoadingOverlay />}
-      <Header selectedSampleId={selectedSampleId} onSelectSample={handleSelectSample} onFileUpload={handleFileUpload} statusText={displayStatusText} />
+      <Header
+        statusText={displayStatusText}
+        currentStep={isCodeDirty ? 0 : currentStep}
+        totalSteps={isCodeDirty ? 0 : snapshots.length + 1}
+        onStepChange={setCurrentStep}
+        onReset={() => setCurrentStep(0)}
+        onRun={() => runTrace(code)}
+        onLast={() => snapshots.length > 0 && setCurrentStep(snapshots.length)}
+        isTracing={isTracing || isInitializing}
+        isCodeDirty={isCodeDirty}
+      />
       <main ref={mainContainerRef} style={{ ...mainContentStyle, userSelect: isDragging ? 'none' : 'auto' }}>
         <div style={{ ...leftPanelWrapperStyle, flex: `0 0 ${leftPercent}`, width: leftPercent }}>
           <LeftPanel
@@ -168,22 +175,18 @@ export const App: React.FC = () => {
             onChangeVbaCode={setVbaCode}
             onConvertToVba={handleConvertToVba}
             onConvertToPython={handleConvertToPython}
-            currentStep={isCodeDirty ? 0 : currentStep}
-            totalSteps={isCodeDirty ? 0 : snapshots.length + 1}
-            onStepChange={setCurrentStep}
-            onReset={() => setCurrentStep(0)}
-            onRun={() => runTrace(code)}
-            onLast={() => snapshots.length > 0 && setCurrentStep(snapshots.length)}
             activeLine={activeLine}
             activeVbaLine={activeVbaLine}
             activeNodeId={activeNodeId}
             flowchartNodes={flowchartNodes}
             flowchartEdges={flowchartEdges}
-            isTracing={isTracing || isInitializing}
-            isCodeDirty={isCodeDirty}
-            executionStatus={executionStatus}
             activeTab={activeTab}
             onChangeTab={setActiveTab}
+            selectedSampleId={selectedSampleId}
+            onSelectSample={handleSelectSample}
+            onFileUpload={handleFileUpload}
+            zoom={zoom}
+            onZoomChange={setZoom}
           />
         </div>
         <div

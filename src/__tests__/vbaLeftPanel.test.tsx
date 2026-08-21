@@ -30,7 +30,11 @@ vi.mock('../components/MonacoEditor', () => ({
 
 // FlowchartViewer のモック
 vi.mock('../components/FlowchartViewer', () => ({
-  FlowchartViewer: () => <div id="flowchart-viewer" data-testid="flowchart-viewer" role="tabpanel" aria-labelledby="tab-flowchart">Flowchart Content</div>,
+  FlowchartViewer: () => (
+    <div id="flowchart-viewer" data-testid="flowchart-viewer" role="tabpanel" aria-labelledby="tab-flowchart">
+      Flowchart Content
+    </div>
+  ),
 }));
 
 describe('LeftPanel - VBA Tab and Conversion UI', () => {
@@ -41,25 +45,18 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
     onChangeVbaCode: vi.fn(),
     onConvertToVba: vi.fn(),
     onConvertToPython: vi.fn(),
-    currentStep: 1,
-    totalSteps: 3,
-    onStepChange: vi.fn(),
-    onReset: vi.fn(),
-    onRun: vi.fn(),
-    onLast: vi.fn(),
     activeLine: 2,
     activeVbaLine: 2,
-    executionStatus: 'running' as const,
   };
 
-  it('renders tabs in the exact order: コード(Python), コード(マクロ言語), 流れ図', () => {
+  it('renders tabs in the exact order: Python, マクロ言語, 流れ図', () => {
     render(<LeftPanel {...defaultProps} />);
 
     const tabs = screen.getAllByRole('tab');
     expect(tabs.length).toBe(3);
-    expect(tabs[0]?.textContent).toBe('コード(Python)');
-    expect(tabs[1]?.textContent).toBe('コード(マクロ言語)');
-    expect(tabs[2]?.textContent).toBe('流れ図');
+    expect(tabs[0]?.textContent?.trim()).toBe('Python');
+    expect(tabs[1]?.textContent?.trim()).toBe('マクロ言語');
+    expect(tabs[2]?.textContent?.trim()).toBe('流れ図');
 
     expect(tabs[0]?.getAttribute('id')).toBe('tab-code');
     expect(tabs[1]?.getAttribute('id')).toBe('tab-vba');
@@ -73,8 +70,8 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
   it('switches between tabs properly', () => {
     render(<LeftPanel {...defaultProps} />);
 
-    const pyTab = screen.getByRole('tab', { name: 'コード(Python)' });
-    const vbaTab = screen.getByRole('tab', { name: 'コード(マクロ言語)' });
+    const pyTab = screen.getByRole('tab', { name: 'Python' });
+    const vbaTab = screen.getByRole('tab', { name: 'マクロ言語' });
     const flowTab = screen.getByRole('tab', { name: '流れ図' });
 
     // 初期状態は Python タブ
@@ -114,7 +111,7 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
     expect(onConvertToVba).toHaveBeenCalledTimes(1);
 
     // VBAタブへ切り替え
-    const vbaTab = screen.getByRole('tab', { name: 'コード(マクロ言語)' });
+    const vbaTab = screen.getByRole('tab', { name: 'マクロ言語' });
     fireEvent.click(vbaTab);
 
     // VBAタブ内のPythonへ変換ボタンをクリック
@@ -123,15 +120,12 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
     expect(onConvertToPython).toHaveBeenCalledTimes(1);
   });
 
-  it('passes activeVbaLine to VBA MonacoEditor and updates line badge on VBA tab', () => {
+  it('passes activeVbaLine to VBA MonacoEditor on VBA tab', () => {
     render(<LeftPanel {...defaultProps} activeLine={1} activeVbaLine={3} />);
 
     // VBAタブへ切り替え
-    const vbaTab = screen.getByRole('tab', { name: 'コード(マクロ言語)' });
+    const vbaTab = screen.getByRole('tab', { name: 'マクロ言語' });
     fireEvent.click(vbaTab);
-
-    const badge = screen.getByTestId('active-line-badge');
-    expect(badge.textContent).toBe('実行行: Line 3');
 
     const vbaEditor = screen.getByTestId('monaco-editor-vba');
     expect(vbaEditor.getAttribute('data-highlight')).toBe('3');
@@ -144,7 +138,7 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
       <LeftPanel {...defaultProps} activeTab="flowchart" onChangeTab={onChangeTab} />
     );
 
-    const pyTab = screen.getByRole('tab', { name: 'コード(Python)' });
+    const pyTab = screen.getByRole('tab', { name: 'Python' });
     const flowTab = screen.getByRole('tab', { name: '流れ図' });
 
     expect(flowTab.getAttribute('aria-selected')).toBe('true');
@@ -158,5 +152,31 @@ describe('LeftPanel - VBA Tab and Conversion UI', () => {
     rerender(<LeftPanel {...defaultProps} activeTab="code" onChangeTab={onChangeTab} />);
     expect(pyTab.getAttribute('aria-selected')).toBe('true');
     expect(flowTab.getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('restores last active code language when switching back from flowchart', () => {
+    const onChangeTab = vi.fn();
+    const { rerender } = render(
+      <LeftPanel {...defaultProps} activeTab="vba" onChangeTab={onChangeTab} />
+    );
+
+    // VBA が選択中
+    const vbaTab = screen.getByRole('tab', { name: 'マクロ言語' });
+    expect(vbaTab.getAttribute('aria-selected')).toBe('true');
+
+    // 流れ図に切り替え
+    const flowTab = screen.getByRole('tab', { name: '流れ図' });
+    fireEvent.click(flowTab);
+    expect(onChangeTab).toHaveBeenCalledWith('flowchart');
+
+    // 流れ図アクティブ状態で再描画
+    rerender(<LeftPanel {...defaultProps} activeTab="flowchart" onChangeTab={onChangeTab} />);
+
+    // コードタブのコンテナ領域をクリック（Python/マクロ直接でなくコード枠）
+    const codeTab = screen.getByRole('tab', { name: 'Python' });
+    fireEvent.click(codeTab);
+
+    // 直前に開いていた 'vba' で復帰すること
+    expect(onChangeTab).toHaveBeenLastCalledWith('vba');
   });
 });

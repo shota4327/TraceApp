@@ -1,11 +1,19 @@
 import React from 'react';
-import { SAMPLE_PROGRAMS } from '../services/samplePrograms';
+import { NavButtons, StepSeekBar } from './StepNavigation';
 
-interface HeaderProps {
-  selectedSampleId: string;
-  onSelectSample: (id: string) => void;
-  onFileUpload: (code: string) => void;
+export interface HeaderProps {
   statusText?: string;
+  currentStep?: number;
+  totalSteps?: number;
+  onStepChange?: (step: number) => void;
+  onReset?: () => void;
+  onRun?: () => void;
+  onLast?: () => void;
+  isTracing?: boolean;
+  isCodeDirty?: boolean;
+  selectedSampleId?: string;
+  onSelectSample?: (id: string) => void;
+  onFileUpload?: (code: string) => void;
 }
 
 /** タイトルおよびステータス表示サブコンポーネント */
@@ -63,57 +71,48 @@ const HeaderTitleGroup: React.FC<{ statusText: string }> = ({ statusText }) => {
   );
 };
 
-/** サンプル選択およびファイル読込サブコンポーネント */
-const HeaderControls: React.FC<{
-  selectedSampleId: string;
-  onSelectSample: (id: string) => void;
-  onFileUpload: (code: string) => void;
-}> = ({ selectedSampleId, onSelectSample, onFileUpload }) => {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const content = evt.target?.result as string;
-      if (content) onFileUpload(content);
-    };
-    reader.readAsText(file);
-  };
-
-  return (
-    <div style={controlsStyle}>
-      <label style={labelStyle} htmlFor="preset-select">
-        サンプル選択:
-      </label>
-      <select id="preset-select" data-testid="preset-select" value={selectedSampleId} onChange={(e) => onSelectSample(e.target.value)} style={selectStyle}>
-        {SAMPLE_PROGRAMS.map((sample) => (
-          <option key={sample.id} value={sample.id}>
-            {sample.name}
-          </option>
-        ))}
-      </select>
-      <label style={uploadButtonStyle}>
-        .py ファイル読込
-        <input id="file-upload-input" data-testid="file-upload-input" type="file" accept=".py" onChange={handleFileChange} style={{ display: 'none' }} />
-      </label>
-    </div>
-  );
-};
-
 /**
  * ヘッダーコンポーネント
- * アプリタイトルおよびステータスインジケータ、サンプル選択ドロップダウン、ファイル読込を表示
+ * アプリタイトル、ステータス、ステップナビゲーションボタン群およびシークバーを統括
  */
 export const Header: React.FC<HeaderProps> = ({
-  selectedSampleId,
-  onSelectSample,
-  onFileUpload,
   statusText = '準備完了 (ready)',
+  currentStep = 0,
+  totalSteps = 0,
+  onStepChange = () => {},
+  onReset = () => {},
+  onRun,
+  onLast,
+  isTracing = false,
+  isCodeDirty = false,
 }) => {
+  const maxStep = Math.max(0, totalSteps - 1);
+  const handleLast = () => (onLast ? onLast() : totalSteps > 0 && onStepChange(maxStep));
+
   return (
     <header id="header" data-testid="header" className="header-container" style={headerStyle}>
       <HeaderTitleGroup statusText={statusText} />
-      <HeaderControls selectedSampleId={selectedSampleId} onSelectSample={onSelectSample} onFileUpload={onFileUpload} />
+      <div style={headerNavContainerStyle}>
+        <div style={headerDividerStyle} />
+        <NavButtons
+          onRun={onRun}
+          onPrev={() => onStepChange(currentStep - 1)}
+          onNext={() => onStepChange(currentStep + 1)}
+          onReset={onReset}
+          onLast={handleLast}
+          canPrev={currentStep > 0}
+          canNext={totalSteps > 0 && currentStep < maxStep}
+          isTracing={isTracing}
+          isCodeDirty={isCodeDirty}
+        />
+        <StepSeekBar
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          isTracing={isTracing}
+          isCodeDirty={isCodeDirty}
+          onStepChange={onStepChange}
+        />
+      </div>
     </header>
   );
 };
@@ -122,63 +121,55 @@ const headerStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '12px 20px',
+  padding: '8px 16px',
   backgroundColor: '#ffffff',
   borderBottom: '1px solid #e2e8f0',
+  gap: '16px',
+  flexWrap: 'nowrap',
+  overflowX: 'auto',
 };
 
 const titleGroupStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '16px',
+  gap: '12px',
+  flexShrink: 0,
 };
 
 const titleStyle: React.CSSProperties = {
-  fontSize: '1.25rem',
+  fontSize: '1.15rem',
   fontWeight: 600,
   color: '#1e293b',
+  whiteSpace: 'nowrap',
+  margin: 0,
 };
 
 const statusIndicatorStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  padding: '4px 10px',
+  padding: '3px 8px',
   borderRadius: '12px',
   backgroundColor: '#dcfce7',
   border: '1px solid #86efac',
+  whiteSpace: 'nowrap',
 };
 
 const statusTextStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
+  fontSize: '0.78rem',
   fontWeight: 500,
   color: '#166534',
 };
 
-const controlsStyle: React.CSSProperties = {
+const headerNavContainerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
+  flexShrink: 0,
 };
 
-const labelStyle: React.CSSProperties = {
-  fontSize: '0.875rem',
-  color: '#64748b',
-};
-
-const selectStyle: React.CSSProperties = {
-  padding: '6px 12px',
-  borderRadius: '4px',
-  border: '1px solid #cbd5e1',
-  backgroundColor: '#ffffff',
-  fontSize: '0.875rem',
-  cursor: 'pointer',
-};
-
-const uploadButtonStyle: React.CSSProperties = {
-  padding: '6px 12px',
-  borderRadius: '4px',
-  backgroundColor: '#2563eb',
-  color: '#ffffff',
-  fontSize: '0.875rem',
-  cursor: 'pointer',
+const headerDividerStyle: React.CSSProperties = {
+  width: '1px',
+  height: '24px',
+  backgroundColor: '#cbd5e1',
+  margin: '0 4px',
 };

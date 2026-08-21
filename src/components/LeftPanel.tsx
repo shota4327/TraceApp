@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { MonacoEditor } from './MonacoEditor';
 import { FlowchartViewer } from './FlowchartViewer';
-import { StepNavigation } from './StepNavigation';
+import { ZoomSlider } from './StepNavigation';
 import { FlowchartNode, FlowchartEdge } from '../types/flowchart';
 import { generateFlowchartGraph } from '../services/flowchartGenerator';
+import { SAMPLE_PROGRAMS } from '../services/samplePrograms';
 
 export type LeftPanelTab = 'code' | 'vba' | 'flowchart';
 
@@ -14,113 +15,207 @@ interface LeftPanelProps {
   onChangeVbaCode?: (vbaCode: string) => void;
   onConvertToVba?: () => void;
   onConvertToPython?: () => void;
-  currentStep: number;
-  totalSteps: number;
-  onStepChange: (step: number) => void;
-  onReset: () => void;
-  onRun?: () => void;
-  onLast?: () => void;
   activeLine?: number;
   activeVbaLine?: number;
   activeNodeId?: string;
   flowchartNodes?: FlowchartNode[];
   flowchartEdges?: FlowchartEdge[];
+  activeTab?: LeftPanelTab;
+  onChangeTab?: (tab: LeftPanelTab) => void;
+  selectedSampleId?: string;
+  onSelectSample?: (id: string) => void;
+  onFileUpload?: (code: string) => void;
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
+  currentStep?: number;
+  totalSteps?: number;
+  onStepChange?: (step: number) => void;
+  onReset?: () => void;
+  onRun?: () => void;
+  onLast?: () => void;
   isTracing?: boolean;
   isCodeDirty?: boolean;
   executionStatus?: 'not_started' | 'running' | 'ended';
-  activeTab?: LeftPanelTab;
-  onChangeTab?: (tab: LeftPanelTab) => void;
 }
 
-/** ステップスライダー＆カウンターサブコンポーネント */
-const TabBarStepControl: React.FC<{
-  currentStep: number;
-  totalSteps: number;
-  isTracing: boolean;
-  isCodeDirty?: boolean;
-  onStepChange: (step: number) => void;
-}> = ({ currentStep, totalSteps, isTracing, isCodeDirty, onStepChange }) => {
-  const maxStep = Math.max(0, totalSteps - 1);
-  const isSliderDisabled = totalSteps <= 0 || isTracing || !!isCodeDirty;
+/** サンプル選択・ファイル読込・ズームコントロールサブコンポーネント */
+const TabBarControls: React.FC<{
+  selectedSampleId?: string;
+  onSelectSample?: (id: string) => void;
+  onFileUpload?: (code: string) => void;
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
+}> = ({ selectedSampleId, onSelectSample, onFileUpload, zoom, onZoomChange }) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const content = evt.target?.result as string;
+      if (content && onFileUpload) onFileUpload(content);
+    };
+    reader.readAsText(file);
+  };
 
   return (
-    <div style={stepControlWrapperStyle}>
-      <span id="step-counter" data-testid="step-counter" style={stepCounterStyle}>
-        {totalSteps > 0 ? `ステップ ${currentStep} / ${maxStep}` : 'ステップ 0 / 0'}
-      </span>
-      <input
-        id="step-slider"
-        data-testid="step-slider"
-        type="range"
-        min={0}
-        max={maxStep}
-        value={currentStep}
-        onChange={(e) => onStepChange(Number(e.target.value))}
-        disabled={isSliderDisabled}
-        style={isSliderDisabled ? disabledStepSliderStyle : stepSliderStyle}
-        aria-label="ステップ進行スライダー"
-      />
+    <div style={tabBarRightAreaStyle}>
+      {onSelectSample && (
+        <div style={sampleSelectWrapperStyle}>
+          <label style={controlLabelStyle} htmlFor="preset-select">
+            サンプル:
+          </label>
+          <select
+            id="preset-select"
+            data-testid="preset-select"
+            value={selectedSampleId}
+            onChange={(e) => onSelectSample(e.target.value)}
+            style={selectStyle}
+          >
+            {SAMPLE_PROGRAMS.map((sample) => (
+              <option key={sample.id} value={sample.id}>
+                {sample.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {onFileUpload && (
+        <label style={uploadButtonStyle}>
+          .py 読込
+          <input
+            id="file-upload-input"
+            data-testid="file-upload-input"
+            type="file"
+            accept=".py"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+        </label>
+      )}
+      <ZoomSlider zoom={zoom} onZoomChange={onZoomChange} />
     </div>
   );
 };
 
-/** 左パネルのコード/マクロ言語/流れ図タブバー */
+/** 言語切り替えスライドスイッチサブコンポーネント */
+const LanguageSlideSwitch: React.FC<{
+  activeTab: LeftPanelTab;
+  isCodeActive: boolean;
+  onSelectLanguage: (lang: 'code' | 'vba') => void;
+}> = ({ activeTab, isCodeActive, onSelectLanguage }) => {
+  const isVba = activeTab === 'vba';
+
+  return (
+    <div
+      style={slideSwitchTrackStyle}
+      onClick={(e) => {
+        if (isCodeActive) {
+          e.stopPropagation();
+          onSelectLanguage(isVba ? 'code' : 'vba');
+        }
+      }}
+      title="クリックでPythonとマクロ言語を切り替えます"
+    >
+      {/* スライドする青いピル背景インジケーター */}
+      {isCodeActive && (
+        <div
+          style={{
+            ...slideSwitchIndicatorStyle,
+            transform: isVba ? 'translateX(100%)' : 'translateX(0%)',
+          }}
+        />
+      )}
+      <button
+        id="tab-code"
+        data-testid="tab-code"
+        role="tab"
+        aria-selected={activeTab === 'code'}
+        aria-controls="panel-code"
+        onClick={(e) => {
+          if (isCodeActive) {
+            e.stopPropagation();
+            onSelectLanguage('code');
+          }
+        }}
+        style={activeTab === 'code' && isCodeActive ? activeSlideLabelStyle : slideLabelStyle}
+      >
+        Python
+      </button>
+      <button
+        id="tab-vba"
+        data-testid="tab-vba"
+        role="tab"
+        aria-selected={activeTab === 'vba'}
+        aria-controls="panel-vba"
+        onClick={(e) => {
+          if (isCodeActive) {
+            e.stopPropagation();
+            onSelectLanguage('vba');
+          }
+        }}
+        style={activeTab === 'vba' && isCodeActive ? activeSlideLabelStyle : slideLabelStyle}
+      >
+        マクロ言語
+      </button>
+    </div>
+  );
+};
+
+/** 左パネルのトグル式タブバー */
 const LeftPanelTabBar: React.FC<{
   activeTab: LeftPanelTab;
   onSelectTab: (tab: LeftPanelTab) => void;
-  activeLine?: number;
-  activeVbaLine?: number;
-  executionStatus?: 'not_started' | 'running' | 'ended';
-  currentStep: number;
-  totalSteps: number;
-  onStepChange: (step: number) => void;
-  isTracing: boolean;
-  isCodeDirty?: boolean;
+  selectedSampleId?: string;
+  onSelectSample?: (id: string) => void;
+  onFileUpload?: (code: string) => void;
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
 }> = ({
   activeTab,
   onSelectTab,
-  activeLine,
-  activeVbaLine,
-  executionStatus,
-  currentStep,
-  totalSteps,
-  onStepChange,
-  isTracing,
-  isCodeDirty,
+  selectedSampleId,
+  onSelectSample,
+  onFileUpload,
+  zoom,
+  onZoomChange,
 }) => {
-  const currentLine = activeTab === 'vba' ? (activeVbaLine ?? activeLine) : activeLine;
-  let badgeText = '実行行: (未実行)';
-  if (executionStatus === 'ended') {
-    badgeText = '実行行: (実行終了)';
-  } else if (executionStatus === 'running' || (currentLine !== undefined && currentLine > 0)) {
-    badgeText = `実行行: Line ${currentLine}`;
-  }
+  const isCodeActive = activeTab === 'code' || activeTab === 'vba';
+  const [lastCodeTab, setLastCodeTab] = useState<'code' | 'vba'>('code');
+
+  React.useEffect(() => {
+    if (activeTab === 'code' || activeTab === 'vba') {
+      setLastCodeTab(activeTab);
+    }
+  }, [activeTab]);
+
+  const handleCodeTabContainerClick = () => {
+    if (!isCodeActive) {
+      onSelectTab(lastCodeTab);
+    }
+  };
+
+  const handleSelectLanguage = (lang: 'code' | 'vba') => {
+    setLastCodeTab(lang);
+    onSelectTab(lang);
+  };
 
   return (
     <div style={tabContainerStyle} role="tablist" aria-label="表示モード切り替え">
       <div style={tabButtonGroupStyle}>
-        <button
-          id="tab-code"
-          data-testid="tab-code"
-          role="tab"
-          aria-selected={activeTab === 'code'}
-          aria-controls="panel-code"
-          onClick={() => onSelectTab('code')}
-          style={activeTab === 'code' ? activeTabStyle : tabStyle}
+        {/* コードタブ（下線付きタブ枠内にスライドスイッチを埋め込み） */}
+        <div
+          style={isCodeActive ? activeTabUnderlineStyle : baseTabStyle}
+          onClick={handleCodeTabContainerClick}
         >
-          コード(Python)
-        </button>
-        <button
-          id="tab-vba"
-          data-testid="tab-vba"
-          role="tab"
-          aria-selected={activeTab === 'vba'}
-          aria-controls="panel-vba"
-          onClick={() => onSelectTab('vba')}
-          style={activeTab === 'vba' ? activeTabStyle : tabStyle}
-        >
-          コード(マクロ言語)
-        </button>
+          <span style={{ fontSize: '0.84rem' }}>コード</span>
+          <LanguageSlideSwitch
+            activeTab={activeTab}
+            isCodeActive={isCodeActive}
+            onSelectLanguage={handleSelectLanguage}
+          />
+        </div>
+
+        {/* 流れ図タブボタン（以前と同様の下線付きタブ） */}
         <button
           id="tab-flowchart"
           data-testid="tab-flowchart"
@@ -128,30 +223,26 @@ const LeftPanelTabBar: React.FC<{
           aria-selected={activeTab === 'flowchart'}
           aria-controls="flowchart-viewer"
           onClick={() => onSelectTab('flowchart')}
-          style={activeTab === 'flowchart' ? activeTabStyle : tabStyle}
+          style={activeTab === 'flowchart' ? activeTabUnderlineStyle : baseTabStyle}
         >
           流れ図
         </button>
       </div>
-      <div style={tabBarRightAreaStyle}>
-        <TabBarStepControl
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          isTracing={isTracing}
-          isCodeDirty={isCodeDirty}
-          onStepChange={onStepChange}
-        />
-        <span id="active-line-badge" data-testid="active-line-badge" style={highlightBadgeStyle}>
-          {badgeText}
-        </span>
-      </div>
+
+      <TabBarControls
+        selectedSampleId={selectedSampleId}
+        onSelectSample={onSelectSample}
+        onFileUpload={onFileUpload}
+        zoom={zoom}
+        onZoomChange={onZoomChange}
+      />
     </div>
   );
 };
 
 /**
  * 左パネルコンポーネント
- * Python/VBA/流れ図のタブ切り替え、ステップナビゲーション、ズーム倍率管理、相互変換を統括
+ * Python/VBA/流れ図のトグル表示、サンプル選択、ファイル読込、ズーム連動エディタを統括
  */
 export const LeftPanel: React.FC<LeftPanelProps> = ({
   code,
@@ -160,28 +251,26 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onChangeVbaCode = () => {},
   onConvertToVba,
   onConvertToPython,
-  currentStep,
-  totalSteps,
-  onStepChange,
-  onReset,
-  onRun,
-  onLast,
   activeLine,
   activeVbaLine,
   activeNodeId,
   flowchartNodes,
   flowchartEdges,
-  isTracing = false,
-  isCodeDirty = false,
-  executionStatus,
   activeTab: externalActiveTab,
   onChangeTab: externalOnChangeTab,
+  selectedSampleId,
+  onSelectSample,
+  onFileUpload,
+  zoom: externalZoom,
+  onZoomChange: externalOnZoomChange,
 }) => {
   const [internalActiveTab, setInternalActiveTab] = useState<LeftPanelTab>('code');
-  const [zoom, setZoom] = useState<number>(100);
+  const [internalZoom, setInternalZoom] = useState<number>(100);
 
   const activeTab = externalActiveTab ?? internalActiveTab;
   const setActiveTab = externalOnChangeTab ?? setInternalActiveTab;
+  const zoom = externalZoom ?? internalZoom;
+  const setZoom = externalOnZoomChange ?? setInternalZoom;
 
   const memoizedGraph = useMemo(() => {
     if (flowchartNodes && flowchartNodes.length > 0) {
@@ -195,14 +284,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       <LeftPanelTabBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
-        activeLine={activeLine}
-        activeVbaLine={activeVbaLine}
-        executionStatus={executionStatus}
-        currentStep={currentStep}
-        totalSteps={totalSteps}
-        onStepChange={onStepChange}
-        isTracing={isTracing}
-        isCodeDirty={isCodeDirty}
+        selectedSampleId={selectedSampleId}
+        onSelectSample={onSelectSample}
+        onFileUpload={onFileUpload}
+        zoom={zoom}
+        onZoomChange={setZoom}
       />
       <div style={contentStyle}>
         {/* Python コードエディタパネル */}
@@ -271,18 +357,6 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           />
         </div>
       </div>
-      <StepNavigation
-        currentStep={currentStep}
-        totalSteps={totalSteps}
-        onStepChange={onStepChange}
-        onReset={onReset}
-        onRun={onRun}
-        onLast={onLast}
-        isTracing={isTracing}
-        isCodeDirty={isCodeDirty}
-        zoom={zoom}
-        onZoomChange={setZoom}
-      />
     </div>
   );
 };
@@ -312,63 +386,8 @@ const tabButtonGroupStyle: React.CSSProperties = {
   height: '100%',
 };
 
-const tabBarRightAreaStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  flexShrink: 0,
-};
-
-const stepControlWrapperStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  flexShrink: 0,
-};
-
-const stepCounterStyle: React.CSSProperties = {
-  fontSize: '0.78rem',
-  color: '#475569',
-  fontWeight: 500,
-  whiteSpace: 'nowrap',
-  minWidth: '85px',
-  textAlign: 'right',
-  flexShrink: 0,
-};
-
-const stepSliderStyle: React.CSSProperties = {
-  width: '100px',
-  cursor: 'pointer',
-  flexShrink: 0,
-  opacity: 1,
-};
-
-const disabledStepSliderStyle: React.CSSProperties = {
-  ...stepSliderStyle,
-  cursor: 'not-allowed',
-  opacity: 0.35,
-};
-
-const highlightBadgeStyle: React.CSSProperties = {
-  fontSize: '0.75rem',
-  padding: '3px 4px',
-  borderRadius: '4px',
-  backgroundColor: '#fef08a',
-  color: '#854d0e',
-  border: '1px solid #fde047',
-  fontWeight: 600,
-  whiteSpace: 'nowrap',
-  width: '120px',
-  display: 'inline-flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  textAlign: 'center',
-  flexShrink: 0,
-  boxSizing: 'border-box',
-};
-
-const tabStyle: React.CSSProperties = {
-  padding: '0 16px',
+const baseTabStyle: React.CSSProperties = {
+  padding: '0 14px',
   height: '100%',
   display: 'inline-flex',
   alignItems: 'center',
@@ -383,14 +402,110 @@ const tabStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   fontWeight: 500,
   boxSizing: 'border-box',
+  transition: 'all 0.15s ease',
+  gap: '8px',
 };
 
-const activeTabStyle: React.CSSProperties = {
-  ...tabStyle,
+const activeTabUnderlineStyle: React.CSSProperties = {
+  ...baseTabStyle,
   backgroundColor: '#ffffff',
   color: '#2563eb',
   borderBottom: '2px solid #2563eb',
   fontWeight: 600,
+};
+
+const slideSwitchTrackStyle: React.CSSProperties = {
+  position: 'relative',
+  display: 'inline-flex',
+  alignItems: 'center',
+  backgroundColor: '#e2e8f0',
+  borderRadius: '14px',
+  padding: '2px',
+  cursor: 'pointer',
+  userSelect: 'none',
+  width: '154px',
+  height: '24px',
+  boxSizing: 'border-box',
+  flexShrink: 0,
+};
+
+const slideSwitchIndicatorStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '2px',
+  left: '2px',
+  width: 'calc(50% - 2px)',
+  height: 'calc(100% - 4px)',
+  backgroundColor: '#2563eb',
+  borderRadius: '12px',
+  transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.15)',
+  pointerEvents: 'none',
+  zIndex: 1,
+};
+
+const slideLabelStyle: React.CSSProperties = {
+  position: 'relative',
+  zIndex: 2,
+  flex: 1,
+  height: '100%',
+  border: 'none',
+  backgroundColor: 'transparent',
+  color: '#64748b',
+  cursor: 'pointer',
+  fontSize: '0.78rem',
+  fontWeight: 500,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '0 6px',
+  whiteSpace: 'nowrap',
+  transition: 'color 0.15s ease',
+};
+
+const activeSlideLabelStyle: React.CSSProperties = {
+  ...slideLabelStyle,
+  color: '#ffffff',
+  fontWeight: 600,
+};
+
+const tabBarRightAreaStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  flexShrink: 0,
+};
+
+const sampleSelectWrapperStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+};
+
+const controlLabelStyle: React.CSSProperties = {
+  fontSize: '0.78rem',
+  color: '#64748b',
+  whiteSpace: 'nowrap',
+};
+
+const selectStyle: React.CSSProperties = {
+  padding: '3px 6px',
+  borderRadius: '4px',
+  border: '1px solid #cbd5e1',
+  backgroundColor: '#ffffff',
+  fontSize: '0.78rem',
+  cursor: 'pointer',
+  maxWidth: '140px',
+};
+
+const uploadButtonStyle: React.CSSProperties = {
+  padding: '3px 8px',
+  borderRadius: '4px',
+  backgroundColor: '#2563eb',
+  color: '#ffffff',
+  fontSize: '0.78rem',
+  fontWeight: 500,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
 };
 
 const floatingConvertButtonStyle: React.CSSProperties = {
