@@ -1,11 +1,9 @@
-/**
- * サンプルプログラム定義インターフェース
- */
 export interface SampleProgram {
   id: string;
   name: string;
   description: string;
   code: string;
+  language?: 'python' | 'vba';
 }
 
 /**

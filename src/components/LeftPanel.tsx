@@ -45,19 +45,40 @@ const TabBarControls: React.FC<{
   zoom: number;
   onZoomChange: (zoom: number) => void;
 }> = ({ selectedSampleId, onSelectSample, zoom, onZoomChange }) => {
+  const currentSample = SAMPLE_PROGRAMS.find((s) => s.id === selectedSampleId);
+  const sampleLanguage = currentSample?.language || 'python';
+  const isVba = sampleLanguage === 'vba';
+
+  const badgeStyle: React.CSSProperties = {
+    padding: '2px 6px',
+    borderRadius: '4px',
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    color: isVba ? '#15803d' : '#1d4ed8',
+    backgroundColor: isVba ? '#f0fdf4' : '#eff6ff',
+    border: `1px solid ${isVba ? '#bbf7d0' : '#bfdbfe'}`,
+  };
+
   return (
     <div style={tabBarRightAreaStyle}>
       {onSelectSample && (
         <div style={sampleSelectWrapperStyle}>
-          <label style={controlLabelStyle} htmlFor="preset-select">
-            サンプル:
-          </label>
+          <span
+            id="badge-sample-language"
+            data-testid="badge-sample-language"
+            style={badgeStyle}
+            title={`サンプルの言語種別: ${isVba ? 'マクロ言語(VBA)' : 'Python'}`}
+          >
+            {isVba ? 'マクロ言語' : 'Python'}
+          </span>
           <select
             id="preset-select"
             data-testid="preset-select"
             value={selectedSampleId}
             onChange={(e) => onSelectSample(e.target.value)}
             style={selectStyle}
+            aria-label="サンプルプログラム選択"
           >
             {SAMPLE_PROGRAMS.map((sample) => (
               <option key={sample.id} value={sample.id}>
@@ -459,12 +480,6 @@ const sampleSelectWrapperStyle: React.CSSProperties = {
   gap: '4px',
 };
 
-const controlLabelStyle: React.CSSProperties = {
-  fontSize: '0.78rem',
-  color: '#64748b',
-  whiteSpace: 'nowrap',
-};
-
 const selectStyle: React.CSSProperties = {
   padding: '3px 6px',
   borderRadius: '4px',
@@ -472,7 +487,7 @@ const selectStyle: React.CSSProperties = {
   backgroundColor: '#ffffff',
   fontSize: '0.78rem',
   cursor: 'pointer',
-  maxWidth: '140px',
+  maxWidth: '210px',
 };
 
 const floatingUploadButtonStyle: React.CSSProperties = {

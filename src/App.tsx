@@ -96,9 +96,9 @@ export const App: React.FC = () => {
 
   const handleSelectSample = (id: string) => {
     setSelectedSampleId(id);
-    setActiveTab('code');
     const target = SAMPLE_PROGRAMS.find((s) => s.id === id);
     if (target) {
+      setActiveTab(target.language === 'vba' ? 'vba' : 'code');
       setCode(target.code);
       const vbaRes = pythonToVba(target.code);
       setVbaCode(vbaRes.code);
