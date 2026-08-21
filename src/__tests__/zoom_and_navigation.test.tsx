@@ -1,19 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { StepNavigation } from '../components/StepNavigation';
+import { Header } from '../components/Header';
 import { LeftPanel } from '../components/LeftPanel';
 import { FlowchartViewer } from '../components/FlowchartViewer';
 import { MonacoEditor } from '../components/MonacoEditor';
 
-describe('ズーム機能およびタブバーステップシークバーの検証', () => {
-  it('StepNavigation にズームスライダーが描画され、拡大率変更が反映されること', () => {
+describe('ズーム機能およびヘッダーステップシークバーの検証', () => {
+  it('LeftPanel タブバーにズームスライダーが描画され、拡大率変更が反映されること', () => {
     const handleZoomChange = vi.fn();
     render(
-      <StepNavigation
-        currentStep={0}
-        totalSteps={4}
-        onStepChange={() => {}}
-        onReset={() => {}}
+      <LeftPanel
+        code="x = 1"
+        onChangeCode={() => {}}
         zoom={150}
         onZoomChange={handleZoomChange}
       />
@@ -30,29 +28,23 @@ describe('ズーム機能およびタブバーステップシークバーの検�
     expect(handleZoomChange).toHaveBeenCalledWith(200);
   });
 
-  it('LeftPanel のタブバー内にステップスライダーとステップカウンターが正しく描画されること', () => {
+  it('Header 内にステップスライダーとステップカウンターが正しく描画され、変更が通知されること', () => {
     const handleStepChange = vi.fn();
     render(
-      <LeftPanel
-        code="x = 1"
-        onChangeCode={() => {}}
+      <Header
         currentStep={1}
         totalSteps={4}
         onStepChange={handleStepChange}
         onReset={() => {}}
-        activeLine={1}
-        executionStatus="running"
       />
     );
 
     const stepSlider = screen.getByTestId('step-slider') as HTMLInputElement;
     const stepCounter = screen.getByTestId('step-counter');
-    const badge = screen.getByTestId('active-line-badge');
 
     expect(stepSlider).toBeDefined();
     expect(stepSlider.value).toBe('1');
     expect(stepCounter.textContent).toBe('ステップ 1 / 3');
-    expect(badge.textContent).toBe('実行行: Line 1');
 
     fireEvent.change(stepSlider, { target: { value: '2' } });
     expect(handleStepChange).toHaveBeenCalledWith(2);

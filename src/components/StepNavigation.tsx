@@ -1,20 +1,7 @@
 import React from 'react';
 
-interface StepNavigationProps {
-  currentStep: number;
-  totalSteps: number;
-  onStepChange: (step: number) => void;
-  onReset: () => void;
-  onRun?: () => void;
-  onLast?: () => void;
-  isTracing?: boolean;
-  isCodeDirty?: boolean;
-  zoom?: number;
-  onZoomChange?: (zoom: number) => void;
-}
-
-/** ナビゲーションボタン群サブコンポーネント */
-const NavButtons: React.FC<{
+/** ナビゲーションボタン群コンポーネント */
+export interface NavButtonsProps {
   onRun?: () => void;
   onReset: () => void;
   onPrev: () => void;
@@ -24,7 +11,19 @@ const NavButtons: React.FC<{
   canNext: boolean;
   isTracing: boolean;
   isCodeDirty?: boolean;
-}> = ({ onRun, onReset, onPrev, onNext, onLast, canPrev, canNext, isTracing, isCodeDirty }) => {
+}
+
+export const NavButtons: React.FC<NavButtonsProps> = ({
+  onRun,
+  onReset,
+  onPrev,
+  onNext,
+  onLast,
+  canPrev,
+  canNext,
+  isTracing,
+  isCodeDirty,
+}) => {
   const isRunDisabled = isTracing || !isCodeDirty;
   const isNavDisabled = isTracing || !!isCodeDirty;
   const isPrevDisabled = isNavDisabled || !canPrev;
@@ -81,11 +80,53 @@ const NavButtons: React.FC<{
   );
 };
 
-/** ズームスライダーサブコンポーネント */
-const ZoomSlider: React.FC<{
+/** ステップシークバー（スライダー＆ステップ数カウンター）コンポーネント */
+export interface StepSeekBarProps {
+  currentStep: number;
+  totalSteps: number;
+  isTracing: boolean;
+  isCodeDirty?: boolean;
+  onStepChange: (step: number) => void;
+}
+
+export const StepSeekBar: React.FC<StepSeekBarProps> = ({
+  currentStep,
+  totalSteps,
+  isTracing,
+  isCodeDirty,
+  onStepChange,
+}) => {
+  const maxStep = Math.max(0, totalSteps - 1);
+  const isSliderDisabled = totalSteps <= 0 || isTracing || !!isCodeDirty;
+
+  return (
+    <div style={stepSeekBarWrapperStyle}>
+      <input
+        id="step-slider"
+        data-testid="step-slider"
+        type="range"
+        min={0}
+        max={maxStep}
+        value={currentStep}
+        onChange={(e) => onStepChange(Number(e.target.value))}
+        disabled={isSliderDisabled}
+        style={isSliderDisabled ? disabledStepSliderStyle : stepSliderStyle}
+        aria-label="ステップ進行スライダー"
+      />
+      <span id="step-counter" data-testid="step-counter" style={stepCounterStyle}>
+        {totalSteps > 0 ? `ステップ ${currentStep} / ${maxStep}` : 'ステップ 0 / 0'}
+      </span>
+    </div>
+  );
+};
+
+/** ズーム（拡大率）スライダーコンポーネント */
+export interface ZoomSliderProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
-}> = ({ zoom, onZoomChange }) => (
+}
+
+export const ZoomSlider: React.FC<ZoomSliderProps> = ({ zoom, onZoomChange }) => (
   <div style={sliderContainerStyle}>
     <span style={zoomIconLabelStyle}>拡大率:</span>
     <input
@@ -106,10 +147,20 @@ const ZoomSlider: React.FC<{
   </div>
 );
 
-/**
- * ステップナビゲーションコンポーネント
- * 前へ・次へ・リセット・最後・実行ボタンおよびズーム設定スライダーを提供
- */
+/** 後方互換・単体テスト用 StepNavigation 統合コンポーネント */
+export interface StepNavigationProps {
+  currentStep: number;
+  totalSteps: number;
+  onStepChange: (step: number) => void;
+  onReset: () => void;
+  onRun?: () => void;
+  onLast?: () => void;
+  isTracing?: boolean;
+  isCodeDirty?: boolean;
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
+}
+
 export const StepNavigation: React.FC<StepNavigationProps> = ({
   currentStep,
   totalSteps,
@@ -126,7 +177,7 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
   const handleLast = () => (onLast ? onLast() : totalSteps > 0 && onStepChange(maxStep));
 
   return (
-    <div style={containerStyle}>
+    <div style={stepNavigationContainerStyle}>
       <NavButtons
         onRun={onRun}
         onPrev={() => onStepChange(currentStep - 1)}
@@ -143,30 +194,22 @@ export const StepNavigation: React.FC<StepNavigationProps> = ({
   );
 };
 
-const containerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '10px 16px',
-  backgroundColor: '#f8fafc',
-  borderTop: '1px solid #e2e8f0',
-  gap: '16px',
-};
-
 const buttonGroupStyle: React.CSSProperties = {
   display: 'flex',
-  gap: '8px',
+  gap: '6px',
+  alignItems: 'center',
 };
 
 const baseButtonStyle: React.CSSProperties = {
-  padding: '6px 14px',
+  padding: '5px 12px',
   borderRadius: '4px',
   borderWidth: '1px',
   borderStyle: 'solid',
-  fontSize: '0.875rem',
+  fontSize: '0.82rem',
   fontWeight: 500,
   transition: 'all 0.15s ease',
   boxSizing: 'border-box',
+  whiteSpace: 'nowrap',
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -206,33 +249,69 @@ const disabledRunButtonStyle: React.CSSProperties = {
   opacity: 0.6,
 };
 
+const stepSeekBarWrapperStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  flexShrink: 0,
+};
+
+const stepCounterStyle: React.CSSProperties = {
+  fontSize: '0.80rem',
+  color: '#475569',
+  fontWeight: 500,
+  whiteSpace: 'nowrap',
+  minWidth: '85px',
+  textAlign: 'left',
+  flexShrink: 0,
+};
+
+const stepSliderStyle: React.CSSProperties = {
+  width: '110px',
+  cursor: 'pointer',
+  flexShrink: 0,
+  opacity: 1,
+};
+
+const disabledStepSliderStyle: React.CSSProperties = {
+  ...stepSliderStyle,
+  cursor: 'not-allowed',
+  opacity: 0.35,
+};
+
 const sliderContainerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '10px',
-  flex: 1,
-  maxWidth: '280px',
-  justifyContent: 'flex-end',
+  gap: '6px',
+  flexShrink: 0,
 };
 
 const sliderStyle: React.CSSProperties = {
-  flex: 1,
+  width: '80px',
   cursor: 'pointer',
-  minWidth: '100px',
-  maxWidth: '160px',
 };
 
 const zoomIconLabelStyle: React.CSSProperties = {
-  fontSize: '0.85rem',
+  fontSize: '0.78rem',
   color: '#64748b',
   whiteSpace: 'nowrap',
 };
 
 const zoomLabelStyle: React.CSSProperties = {
-  fontSize: '0.85rem',
+  fontSize: '0.78rem',
   color: '#334155',
   fontWeight: 600,
   whiteSpace: 'nowrap',
-  minWidth: '45px',
+  minWidth: '38px',
   textAlign: 'right',
+};
+
+const stepNavigationContainerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '10px 16px',
+  backgroundColor: '#f8fafc',
+  borderTop: '1px solid #e2e8f0',
+  gap: '16px',
 };
