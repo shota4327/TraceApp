@@ -22,7 +22,7 @@ describe('サンプル選択のコード種別表示・レイアウト検証 (Is
     onSelectSample: vi.fn(),
   };
 
-  it('プルダウンの左側に言語バッジが表示され、「サンプル:」ラベルが存在しないこと', () => {
+  it('トリガーボタン内に言語バッジが表示され、「サンプル:」ラベルが存在しないこと', () => {
     render(<LeftPanel {...defaultProps} selectedSampleId="seq" />);
 
     // 「サンプル:」テキストラベルは削除されていること
@@ -34,7 +34,44 @@ describe('サンプル選択のコード種別表示・レイアウト検証 (Is
     expect(badge.textContent).toBe('Python');
   });
 
-  it('プルダウンの選択肢変更時に onSelectSample コールバックが呼び出されること', () => {
+  it('VBAサンプル選択時、トリガーの言語バッジに「マクロ言語」が表示されること', () => {
+    render(<LeftPanel {...defaultProps} selectedSampleId="zensho-2-74-4-1-2-vba" />);
+
+    const badge = screen.getByTestId('badge-sample-language');
+    expect(badge).toBeDefined();
+    expect(badge.textContent).toBe('マクロ言語');
+  });
+
+  it('カスタムドロップダウン展開時、各サンプル行内に色付きバッジが表示され、クリックで選択できること', () => {
+    const onSelectSample = vi.fn();
+    render(<LeftPanel {...defaultProps} selectedSampleId="seq" onSelectSample={onSelectSample} />);
+
+    // 最初はメニューが閉じていること
+    expect(screen.queryByTestId('sample-select-menu')).toBeNull();
+
+    // トリガーボタンをクリックして展開
+    const triggerBtn = screen.getByTestId('preset-select-button');
+    fireEvent.click(triggerBtn);
+
+    // メニューが展開されること
+    const menu = screen.getByTestId('sample-select-menu');
+    expect(menu).toBeDefined();
+
+    // VBA サンプルの行が表示されており、マクロ言語バッジが含まれていること
+    const vbaItem = screen.getByTestId('sample-item-zensho-2-74-4-1-2-vba');
+    expect(vbaItem).toBeDefined();
+    expect(vbaItem.textContent).toContain('マクロ言語');
+    expect(vbaItem.textContent).toContain('2級 第74回【4】(1)(2)');
+
+    // アイテムをクリックして選択
+    fireEvent.click(vbaItem);
+    expect(onSelectSample).toHaveBeenCalledWith('zensho-2-74-4-1-2-vba');
+
+    // 選択後にメニューが閉じること
+    expect(screen.queryByTestId('sample-select-menu')).toBeNull();
+  });
+
+  it('隠しselectの変更でも onSelectSample コールバックが呼び出されること (E2E互換性)', () => {
     const onSelectSample = vi.fn();
     render(<LeftPanel {...defaultProps} selectedSampleId="seq" onSelectSample={onSelectSample} />);
 
@@ -42,14 +79,6 @@ describe('サンプル選択のコード種別表示・レイアウト検証 (Is
     fireEvent.change(select, { target: { value: 'branch' } });
 
     expect(onSelectSample).toHaveBeenCalledWith('branch');
-  });
-
-  it('VBAサンプル選択時、言語バッジに「マクロ言語」が表示されること', () => {
-    render(<LeftPanel {...defaultProps} selectedSampleId="zensho-2-74-4-1-2-vba" />);
-
-    const badge = screen.getByTestId('badge-sample-language');
-    expect(badge).toBeDefined();
-    expect(badge.textContent).toBe('マクロ言語');
   });
 
   it('サンプルプログラム定義に language 属性がサポートされていること', () => {

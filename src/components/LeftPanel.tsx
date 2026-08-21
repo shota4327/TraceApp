@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MonacoEditor } from './MonacoEditor';
 import { FlowchartViewer } from './FlowchartViewer';
 import { ZoomSlider } from './ZoomSlider';
@@ -38,6 +38,120 @@ interface LeftPanelProps {
   executionStatus?: 'not_started' | 'running' | 'ended';
 }
 
+const getBadgeStyle = (isVba: boolean): React.CSSProperties => ({
+  padding: '2px 6px',
+  borderRadius: '4px',
+  fontSize: '0.70rem',
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  color: isVba ? '#15803d' : '#1d4ed8',
+  backgroundColor: isVba ? '#f0fdf4' : '#eff6ff',
+  border: `1px solid ${isVba ? '#bbf7d0' : '#bfdbfe'}`,
+  flexShrink: 0,
+});
+
+/** サンプル選択カスタムドロップダウンコンポーネント */
+const SampleSelectDropdown: React.FC<{
+  selectedSampleId?: string;
+  onSelectSample: (id: string) => void;
+}> = ({ selectedSampleId, onSelectSample }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const currentSample = SAMPLE_PROGRAMS.find((s) => s.id === selectedSampleId) || SAMPLE_PROGRAMS[0]!;
+  const currentIsVba = (currentSample.language || 'python') === 'vba';
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} style={dropdownContainerStyle}>
+      {/* 隠しselect: E2Eテスト(selectOption)およびアクセシビリティ用 */}
+      <select
+        id="preset-select"
+        data-testid="preset-select"
+        value={selectedSampleId}
+        onChange={(e) => onSelectSample(e.target.value)}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '20px',
+          height: '20px',
+          opacity: 0.01,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+        aria-label="サンプルプログラム選択"
+        tabIndex={-1}
+      >
+        {SAMPLE_PROGRAMS.map((sample) => (
+          <option key={sample.id} value={sample.id}>
+            {sample.name}
+          </option>
+        ))}
+      </select>
+
+      {/* トリガーボタン */}
+      <button
+        type="button"
+        id="preset-select-button"
+        data-testid="preset-select-button"
+        onClick={() => setIsOpen(!isOpen)}
+        style={dropdownTriggerStyle}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span
+          id="badge-sample-language"
+          data-testid="badge-sample-language"
+          style={getBadgeStyle(currentIsVba)}
+        >
+          {currentIsVba ? 'マクロ言語' : 'Python'}
+        </span>
+        <span style={triggerLabelStyle}>{currentSample.name}</span>
+        <span style={arrowIconStyle}>{isOpen ? '▲' : '▼'}</span>
+      </button>
+
+      {/* ドロップダウンメニュー */}
+      {isOpen && (
+        <div style={dropdownMenuStyle} role="listbox" data-testid="sample-select-menu">
+          {SAMPLE_PROGRAMS.map((sample) => {
+            const isVba = (sample.language || 'python') === 'vba';
+            const isSelected = sample.id === selectedSampleId;
+            return (
+              <div
+                key={sample.id}
+                role="option"
+                aria-selected={isSelected}
+                data-testid={`sample-item-${sample.id}`}
+                onClick={() => {
+                  onSelectSample(sample.id);
+                  setIsOpen(false);
+                }}
+                style={isSelected ? selectedMenuItemStyle : menuItemStyle}
+              >
+                <span style={getBadgeStyle(isVba)}>
+                  {isVba ? 'マクロ言語' : 'Python'}
+                </span>
+                <span style={menuItemTextStyle}>{sample.name}</span>
+                {isSelected && <span style={checkMarkStyle}>✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /** サンプル選択・ズームコントロールサブコンポーネント */
 const TabBarControls: React.FC<{
   selectedSampleId?: string;
@@ -45,48 +159,13 @@ const TabBarControls: React.FC<{
   zoom: number;
   onZoomChange: (zoom: number) => void;
 }> = ({ selectedSampleId, onSelectSample, zoom, onZoomChange }) => {
-  const currentSample = SAMPLE_PROGRAMS.find((s) => s.id === selectedSampleId);
-  const sampleLanguage = currentSample?.language || 'python';
-  const isVba = sampleLanguage === 'vba';
-
-  const badgeStyle: React.CSSProperties = {
-    padding: '2px 6px',
-    borderRadius: '4px',
-    fontSize: '0.72rem',
-    fontWeight: 600,
-    whiteSpace: 'nowrap',
-    color: isVba ? '#15803d' : '#1d4ed8',
-    backgroundColor: isVba ? '#f0fdf4' : '#eff6ff',
-    border: `1px solid ${isVba ? '#bbf7d0' : '#bfdbfe'}`,
-  };
-
   return (
     <div style={tabBarRightAreaStyle}>
       {onSelectSample && (
-        <div style={sampleSelectWrapperStyle}>
-          <span
-            id="badge-sample-language"
-            data-testid="badge-sample-language"
-            style={badgeStyle}
-            title={`サンプルの言語種別: ${isVba ? 'マクロ言語(VBA)' : 'Python'}`}
-          >
-            {isVba ? 'マクロ言語' : 'Python'}
-          </span>
-          <select
-            id="preset-select"
-            data-testid="preset-select"
-            value={selectedSampleId}
-            onChange={(e) => onSelectSample(e.target.value)}
-            style={selectStyle}
-            aria-label="サンプルプログラム選択"
-          >
-            {SAMPLE_PROGRAMS.map((sample) => (
-              <option key={sample.id} value={sample.id}>
-                {sample.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SampleSelectDropdown
+          selectedSampleId={selectedSampleId}
+          onSelectSample={onSelectSample}
+        />
       )}
       <ZoomSlider zoom={zoom} onZoomChange={onZoomChange} />
     </div>
@@ -474,20 +553,87 @@ const tabBarRightAreaStyle: React.CSSProperties = {
   flexShrink: 0,
 };
 
-const sampleSelectWrapperStyle: React.CSSProperties = {
-  display: 'flex',
+const dropdownContainerStyle: React.CSSProperties = {
+  position: 'relative',
+  display: 'inline-flex',
   alignItems: 'center',
-  gap: '4px',
 };
 
-const selectStyle: React.CSSProperties = {
-  padding: '3px 6px',
+const dropdownTriggerStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '3px 8px',
   borderRadius: '4px',
   border: '1px solid #cbd5e1',
   backgroundColor: '#ffffff',
   fontSize: '0.78rem',
   cursor: 'pointer',
-  maxWidth: '210px',
+  maxWidth: '240px',
+  boxSizing: 'border-box',
+  userSelect: 'none',
+  transition: 'border-color 0.15s ease',
+};
+
+const triggerLabelStyle: React.CSSProperties = {
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  color: '#1e293b',
+  fontWeight: 500,
+};
+
+const arrowIconStyle: React.CSSProperties = {
+  fontSize: '0.60rem',
+  color: '#64748b',
+  marginLeft: 'auto',
+  flexShrink: 0,
+};
+
+const dropdownMenuStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 'calc(100% + 4px)',
+  left: 0,
+  zIndex: 100,
+  backgroundColor: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '6px',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+  minWidth: '260px',
+  maxHeight: '320px',
+  overflowY: 'auto',
+  padding: '4px 0',
+};
+
+const menuItemStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  padding: '6px 12px',
+  fontSize: '0.78rem',
+  color: '#334155',
+  cursor: 'pointer',
+  transition: 'background-color 0.1s ease',
+};
+
+const selectedMenuItemStyle: React.CSSProperties = {
+  ...menuItemStyle,
+  backgroundColor: '#f8fafc',
+  fontWeight: 600,
+  color: '#2563eb',
+};
+
+const menuItemTextStyle: React.CSSProperties = {
+  flex: 1,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const checkMarkStyle: React.CSSProperties = {
+  fontSize: '0.80rem',
+  color: '#2563eb',
+  marginLeft: '4px',
 };
 
 const floatingUploadButtonStyle: React.CSSProperties = {
