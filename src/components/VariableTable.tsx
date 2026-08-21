@@ -360,11 +360,9 @@ const cellContentWrapperStyle: React.CSSProperties = {
 };
 
 const commentBadgeStyle: React.CSSProperties = {
-  fontSize: '0.72rem',
-  padding: '1px 5px',
-  backgroundColor: '#e0e7ff',
-  color: '#3730a3',
-  borderRadius: '3px',
-  fontWeight: 600,
+  fontSize: '0.75rem',
+  color: '#475569',
+  fontWeight: 500,
   whiteSpace: 'nowrap',
+  marginLeft: '2px',
 };
