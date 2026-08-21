@@ -192,6 +192,7 @@ export const App: React.FC = () => {
   const activeSnapshot = isNotStarted ? undefined : (isEnded ? snapshots[snapshots.length - 1] : snapshots[currentStep - 1]);
 
   const [zoom, setZoom] = useState<number>(100);
+  const [tableZoom, setTableZoom] = useState<number>(100);
 
   let displayStatusText = statusText;
   if (isInitializing) {
@@ -262,6 +263,8 @@ export const App: React.FC = () => {
             currentStepIndex={isNotStarted ? -1 : currentStep - 1}
             stdout={activeSnapshot?.stdoutCumulative ?? ''}
             code={lastTracedCode || code}
+            zoom={tableZoom}
+            onZoomChange={setTableZoom}
           />
         </div>
       </main>

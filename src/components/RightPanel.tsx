@@ -10,6 +10,8 @@ interface RightPanelProps {
   stdout?: string;
   code?: string;
   lineComments?: Record<number, string>;
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
 }
 
 /**
@@ -22,6 +24,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   stdout = '',
   code,
   lineComments,
+  zoom,
+  onZoomChange,
 }) => {
   const { containerRef, topRatio, isDragging, handlePointerDown } = useVerticalResize({
     initialRatio: 0.8,
@@ -49,6 +53,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           currentStepIndex={currentStepIndex}
           code={code}
           lineComments={lineComments}
+          zoom={zoom}
+          onZoomChange={onZoomChange}
         />
       </div>
 

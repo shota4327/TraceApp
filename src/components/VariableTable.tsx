@@ -1,12 +1,15 @@
 import React from 'react';
 import { StepSnapshot } from '../types/trace';
 import { extractLineComments } from '../services/commentExtractor';
+import { ZoomSlider } from './StepNavigation';
 
 interface VariableTableProps {
   snapshots?: StepSnapshot[];
   currentStepIndex?: number;
   code?: string;
   lineComments?: Record<number, string>;
+  zoom?: number;
+  onZoomChange?: (zoom: number) => void;
 }
 
 /** テーブルヘッダー行コンポーネント */
@@ -104,9 +107,15 @@ export const VariableTable: React.FC<VariableTableProps> = ({
   currentStepIndex = 0,
   code,
   lineComments,
+  zoom: externalZoom,
+  onZoomChange: externalOnZoomChange,
 }) => {
+  const [internalZoom, setInternalZoom] = React.useState<number>(100);
   const [hideUnchanged, setHideUnchanged] = React.useState(true);
   const activeRowRef = React.useRef<HTMLTableRowElement | null>(null);
+
+  const zoom = externalZoom ?? internalZoom;
+  const setZoom = externalOnZoomChange ?? setInternalZoom;
 
   const lineCommentsMap = React.useMemo(() => {
     if (lineComments) return lineComments;
@@ -148,23 +157,31 @@ export const VariableTable: React.FC<VariableTableProps> = ({
     <div id="variable-table" data-testid="variable-table" style={containerStyle}>
       <div style={headerTitleStyle}>
         <span>変数履歴表</span>
-        <label style={filterCheckboxLabelStyle}>
-          <input
-            id="hide-unchanged-steps-checkbox"
-            data-testid="hide-unchanged-steps-checkbox"
-            type="checkbox"
-            checked={hideUnchanged}
-            onChange={(e) => setHideUnchanged(e.target.checked)}
-            style={{ cursor: 'pointer', margin: 0 }}
+        <div style={headerRightAreaStyle}>
+          <label style={filterCheckboxLabelStyle}>
+            <input
+              id="hide-unchanged-steps-checkbox"
+              data-testid="hide-unchanged-steps-checkbox"
+              type="checkbox"
+              checked={hideUnchanged}
+              onChange={(e) => setHideUnchanged(e.target.checked)}
+              style={{ cursor: 'pointer', margin: 0 }}
+            />
+            変更のない行を非表示
+          </label>
+          <ZoomSlider
+            zoom={zoom}
+            onZoomChange={setZoom}
+            id="table-zoom-slider"
+            testId="table-zoom-slider"
           />
-          変更のない行を非表示
-        </label>
+        </div>
       </div>
       <div id="locals-table-body" data-testid="locals-table-body" style={tableWrapperStyle}>
         {allVarNames.length === 0 || displayedSnapshots.length === 0 ? (
           <div style={emptyStyle}>表示する変数の履歴がありません</div>
         ) : (
-          <table style={tableStyle}>
+          <table style={{ ...tableStyle, zoom: `${zoom}%` }}>
             <VariableTableHeader varNames={allVarNames} changedVars={currentChangedVars} />
             <tbody>
               {displayedSnapshots.map((s, idx) => {
@@ -201,6 +218,12 @@ const containerStyle: React.CSSProperties = {
   flexDirection: 'column',
   height: '100%',
   backgroundColor: '#ffffff',
+};
+
+const headerRightAreaStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
 };
 
 const filterCheckboxLabelStyle: React.CSSProperties = {
