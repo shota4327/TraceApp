@@ -64,4 +64,36 @@ describe('マクロ言語編集時のステータスバッジ連動およびト�
     const updatedEditors = screen.getAllByTestId('monaco-editor');
     expect((updatedEditors[1] as HTMLTextAreaElement).value).toContain('x = 100');
   });
+
+  it('Pythonまたはマクロ言語コード編集時（not ready）、変数履歴表が「表示する変数の履歴がありません」になること (Issue #37)', async () => {
+    render(<App />);
+
+    // 1. 初期ロード完了を待機
+    await waitFor(() => {
+      expect(screen.getByTestId('status-text').textContent).toContain('準備完了');
+    }, { timeout: 10000 });
+
+    // 初期状態では変数履歴表が表示されている（現在の値行などが存在する）
+    expect(screen.getByTestId('locals-table-body').textContent).not.toContain('表示する変数の履歴がありません');
+
+    // 2. Pythonコードを編集して not ready にする
+    const pyEditor = screen.getAllByTestId('monaco-editor')[0]!;
+    fireEvent.change(pyEditor, { target: { value: 'val = 999\nprint(val)' } });
+
+    // 3. ステータスが「コードが変更されました」になり、変数履歴表がクリアされて空メッセージが表示されること
+    await waitFor(() => {
+      expect(screen.getByTestId('status-text').textContent).toContain('コードが変更されました');
+      expect(screen.getByTestId('locals-table-body').textContent).toContain('表示する変数の履歴がありません');
+    });
+
+    // 4. 「トレース準備」ボタンを押下
+    const runBtn = screen.getByTestId('btn-run') as HTMLButtonElement;
+    fireEvent.click(runBtn);
+
+    // 5. 準備完了になり、再度変数履歴表が表示されること
+    await waitFor(() => {
+      expect(screen.getByTestId('status-text').textContent).toContain('準備完了');
+      expect(screen.getByTestId('locals-table-body').textContent).not.toContain('表示する変数の履歴がありません');
+    }, { timeout: 10000 });
+  });
 });
