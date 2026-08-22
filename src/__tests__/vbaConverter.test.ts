@@ -7,11 +7,11 @@ describe('vbaConverter - pythonToVba', () => {
     const result = pythonToVba(py);
     
     expect(result.code).toContain('Sub Program()');
-    expect(result.code).toContain('    Dim a As Integer');
-    expect(result.code).toContain('    Dim b As Integer');
-    expect(result.code).toContain('    Dim c As Integer');
-    expect(result.code).toContain('    Dim d As Integer');
-    expect(result.code).toContain('    Dim e As Integer');
+    expect(result.code).toContain('    Dim a As Long');
+    expect(result.code).toContain('    Dim b As Long');
+    expect(result.code).toContain('    Dim c As Long');
+    expect(result.code).toContain('    Dim d As Long');
+    expect(result.code).toContain('    Dim e As Long');
     expect(result.code).toContain('    a = 10');
     expect(result.code).toContain('    b = 20');
     expect(result.code).toContain('    c = a + b * 2');
@@ -21,22 +21,22 @@ describe('vbaConverter - pythonToVba', () => {
 
     // Dim宣言の後に空白行が存在することを確認
     const lines = result.code.split('\n');
-    const lastDimIdx = lines.findIndex((l) => l.includes('Dim e As Integer'));
+    const lastDimIdx = lines.findIndex((l) => l.includes('Dim e As Long'));
     expect(lines[lastDimIdx + 1]).toBe('');
   });
 
-  it('infers variable types properly (Integer, Double, String, Array)', () => {
+  it('infers variable types properly (Long, Double, String, Array)', () => {
     const py = `x = 10
 msg = "hello"
 pi = 3.14
 arr = [0] * 5
 dyn = []`;
     const result = pythonToVba(py);
-    expect(result.code).toContain('Dim x As Integer');
+    expect(result.code).toContain('Dim x As Long');
     expect(result.code).toContain('Dim msg As String');
     expect(result.code).toContain('Dim pi As Double');
-    expect(result.code).toContain('Dim arr(4) As Integer');
-    expect(result.code).toContain('Dim dyn() As Integer');
+    expect(result.code).toContain('Dim arr(4) As Long');
+    expect(result.code).toContain('Dim dyn() As Long');
   });
 
   it('converts print to MsgBox with space before parentheses MsgBox (...)', () => {
@@ -63,9 +63,9 @@ print(x) # 出力`;
   it('converts if / elif / else conditionals with correct End If and indentation', () => {
     const py = `if x > 10:
     print("big")
-elif x == 10:
+    elif x == 10:
     print("equal")
-else:
+    else:
     print("small")`;
     const result = pythonToVba(py);
     expect(result.code).toContain('    If x > 10 Then');
@@ -91,7 +91,7 @@ while i < 5:
     const py = `for i in range(5):
     print(i)`;
     const result = pythonToVba(py);
-    expect(result.code).toContain('    Dim i As Integer');
+    expect(result.code).toContain('    Dim i As Long');
     expect(result.code).toContain('    For i = 0 To 4');
     expect(result.code).toContain('        MsgBox (i)');
     expect(result.code).toContain('    Next i');
@@ -109,11 +109,11 @@ print(total)`;
     const result = pythonToVba(py);
 
     // Function add が Sub Program() の外側（手前）に配置されていること
-    expect(result.code).toMatch(/^Function add\(a As Integer, b As Integer\) As Integer[\s\S]*End Function\s*\n\s*Sub Program\(\)/);
+    expect(result.code).toMatch(/^Function add\(a As Long, b As Long\) As Long[\s\S]*End Function\s*\n\s*Sub Program\(\)/);
     
     // Function add 内の引数型、戻り値型、ローカル変数 result の Dim 宣言
-    expect(result.code).toContain('Function add(a As Integer, b As Integer) As Integer');
-    expect(result.code).toContain('    Dim result As Integer');
+    expect(result.code).toContain('Function add(a As Long, b As Long) As Long');
+    expect(result.code).toContain('    Dim result As Long');
     expect(result.code).toContain('    result = a + b');
     expect(result.code).toContain('    add = result');
     expect(result.code).not.toContain('Exit Function');
@@ -121,8 +121,8 @@ print(total)`;
 
     // Sub Program() 側の変数と処理
     expect(result.code).toContain('Sub Program()');
-    expect(result.code).toContain('    Dim total As Integer');
-    expect(result.code).toContain('    Dim i As Integer');
+    expect(result.code).toContain('    Dim total As Long');
+    expect(result.code).toContain('    Dim i As Long');
     expect(result.code).toContain('    total = 0');
     expect(result.code).toContain('    For i = 1 To 3');
     expect(result.code).toContain('        total = add(total, i)');

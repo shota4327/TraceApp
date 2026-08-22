@@ -157,13 +157,13 @@ interface BlockContext {
 
 interface VarDeclarationInfo {
   name: string;
-  typeStr: 'Integer' | 'Double' | 'String';
+  typeStr: 'Long' | 'Double' | 'String';
   arraySize?: number | null;
 }
 
 interface ParsedParam {
   name: string;
-  typeStr: 'Integer' | 'Double' | 'String';
+  typeStr: 'Long' | 'Double' | 'String';
 }
 
 interface ParsedLine {
@@ -175,7 +175,7 @@ interface ParsedFunction {
   funcName: string;
   params: ParsedParam[];
   hasReturn: boolean;
-  returnTypeStr?: 'Integer' | 'Double' | 'String';
+  returnTypeStr?: 'Long' | 'Double' | 'String';
   defLine: ParsedLine;
   bodyLines: ParsedLine[];
 }
@@ -185,13 +185,13 @@ interface ParsedFunction {
  */
 function inferTypeFromExpr(
   expr: string,
-  knownVarMap?: Map<string, 'Integer' | 'Double' | 'String'>
-): 'Integer' | 'Double' | 'String' {
+  knownVarMap?: Map<string, 'Long' | 'Double' | 'String'>
+): 'Long' | 'Double' | 'String' {
   const trimmed = expr.trim();
   if (/^["'].*["']$/.test(trimmed) || /^str\(.*\)$/.test(trimmed)) return 'String';
   if (/\d+\.\d+/.test(trimmed) || /^float\(.*\)$/.test(trimmed) || /\//.test(trimmed)) return 'Double';
   if (knownVarMap && knownVarMap.has(trimmed)) return knownVarMap.get(trimmed)!;
-  return 'Integer';
+  return 'Long';
 }
 
 /**
@@ -235,7 +235,7 @@ function extractVariablesAndTypes(lines: string[], excludeNames: Set<string> = n
     if (forMatch && forMatch[1]) {
       const varName = forMatch[1];
       if (!builtInKeywords.has(varName) && !excludeNames.has(varName) && !varMap.has(varName)) {
-        varMap.set(varName, { name: varName, typeStr: 'Integer' });
+        varMap.set(varName, { name: varName, typeStr: 'Long' });
       }
     }
 
@@ -247,14 +247,14 @@ function extractVariablesAndTypes(lines: string[], excludeNames: Set<string> = n
 
       if (!builtInKeywords.has(varName) && !excludeNames.has(varName)) {
         const arraySize = inferArraySize(rightExpr);
-        const typeStr = arraySize !== undefined ? 'Integer' : inferTypeFromExpr(rightExpr);
+        const typeStr = arraySize !== undefined ? 'Long' : inferTypeFromExpr(rightExpr);
 
         if (!varMap.has(varName)) {
           varMap.set(varName, { name: varName, typeStr, arraySize });
         } else {
           const existing = varMap.get(varName)!;
           if (typeStr === 'String') existing.typeStr = 'String';
-          else if (typeStr === 'Double' && existing.typeStr === 'Integer') existing.typeStr = 'Double';
+          else if (typeStr === 'Double' && existing.typeStr === 'Long') existing.typeStr = 'Double';
           if (arraySize !== undefined && existing.arraySize === undefined) existing.arraySize = arraySize;
         }
       }
@@ -267,12 +267,12 @@ function extractVariablesAndTypes(lines: string[], excludeNames: Set<string> = n
 /**
  * Pythonの型名（str, float, int 等）を VBA型名にマッピング
  */
-function mapPythonTypeToVba(typeHint?: string): 'Integer' | 'Double' | 'String' {
-  if (!typeHint) return 'Integer';
+function mapPythonTypeToVba(typeHint?: string): 'Long' | 'Double' | 'String' {
+  if (!typeHint) return 'Long';
   const lower = typeHint.toLowerCase().trim();
   if (lower === 'str' || lower === 'string') return 'String';
   if (lower === 'float' || lower === 'double') return 'Double';
-  return 'Integer';
+  return 'Long';
 }
 
 /**
@@ -514,10 +514,10 @@ function formatVbaFunction(
 
   const localMap = new Map(funcLocalVars.map((v) => [v.name, v.typeStr]));
   const paramsStr = fn.params
-    .map((p) => `${p.name} As ${p.typeStr !== 'Integer' ? p.typeStr : (localMap.get(p.name) ?? 'Integer')}`)
+    .map((p) => `${p.name} As ${p.typeStr !== 'Long' ? p.typeStr : (localMap.get(p.name) ?? 'Long')}`)
     .join(', ');
 
-  const returnTypeClause = fn.hasReturn ? ` As ${fn.returnTypeStr ?? 'Integer'}` : '';
+  const returnTypeClause = fn.hasReturn ? ` As ${fn.returnTypeStr ?? 'Long'}` : '';
   vbaLines.push(`${decl} ${fn.funcName}(${paramsStr})${returnTypeClause}${inlineCommentSuffix}`);
   lineMap[fn.defLine.pyLineNum] = vbaLines.length;
 
