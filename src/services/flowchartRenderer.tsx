@@ -326,11 +326,11 @@ export function renderNodeShape(
 function renderSvgDefs(): React.ReactNode {
   return (
     <defs>
-      <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#64748b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker>
-      <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker>
-      <marker id="arrowhead-true" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker>
-      <marker id="arrowhead-false" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#d97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker>
-      <marker id="arrowhead-loop" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#9333ea" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker>
+      <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#64748b" strokeWidth="1.0" strokeLinecap="round" strokeLinejoin="round" /></marker>
+      <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#2563eb" strokeWidth="1.0" strokeLinecap="round" strokeLinejoin="round" /></marker>
+      <marker id="arrowhead-true" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#16a34a" strokeWidth="1.0" strokeLinecap="round" strokeLinejoin="round" /></marker>
+      <marker id="arrowhead-false" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#d97706" strokeWidth="1.0" strokeLinecap="round" strokeLinejoin="round" /></marker>
+      <marker id="arrowhead-loop" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polyline points="2 1, 9 3.5, 2 6" fill="none" stroke="#9333ea" strokeWidth="1.0" strokeLinecap="round" strokeLinejoin="round" /></marker>
     </defs>
   );
 }
