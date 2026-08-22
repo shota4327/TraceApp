@@ -44,11 +44,83 @@ function buildDrawIoVertexXmls(nodes: FlowchartNode[], layout: ReturnType<typeof
   return vertexXmls;
 }
 
-/** 描画に必要なエッジの XML セル配列を生成（不要な制御線・重複を除外しアンカー指定） */
-function buildDrawIoEdgeXmls(edges: FlowchartEdge[], nodeMap: Map<string, FlowchartNode>): string[] {
+/** 合流先ノード (tgtIndex) の直前にある分岐ブロックの最下部 Y 座標を取得 */
+function getBranchMaxBottomY(tgtIndex: number, layout: ReturnType<typeof calculateNodeLayouts>): number {
+  let maxBottom = 0;
+  for (let i = 0; i < tgtIndex; i++) {
+    const b = (layout.nodeYs[i] ?? 0) + (layout.nodeHeights[i] ?? 50);
+    if (b > maxBottom) maxBottom = b;
+  }
+  return maxBottom;
+}
+
+/** 分岐・合流エッジの精密なスタイルとウェイポイントを算出 */
+function computeEdgePointsAndStyle(
+  edge: FlowchartEdge,
+  srcNode: FlowchartNode,
+  srcIdx: number,
+  tgtIdx: number,
+  layout: ReturnType<typeof calculateNodeLayouts>,
+  nodeWidth: number
+): { styleStr: string; pointsXml: string } {
+  const srcX = layout.nodeXs[srcIdx] ?? 100;
+  const srcY = layout.nodeYs[srcIdx] ?? 20;
+  const srcH = layout.nodeHeights[srcIdx] ?? 50;
+  const srcCol = layout.nodeCols[srcIdx] ?? 0;
+  const tgtX = layout.nodeXs[tgtIdx] ?? 100;
+  const tgtY = layout.nodeYs[tgtIdx] ?? 20;
+  const tgtCol = layout.nodeCols[tgtIdx] ?? 0;
+
+  const isFalse = (edge.label === 'False' || edge.label === 'No' || edge.id.includes('edge-false-')) && srcNode.type === 'decision';
+  const isMerge = (srcCol > tgtCol) || (edge.id.includes('merge') && srcCol > 0);
+
+  if (isFalse) {
+    if (tgtCol > srcCol) {
+      const tgtCenterX = tgtX + nodeWidth / 2;
+      return {
+        styleStr: 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeColor=#64748b;',
+        pointsXml: `\n      <Array as="points">\n        <mxPoint x="${tgtCenterX}" y="${srcY + srcH / 2}"/>\n      </Array>`,
+      };
+    }
+    const rightX = srcX + nodeWidth + 40;
+    const branchBottom = getBranchMaxBottomY(tgtIdx, layout);
+    const prevBottom = branchBottom > 0 ? branchBottom : (srcY + srcH);
+    const mergeY = prevBottom + (tgtY - prevBottom) / 2;
+    const mergeX = tgtX + nodeWidth / 2;
+    return {
+      styleStr: 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeColor=#64748b;',
+      pointsXml: `\n      <Array as="points">\n        <mxPoint x="${rightX}" y="${srcY + srcH / 2}"/>\n        <mxPoint x="${rightX}" y="${mergeY}"/>\n        <mxPoint x="${mergeX}" y="${mergeY}"/>\n      </Array>`,
+    };
+  }
+
+  if (isMerge) {
+    const startX = srcX + nodeWidth / 2;
+    const branchBottom = Math.max(getBranchMaxBottomY(tgtIdx, layout), srcY + srcH);
+    const mergeY = branchBottom + (tgtY - branchBottom) / 2;
+    const mergeX = tgtX + nodeWidth / 2;
+    return {
+      styleStr: 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeColor=#64748b;',
+      pointsXml: `\n      <Array as="points">\n        <mxPoint x="${startX}" y="${mergeY}"/>\n        <mxPoint x="${mergeX}" y="${mergeY}"/>\n      </Array>`,
+    };
+  }
+
+  return {
+    styleStr: 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeColor=#64748b;',
+    pointsXml: '',
+  };
+}
+
+/** 描画に必要なエッジの XML セル配列を生成（不要な制御線・重複を除外しアンカー・ウェイポイント指定） */
+function buildDrawIoEdgeXmls(
+  edges: FlowchartEdge[],
+  nodes: FlowchartNode[],
+  layout: ReturnType<typeof calculateNodeLayouts>
+): string[] {
   const validEdges = edges.filter((e) => !e.id.includes('loop-exit') && !e.id.includes('loopback') && e.label !== 'Loop');
   const uniqueEdges: FlowchartEdge[] = [];
   const seenPairs = new Set<string>();
+  const nodeIndexMap = new Map<string, number>();
+  nodes.forEach((n, idx) => nodeIndexMap.set(n.id, idx));
 
   for (const edge of validEdges) {
     const pairKey = `${edge.sourceId}->${edge.targetId}`;
@@ -58,13 +130,19 @@ function buildDrawIoEdgeXmls(edges: FlowchartEdge[], nodeMap: Map<string, Flowch
     }
   }
 
+  const nodeWidth = 180;
   return uniqueEdges.map((edge) => {
-    const srcNode = nodeMap.get(edge.sourceId);
-    const isFalseBranch = (edge.label === 'False' || edge.label === 'No' || edge.id.includes('edge-false-')) && srcNode?.type === 'decision';
-    const exitAnchor = isFalseBranch ? 'exitX=1;exitY=0.5;' : 'exitX=0.5;exitY=1;';
-    const defaultStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeColor=#64748b;`;
-    const styleStr = edge.style || defaultStyle;
-    return `<mxCell id="${edge.id}" value="" style="${styleStr}" edge="1" parent="1" source="${edge.sourceId}" target="${edge.targetId}"><mxGeometry relative="1" as="geometry"/></mxCell>`;
+    const srcIdx = nodeIndexMap.get(edge.sourceId);
+    const tgtIdx = nodeIndexMap.get(edge.targetId);
+
+    if (srcIdx === undefined || tgtIdx === undefined) {
+      const fallbackStyle = edge.style || 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#64748b;';
+      return `<mxCell id="${edge.id}" value="" style="${fallbackStyle}" edge="1" parent="1" source="${edge.sourceId}" target="${edge.targetId}"><mxGeometry relative="1" as="geometry"/></mxCell>`;
+    }
+
+    const { styleStr, pointsXml } = computeEdgePointsAndStyle(edge, nodes[srcIdx]!, srcIdx, tgtIdx, layout, nodeWidth);
+    const finalStyle = edge.style || styleStr;
+    return `<mxCell id="${edge.id}" value="" style="${finalStyle}" edge="1" parent="1" source="${edge.sourceId}" target="${edge.targetId}"><mxGeometry relative="1" as="geometry">${pointsXml}</mxGeometry></mxCell>`;
   });
 }
 
@@ -73,18 +151,15 @@ function buildDrawIoEdgeXmls(edges: FlowchartEdge[], nodeMap: Map<string, Flowch
  * - 画面レンダラーと完全に一致した X, Y 座標・幅・高さを反映
  * - loopLimit (flipV=0 / flipV=1), 平行四辺形, はじめ/おわり, 直線接続線を反映
  * - 重複エッジ・不要なループ内部制御エッジ（loop-exit, loopback）を除外
- * - アンカーポイント（exitX/exitY, entryX/entryY）を明示し、エッジを先に出力してブロック重なりを解消
+ * - アンカーポイントおよび合流ウェイポイントを精密指定し、ズレ・重なりを解消
  */
 export function generateFullDrawIoXml(
   nodes: FlowchartNode[],
   edges: FlowchartEdge[]
 ): string {
   const layout = calculateNodeLayouts(nodes, edges);
-  const nodeMap = new Map<string, FlowchartNode>();
-  nodes.forEach((n) => nodeMap.set(n.id, n));
-
   const vertexXmls = buildDrawIoVertexXmls(nodes, layout);
-  const edgeXmls = buildDrawIoEdgeXmls(edges, nodeMap);
+  const edgeXmls = buildDrawIoEdgeXmls(edges, nodes, layout);
 
   // レイヤー順序: エッジ（線）を先、頂点（ブロック）を後に配置することで、線がブロックを突き抜けないようにする
   const allCells = [...edgeXmls, ...vertexXmls].join('\n    ');

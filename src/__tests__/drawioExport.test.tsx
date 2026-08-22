@@ -68,6 +68,27 @@ describe('流れ図のdraw.io形式書き出し機能 (Issue #23)', () => {
     expect(xml).not.toContain('value="Next"');
   });
 
+  it('If条件分岐のFalse/No合流線に中継ウェイポイント（mxPoint）が含まれ正確に合流すること', () => {
+    const branchNodes: FlowchartNode[] = [
+      { id: 'node-start', type: 'terminal', label: 'はじめ' },
+      { id: 'node-if', type: 'decision', label: 'x > 0' },
+      { id: 'node-yes', type: 'process', label: '1 → x' },
+      { id: 'node-end', type: 'terminal', label: 'おわり' },
+    ];
+    const branchEdges: FlowchartEdge[] = [
+      { id: 'edge-start-if', sourceId: 'node-start', targetId: 'node-if' },
+      { id: 'edge-true', sourceId: 'node-if', targetId: 'node-yes', label: 'True' },
+      { id: 'edge-yes-end', sourceId: 'node-yes', targetId: 'node-end' },
+      { id: 'edge-false', sourceId: 'node-if', targetId: 'node-end', label: 'False' },
+    ];
+
+    const xml = generateFullDrawIoXml(branchNodes, branchEdges);
+
+    expect(xml).toContain('id="edge-false"');
+    expect(xml).toContain('<Array as="points">');
+    expect(xml).toContain('<mxPoint x="');
+  });
+
   it('saveDrawIoFile で showSaveFilePicker が利用可能な場合、ストリーム書き込みが行われること', async () => {
     const mockWritable = {
       write: vi.fn().mockResolvedValue(undefined),
