@@ -53,88 +53,6 @@ print(total)`,
 print("Pyodide stdout capture test")`,
   },
   {
-    id: 'zensho-2-73-4-1-2',
-    name: '２級 第73回【４】(１)(２)',
-    description: '全商情報処理検定 ２級 第73回【４】(１)(２) トレース演習',
-    code: `a = 3
-b = 1
-e = a + b
-if a > b:
-    e = e + 1
-    f = a + b
-else:
-    f = a - b
-e = e * e
-f = f * f
-g = e - f
-h = 1
-j = 1
-while g > j:
-    h = h + 1
-    j = h * h #(ア)
-print(h) #(イ)`,
-  },
-  {
-    id: 'zensho-2-73-4-3-4',
-    name: '２級 第73回【４】(３)(４)',
-    description: '全商情報処理検定 ２級 第73回【４】(３)(４) トレース演習',
-    code: `a = 4
-b = 9
-e = a + b
-if a > b:
-    e = e + 1
-    f = a + b
-else:
-    f = a - b
-e = e * e
-f = f * f
-g = e - f
-h = 1
-j = 1
-while g > j:
-    h = h + 1
-    j = h * h #(ア)
-print(h) #(イ)`,
-  },
-  {
-    id: 'zensho-2-74-4-1-2',
-    name: '２級 第74回【４】(１)(２)',
-    description: '全商情報処理検定 ２級 第74回【４】(１)(２) トレース演習',
-    code: `a = 4
-b = a
-c = 1
-while b >= c:
-    b = b - c
-    c = c + 2
-e = a
-f = 2
-while e >= f:
-    e = e - f
-    f = f + 2
-g = b - e
-h = g * g
-print(h)`,
-  },
-  {
-    id: 'zensho-2-74-4-3-4',
-    name: '２級 第74回【４】(３)(４)',
-    description: '全商情報処理検定 ２級 第74回【４】(３)(４) トレース演習',
-    code: `a = 32
-b = a
-c = 1
-while b >= c:
-    b = b - c
-    c = c + 2
-e = a
-f = 2
-while e >= f:
-    e = e - f
-    f = f + 2
-g = b - e
-h = g * g
-print(h)`,
-  },
-  {
     id: 'zensho-2-74-4-1-2-vba',
     name: '2級 第74回【4】(1)(2)',
     language: 'vba',
@@ -162,6 +80,140 @@ print(h)`,
     Loop
     g = b - e
     h = g * g
+    MsgBox (h) '(イ)
+End Sub`,
+  },
+  {
+    id: 'zensho-2-73-4-1-2-vba',
+    name: '2級 第73回【4】(1)(2)',
+    language: 'vba',
+    description: '全商情報処理検定 2級 第73回【4】(1)(2) マクロ言語トレース演習',
+    code: `Sub Program()
+    Dim a As Long
+    Dim b As Long
+    Dim e As Long
+    Dim f As Long
+    Dim g As Long
+    Dim h As Long
+    Dim j As Long
+    a = 3
+    b = 1
+    e = a + b
+    If a > b Then
+        e = e + 1
+        f = a + b
+    Else
+        f = a - b
+    End If
+    e = e * e
+    f = f * f
+    g = e - f
+    h = 1
+    j = 1
+    Do While g > j
+        h = h + 1
+        j = h * h '(ア)
+    Loop
+    MsgBox (h) '(イ)
+End Sub`,
+  },
+  {
+    id: 'zensho-2-72-4-1-2-vba',
+    name: '2級 第72回【4】(1)(2)',
+    language: 'vba',
+    description: '全商情報処理検定 2級 第72回【4】(1)(2) マクロ言語トレース演習',
+    code: `Sub Program()
+    Dim a As Long
+    Dim b As Long
+    Dim c As Long
+    Dim e As Long
+    Dim f As Long
+    Dim g As Long
+    Dim h As Long
+    Dim i As Long
+    a = 2
+    b = 36
+    c = 0
+    e = 5
+    f = a * a
+    g = f * 2
+    Do While b > 0
+        c = c + a
+        f = c * c
+        h = f * 10 '(ア)
+        i = h / g
+        b = b - i
+        MsgBox (c & "," & b) '(イ)
+        If c >= e Then
+            e = e + 5 '(ウ)
+        End If
+    Loop
+End Sub`,
+  },
+  {
+    id: 'zensho-2-71-4-1-2-vba',
+    name: '2級 第71回【4】(1)(2)',
+    language: 'vba',
+    description: '全商情報処理検定 2級 第71回【4】(1)(2) マクロ言語トレース演習',
+    code: `Sub Program()
+    Dim a As Long
+    Dim b As Long
+    Dim c As Long
+    Dim e As Long
+    Dim f As Long
+    Dim g As Long
+    a = 6
+    b = 3
+    c = b
+    Do While a > 1
+        e = Int(c / 2) '(ア)
+        f = e * 2
+        If c = f Then
+            MsgBox (c) '(イ)
+        End If
+        g = b + c
+        b = c
+        c = g
+        a = a - 1
+    Loop
+End Sub`,
+  },
+  {
+    id: 'zensho-2-70-4-1-2-vba',
+    name: '2級 第70回【4】(1)(2)',
+    language: 'vba',
+    description: '全商情報処理検定 2級 第70回【4】(1)(2) マクロ言語トレース演習',
+    code: `Sub Program()
+    Dim x As Long
+    Dim y As Long
+    Dim a As Long
+    Dim b As Long
+    Dim c As Long
+    Dim e As Long
+    Dim f As Long
+    Dim g As Long
+    Dim h As Long
+    x = 5
+    y = 40
+    a = 0
+    b = 0
+    c = 0
+    Do While a < 10
+        a = a + 1
+        If a > b Then
+            b = b + 2
+            c = c + x '(ア)
+        End If
+    Loop
+    e = 0
+    f = 0
+    g = 0
+    Do While e < x
+        e = e + 1
+        f = f + c
+        g = g + y
+    Loop
+    h = f + g
     MsgBox (h) '(イ)
 End Sub`,
   },
