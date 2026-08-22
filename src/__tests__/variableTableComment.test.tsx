@@ -74,3 +74,87 @@ print(total)`;
     expect(badges[0]?.textContent).toBe('(ア)');
   });
 });
+
+describe('変数履歴表の現在の値固定表示機能 (Issue #4)', () => {
+  const mockSnapshots: StepSnapshot[] = [
+    {
+      stepIndex: 0,
+      line: 1,
+      event: 'line',
+      globals: { a: 10 },
+      locals: {},
+      stdoutCumulative: '',
+      stdoutDelta: '',
+      changedVars: ['a'],
+    },
+    {
+      stepIndex: 1,
+      line: 2,
+      event: 'line',
+      globals: { a: 10, b: 20 },
+      locals: {},
+      stdoutCumulative: '',
+      stdoutDelta: '',
+      changedVars: ['b'],
+    },
+    {
+      stepIndex: 2,
+      line: 3,
+      event: 'line',
+      globals: { a: 30, b: 20 },
+      locals: {},
+      stdoutCumulative: '',
+      stdoutDelta: '',
+      changedVars: ['a'],
+    },
+  ];
+
+  it('ヘッダー内に「現在の値」行が描画され、初期ステップの値が反映されること', () => {
+    render(<VariableTable snapshots={mockSnapshots} currentStepIndex={0} />);
+
+    const currentValuesRow = screen.getByTestId('current-values-row');
+    expect(currentValuesRow).toBeDefined();
+    expect(currentValuesRow.textContent).toContain('現在の値');
+    expect(currentValuesRow.textContent).toContain('10');
+  });
+
+  it('ステップ進行に伴い、現在の値行が最新のスナップショット値に更新されること', () => {
+    const { rerender } = render(<VariableTable snapshots={mockSnapshots} currentStepIndex={0} />);
+
+    let currentValuesRow = screen.getByTestId('current-values-row');
+    expect(currentValuesRow.textContent).toContain('10');
+
+    // Step 2 に進める (a=10, b=20)
+    rerender(<VariableTable snapshots={mockSnapshots} currentStepIndex={1} />);
+    currentValuesRow = screen.getByTestId('current-values-row');
+    expect(currentValuesRow.textContent).toContain('10');
+    expect(currentValuesRow.textContent).toContain('20');
+
+    // Step 3 に進める (a=30, b=20)
+    rerender(<VariableTable snapshots={mockSnapshots} currentStepIndex={2} />);
+    currentValuesRow = screen.getByTestId('current-values-row');
+    expect(currentValuesRow.textContent).toContain('30');
+    expect(currentValuesRow.textContent).toContain('20');
+  });
+
+  it('ローカル変数にはローカル変数バッジ(L)が表示されること', () => {
+    const localSnapshots: StepSnapshot[] = [
+      {
+        stepIndex: 0,
+        line: 5,
+        event: 'line',
+        globals: {},
+        locals: { x: 99 },
+        stdoutCumulative: '',
+        stdoutDelta: '',
+        changedVars: ['x'],
+      },
+    ];
+
+    render(<VariableTable snapshots={localSnapshots} currentStepIndex={0} />);
+
+    const currentValuesRow = screen.getByTestId('current-values-row');
+    expect(currentValuesRow.textContent).toContain('99');
+    expect(currentValuesRow.textContent).toContain('L');
+  });
+});

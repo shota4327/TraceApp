@@ -84,8 +84,8 @@ describe('VariableTable: 変更のない行を非表示フィルタリング機�
     expect(checkbox.checked).toBe(true);
 
     const rows = screen.getAllByRole('row');
-    // ヘッダー行 (1) + 変更ありステップ (Step 1, 2, 4, 5, 7 の 5行) = 6行
-    expect(rows.length).toBe(6);
+    // ヘッダー2行 (変数名・現在の値) + 変更ありステップ (Step 1, 2, 4, 5, 7 の 5行) = 7行
+    expect(rows.length).toBe(7);
 
     const tableText = screen.getByTestId('locals-table-body').textContent || '';
     expect(tableText).toContain('1'); // Step 1
@@ -102,8 +102,8 @@ describe('VariableTable: 変更のない行を非表示フィルタリング機�
     fireEvent.click(checkbox);
 
     const rows = screen.getAllByRole('row');
-    // ヘッダー行 (1) + 全ステップ 7行 = 8行
-    expect(rows.length).toBe(8);
+    // ヘッダー2行 (変数名・現在の値) + 全ステップ 7行 = 9行
+    expect(rows.length).toBe(9);
   });
 
   it('3. 現在ステップが変更なしステップ（Step 3: currentStepIndex=2）の時、テーブル上に余計なアクティブ行がつかないこと', () => {
