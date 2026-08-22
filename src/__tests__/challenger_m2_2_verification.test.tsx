@@ -97,8 +97,8 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
 
       // draw.io XML 生成検証
       const xml = generateDrawIoXml(graph);
-      expect(xml).toContain('rounded=1;whiteSpace=wrap;html=1;arcSize=50'); // terminal スタイル
-      expect(xml).toContain('rounded=0;whiteSpace=wrap;html=1;'); // process スタイル
+      expect(xml).toContain('rounded=1;arcSize=50;'); // terminal スタイル
+      expect(xml).toContain('rounded=1;arcSize=8;'); // process スタイル
     });
 
     it('1.2 条件分岐プログラム: decision(ひし形) と分岐エッジ(True/Next)が正しく生成されること', () => {
@@ -120,7 +120,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
 
       // draw.io XML に rhombus スタイルが含まれること
       const xml = generateDrawIoXml(graph);
-      expect(xml).toContain('rhombus;whiteSpace=wrap;html=1');
+      expect(xml).toContain('rhombus;');
     });
 
     it('1.3 ループと関数プログラム: 関数端子(def/return) と loop(六角形) および Loop/False エッジが生成されること', () => {

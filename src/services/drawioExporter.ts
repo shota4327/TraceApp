@@ -37,18 +37,24 @@ function buildDrawIoVertexXmls(nodes: FlowchartNode[], layout: NodeLayoutResult)
       const commentY = y + (height - 30) / 2;
       const escapedComment = escapeXml(node.comment);
       vertexXmls.push(
-        `<mxCell id="comment-${node.id}" value="${escapedComment}" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#64748b;fontSize=12;" vertex="1" parent="1"><mxGeometry x="${commentX}" y="${commentY}" width="120" height="30" as="geometry"/></mxCell>`
+        `<mxCell id="comment-${node.id}" value="${escapedComment}" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=BIZ UDPGothic,BIZ UDPゴシック,sans-serif;fontColor=#475569;fontSize=14;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="${commentX}" y="${commentY}" width="140" height="30" as="geometry"/></mxCell>`
       );
     }
   }
   return vertexXmls;
 }
 
-/** 単一エッジの XML セルを生成（幾何経路データからウェイポイントとアンカーを展開） */
+/** 単一エッジの XML セルを生成（幾何経路データからウェイポイント・アンカー・フォント・ラベルを展開） */
 function formatDrawIoEdgeCell(geom: EdgePathGeometry): string {
   const isBranchNo = geom.type === 'branch-elif' || geom.type === 'branch-merge';
+  const isYes = geom.label === 'Yes' || geom.label === 'True';
   const exitAnchor = isBranchNo ? 'exitX=1;exitY=0.5;' : 'exitX=0.5;exitY=1;';
-  const defaultStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeColor=#64748b;`;
+
+  const strokeColor = isBranchNo ? '#d97706' : isYes ? '#16a34a' : '#64748b';
+  const fontColor = strokeColor;
+  const labelValue = isBranchNo ? 'No' : isYes ? 'Yes' : '';
+
+  const defaultStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeWidth=2;strokeColor=${strokeColor};fontFamily=BIZ UDPGothic,BIZ UDPゴシック,sans-serif;fontSize=13;fontStyle=1;fontColor=${fontColor};`;
 
   let pointsXml = '';
   if (geom.points.length > 0) {
@@ -56,7 +62,7 @@ function formatDrawIoEdgeCell(geom: EdgePathGeometry): string {
     pointsXml = `\n      <Array as="points">\n        ${pointsInner}\n      </Array>`;
   }
 
-  return `<mxCell id="${geom.edgeId}" value="" style="${defaultStyle}" edge="1" parent="1" source="${geom.sourceId}" target="${geom.targetId}"><mxGeometry relative="1" as="geometry">${pointsXml}</mxGeometry></mxCell>`;
+  return `<mxCell id="${geom.edgeId}" value="${labelValue}" style="${defaultStyle}" edge="1" parent="1" source="${geom.sourceId}" target="${geom.targetId}"><mxGeometry relative="1" as="geometry">${pointsXml}</mxGeometry></mxCell>`;
 }
 
 /** 描画に必要なエッジの XML セル配列を生成（共通幾何エンジン computeEdgeGeometries を消費） */

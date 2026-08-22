@@ -2,29 +2,34 @@ import { FlowchartNode, FlowchartNodeType, FlowchartEdge, FlowchartGraph } from 
 import { splitLineComment } from './commentExtractor';
 
 /**
- * ノードごとの draw.io mxGraph スタイル文字列を返却
+ * ノードごとの draw.io mxGraph スタイル文字列を返却（画面のSVG描画スタイルと完全同期）
  */
 export function getMxStyleForNode(node: FlowchartNode): string {
+  const baseFont = 'fontFamily=BIZ UDPGothic,BIZ UDPゴシック,sans-serif;fontSize=16;fontColor=#334155;align=center;verticalAlign=middle;strokeWidth=2;html=1;whiteSpace=wrap;';
+
   if (node.type === 'loop') {
-    if (node.id.includes('loop-end') || node.label.includes('ループ終了')) {
-      return 'shape=loopLimit;whiteSpace=wrap;html=1;size=20;horizontal=1;flipV=1;fillColor=#f3e8ff;strokeColor=#9333ea;';
-    }
-    return 'shape=loopLimit;whiteSpace=wrap;html=1;size=20;horizontal=1;flipV=0;fillColor=#f3e8ff;strokeColor=#9333ea;';
+    const isLoopEnd = node.id.includes('loop-end') || node.label.includes('ループ終了');
+    const flipV = isLoopEnd ? '1' : '0';
+    return `shape=loopLimit;size=14;horizontal=1;flipV=${flipV};fillColor=#faf5ff;strokeColor=#a855f7;${baseFont}`;
   }
   if (node.subType === 'io' || node.label.includes('表示')) {
-    return 'shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#eff6ff;strokeColor=#2563eb;';
+    return `shape=parallelogram;perimeter=parallelogramPerimeter;fixedSize=1;size=14;fillColor=#ffffff;strokeColor=#3b82f6;${baseFont}`;
   }
   switch (node.type) {
-    case 'terminal':
-      return 'rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#e2e8f0;strokeColor=#475569;';
+    case 'terminal': {
+      const isFuncTerminal = node.subType === 'function-terminal' || node.label.startsWith('def ') || node.label.startsWith('return');
+      const fillColor = isFuncTerminal ? '#ecfdf5' : '#f1f5f9';
+      const strokeColor = isFuncTerminal ? '#059669' : '#64748b';
+      return `rounded=1;arcSize=50;fillColor=${fillColor};strokeColor=${strokeColor};${baseFont}`;
+    }
     case 'process':
-      return 'rounded=0;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;';
+      return `rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=#3b82f6;${baseFont}`;
     case 'decision':
-      return 'rhombus;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d97706;';
+      return `rhombus;fillColor=#fffbeb;strokeColor=#f59e0b;${baseFont}`;
     case 'subroutine':
-      return 'shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#ecfdf5;strokeColor=#059669;';
+      return `shape=process;backgroundOutline=1;fillColor=#f0fdf4;strokeColor=#10b981;${baseFont}`;
     default:
-      return 'rounded=0;whiteSpace=wrap;html=1;';
+      return `rounded=0;fillColor=#ffffff;strokeColor=#94a3b8;${baseFont}`;
   }
 }
 
@@ -32,19 +37,20 @@ export function getMxStyleForNode(node: FlowchartNode): string {
  * ノード種別ごとの draw.io mxGraph スタイル文字列を返却 (後方互換用)
  */
 function getMxStyleForType(type: FlowchartNodeType): string {
+  const baseFont = 'fontFamily=BIZ UDPGothic,BIZ UDPゴシック,sans-serif;fontSize=16;fontColor=#334155;align=center;verticalAlign=middle;strokeWidth=2;html=1;whiteSpace=wrap;';
   switch (type) {
     case 'terminal':
-      return 'rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#e2e8f0;strokeColor=#475569;';
+      return `rounded=1;arcSize=50;fillColor=#f1f5f9;strokeColor=#64748b;${baseFont}`;
     case 'process':
-      return 'rounded=0;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;';
+      return `rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=#3b82f6;${baseFont}`;
     case 'decision':
-      return 'rhombus;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d97706;';
+      return `rhombus;fillColor=#fffbeb;strokeColor=#f59e0b;${baseFont}`;
     case 'loop':
-      return 'shape=loopLimit;whiteSpace=wrap;html=1;size=20;horizontal=1;flipV=0;fillColor=#f3e8ff;strokeColor=#9333ea;';
+      return `shape=loopLimit;size=14;horizontal=1;flipV=0;fillColor=#faf5ff;strokeColor=#a855f7;${baseFont}`;
     case 'subroutine':
-      return 'shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#ecfdf5;strokeColor=#059669;';
+      return `shape=process;backgroundOutline=1;fillColor=#f0fdf4;strokeColor=#10b981;${baseFont}`;
     default:
-      return 'whiteSpace=wrap;html=1;';
+      return `whiteSpace=wrap;html=1;${baseFont}`;
   }
 }
 
