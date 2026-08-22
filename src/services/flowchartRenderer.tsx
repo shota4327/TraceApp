@@ -2,12 +2,14 @@ import React from 'react';
 import { FlowchartNode, FlowchartEdge } from '../types/flowchart';
 import {
   calculateNodeLayouts,
+  calculateNodeHeight,
   computeEdgeGeometries,
+  wrapProcessLabel,
   EdgePathGeometry,
   NodeLayoutResult as GeometryLayoutResult,
 } from './flowchartLayout';
 
-export { calculateNodeLayouts };
+export { calculateNodeLayouts, calculateNodeHeight, wrapProcessLabel };
 
 interface CachedLayoutResult extends GeometryLayoutResult {
   inactiveNodes: React.ReactNode[];
@@ -204,92 +206,6 @@ export function renderDefaultNode(
   );
 }
 
-/** トークンの表示幅ユニット（全角=1.0, 半角=0.55）を算出 */
-function calcTokenUnits(token: string): number {
-  let units = 0;
-  for (let i = 0; i < token.length; i++) {
-    units += token.charCodeAt(i) <= 0x7e ? 0.55 : 1.0;
-  }
-  return units;
-}
-
-/** 文字列を変数名・数値・演算子・記号・空白のトークン列に分割 */
-function tokenizeLabel(text: string): string[] {
-  const matches = text.match(/[a-zA-Z_][a-zA-Z0-9_]*|\d+(?:\.\d+)?|→|＝|＋|－|×|÷|\^|％|≠|≦|≧|[=+\-*/%^<>!]+|\s+|[^\s\w]/gu);
-  return matches ? Array.from(matches) : [text];
-}
-
-/** トークン列を行幅制限（maxUnitsPerLine）に収まるよう行分割 */
-function wrapTokensIntoLines(tokens: string[], maxUnitsPerLine: number): string[] {
-  const lines: string[] = [];
-  let currentLine = '';
-  let currentUnits = 0;
-
-  for (const token of tokens) {
-    const isSpace = /^\s+$/.test(token);
-    const tokenUnits = calcTokenUnits(token);
-
-    if (currentLine.length === 0) {
-      if (isSpace) continue;
-      currentLine = token;
-      currentUnits = tokenUnits;
-    } else if (currentUnits + tokenUnits <= maxUnitsPerLine) {
-      currentLine += token;
-      currentUnits += tokenUnits;
-    } else {
-      lines.push(currentLine.trimEnd());
-      if (isSpace) {
-        currentLine = '';
-        currentUnits = 0;
-      } else {
-        currentLine = token;
-        currentUnits = tokenUnits;
-      }
-    }
-  }
-  if (currentLine.trimEnd().length > 0) {
-    lines.push(currentLine.trimEnd());
-  }
-  return lines.length > 0 ? lines : [''];
-}
-
-const labelWrapCache = new Map<string, string[]>();
-
-/** 改行コードおよびトークン単位（単語・記号区切り）に基づき行分割 */
-export function wrapProcessLabel(text: string, maxUnitsPerLine = 9.5): string[] {
-  if (!text) return [''];
-  const cacheKey = `${maxUnitsPerLine}:${text}`;
-  const cached = labelWrapCache.get(cacheKey);
-  if (cached) return cached;
-
-  const rawLines = text.split('\n');
-  const allLines: string[] = [];
-
-  for (const rawLine of rawLines) {
-    if (!rawLine.trim()) {
-      allLines.push('');
-      continue;
-    }
-    const tokens = tokenizeLabel(rawLine);
-    const wrapped = wrapTokensIntoLines(tokens, maxUnitsPerLine);
-    allLines.push(...wrapped);
-  }
-  if (labelWrapCache.size > 2000) labelWrapCache.clear();
-  labelWrapCache.set(cacheKey, allLines);
-  return allLines;
-}
-
-/** ノードの必要高さを計算（複数行の場合は高さを自動拡大） */
-export function calculateNodeHeight(node: FlowchartNode, baseHeight = 50): number {
-  if (node.type === 'process' || node.type === 'loop' || node.label.includes('\n')) {
-    const lines = wrapProcessLabel(node.label);
-    if (lines.length > 1) {
-      return Math.max(baseHeight, 16 + lines.length * 20);
-    }
-  }
-  return baseHeight;
-}
-
 /** ノードのテキスト要素（単一行／複数行）を生成 */
 function createNodeTextElement(
   node: FlowchartNode,
@@ -305,7 +221,7 @@ function createNodeTextElement(
   const fill = isActive ? '#1e293b' : '#334155';
   const fontWeight = isActive ? 700 : 500;
 
-  if (node.type === 'process' || node.type === 'loop' || node.label.includes('\n')) {
+  if (node.type === 'process' || node.type === 'loop' || node.subType === 'io' || (node.label && node.label.includes('\n'))) {
     const lines = wrapProcessLabel(node.label);
     if (lines.length > 1) {
       const lineHeight = 20;

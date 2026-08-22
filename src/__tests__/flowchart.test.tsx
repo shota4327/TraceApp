@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { generateFlowchartNodes, generateFlowchartGraph, generateDrawIoXml, formatProcessLabel } from '../services/flowchartGenerator';
-import { renderFlowchartSvg, isNodeActive, wrapProcessLabel } from '../services/flowchartRenderer';
+import { renderFlowchartSvg, isNodeActive, wrapProcessLabel, calculateNodeHeight } from '../services/flowchartRenderer';
 import { FlowchartViewer } from '../components/FlowchartViewer';
 import { LeftPanel } from '../components/LeftPanel';
 import { FlowchartNode } from '../types/flowchart';
@@ -207,6 +207,16 @@ for i in range(4):
 
       const tspans = container.querySelectorAll('tspan');
       expect(tspans.length).toBeGreaterThan(1);
+    });
+
+    it('複数行・長文ラベルのノードにおいてcalculateNodeHeightが動的に高さを拡大すること', () => {
+      const singleLineNode: FlowchartNode = { id: 'p1', type: 'process', label: 'a = 10', lineRange: [1, 1] };
+      const multiLineNode: FlowchartNode = { id: 'p2', type: 'process', label: 'a = 10\nb = 20\nc = 30', lineRange: [2, 2] };
+      const longTextNode: FlowchartNode = { id: 'p3', type: 'process', label: 'とても長いメッセージを出力して処理を継続します', lineRange: [3, 3] };
+
+      expect(calculateNodeHeight(singleLineNode)).toBe(50);
+      expect(calculateNodeHeight(multiLineNode)).toBeGreaterThanOrEqual(76);
+      expect(calculateNodeHeight(longTextNode)).toBeGreaterThan(50);
     });
 
     it('renderFlowchartSvgが正しくSVG要素を生成すること', () => {
