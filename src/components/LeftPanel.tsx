@@ -191,11 +191,13 @@ const LanguageSlideSwitch: React.FC<{
       }}
       title="クリックでPythonとマクロ言語を切り替えます"
     >
-      {/* スライドする青いピル背景インジケーター */}
+      {/* スライドするピル背景インジケーター（Python: 青 / マクロ言語: 緑） */}
       {isCodeActive && (
         <div
+          data-testid="tab-slide-indicator"
           style={{
             ...slideSwitchIndicatorStyle,
+            backgroundColor: isVba ? '#16a34a' : '#2563eb',
             transform: isVba ? 'translateX(100%)' : 'translateX(0%)',
           }}
         />
