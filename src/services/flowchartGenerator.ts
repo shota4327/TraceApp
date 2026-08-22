@@ -22,8 +22,11 @@ export function getMxStyleForNode(node: FlowchartNode): string {
       const strokeColor = isFuncTerminal ? '#059669' : '#64748b';
       return `rounded=1;arcSize=50;fillColor=${fillColor};strokeColor=${strokeColor};${baseFont}`;
     }
-    case 'process':
-      return `rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=#3b82f6;${baseFont}`;
+    case 'process': {
+      const isFuncCallReturn = node.subType === 'function-call-return';
+      const strokeColor = isFuncCallReturn ? '#059669' : '#3b82f6';
+      return `rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=${strokeColor};${baseFont}`;
+    }
     case 'decision':
       return `rhombus;fillColor=#fffbeb;strokeColor=#f59e0b;${baseFont}`;
     case 'subroutine':
