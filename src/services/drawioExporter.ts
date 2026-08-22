@@ -1,20 +1,75 @@
 import { FlowchartNode, FlowchartEdge } from '../types/flowchart';
-import { generateDrawIoXml } from './flowchartGenerator';
+import { getMxStyleForNode } from './flowchartGenerator';
+import { calculateNodeLayouts } from './flowchartRenderer';
+
+/**
+ * 特殊文字を XML エスケープ
+ */
+function escapeXml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+    .replace(/\n/g, '&#xa;');
+}
 
 /**
  * draw.io (diagrams.net) で直接編集可能な完全な mxfile XML 文字列を生成
+ * - 画面レンダラーと完全に一致した X, Y 座標・幅・高さを反映
+ * - loopLimit (flipV=0 / flipV=1), 平行四辺形, はじめ/おわり, 直線接続線を反映
  */
 export function generateFullDrawIoXml(
   nodes: FlowchartNode[],
   edges: FlowchartEdge[]
 ): string {
-  const innerGraphXml = generateDrawIoXml(nodes, edges);
+  const layout = calculateNodeLayouts(nodes, edges);
+  const nodeWidth = 180;
+
+  const vertexXmls: string[] = [];
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]!;
+    const x = layout.nodeXs[i] ?? 100;
+    const y = layout.nodeYs[i] ?? 20;
+    const height = layout.nodeHeights[i] ?? 50;
+    const style = getMxStyleForNode(node);
+    const escapedValue = escapeXml(node.label);
+
+    vertexXmls.push(
+      `<mxCell id="${node.id}" value="${escapedValue}" style="${style}" vertex="1" parent="1"><mxGeometry x="${x}" y="${y}" width="${nodeWidth}" height="${height}" as="geometry"/></mxCell>`
+    );
+
+    // 行末コメント（アノテーション）がある場合は右隣にテキストセルを配置
+    if (node.comment) {
+      const commentX = x + nodeWidth + 12;
+      const commentY = y + (height - 30) / 2;
+      const escapedComment = escapeXml(node.comment);
+      vertexXmls.push(
+        `<mxCell id="comment-${node.id}" value="${escapedComment}" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#64748b;fontSize=12;" vertex="1" parent="1"><mxGeometry x="${commentX}" y="${commentY}" width="120" height="30" as="geometry"/></mxCell>`
+      );
+    }
+  }
+
+  const edgeXmls = edges.map((edge) => {
+    const styleStr = edge.style || 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#64748b;';
+    return `<mxCell id="${edge.id}" value="" style="${styleStr}" edge="1" parent="1" source="${edge.sourceId}" target="${edge.targetId}"><mxGeometry relative="1" as="geometry"/></mxCell>`;
+  });
+
+  const allCells = [...vertexXmls, ...edgeXmls].join('\n    ');
 
   const timestamp = new Date().toISOString();
   return `<?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net" modified="${timestamp}" agent="PyTrace" version="21.0.0" type="device">
   <diagram id="flowchart-diagram" name="流れ図">
-    ${innerGraphXml}
+    <mxGraphModel dx="1000" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        ${allCells}
+      </root>
+    </mxGraphModel>
   </diagram>
 </mxfile>`;
 }

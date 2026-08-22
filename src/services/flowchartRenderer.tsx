@@ -71,6 +71,29 @@ export function renderProcessNode(
   );
 }
 
+/** 入出力ノード (IO / Parallelogram Node: print文等) の描画 */
+export function renderIoNode(
+  node: FlowchartNode,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  isActive: boolean,
+  commonProps: React.HTMLAttributes<SVGGElement>,
+  textElement: React.ReactNode
+): React.ReactNode {
+  const fill = isActive ? '#eff6ff' : '#ffffff';
+  const stroke = isActive ? '#2563eb' : '#3b82f6';
+  const skew = 14;
+  const points = `${x + skew},${y} ${x + width},${y} ${x + width - skew},${y + height} ${x},${y + height}`;
+  return (
+    <g key={node.id} {...commonProps} className={`flowchart-node ${isActive ? 'active' : ''}`}>
+      <polygon points={points} fill={fill} stroke={stroke} strokeWidth={isActive ? 3 : 2} strokeLinejoin="round" />
+      {textElement}
+    </g>
+  );
+}
+
 /** 判断ノード (Decision Node) の描画 */
 export function renderDecisionNode(
   node: FlowchartNode,
@@ -353,13 +376,17 @@ export function renderNodeShape(
   const commentElement = createNodeCommentElement(node, x, y, width, height);
 
   let shapeElement: React.ReactNode;
-  switch (node.type) {
-    case 'terminal': shapeElement = renderTerminalNode(node, x, y, width, height, isActive, commonProps, textElement); break;
-    case 'process': shapeElement = renderProcessNode(node, x, y, width, height, isActive, commonProps, textElement); break;
-    case 'decision': shapeElement = renderDecisionNode(node, x, y, width, height, isActive, commonProps, textElement, cx, cy); break;
-    case 'loop': shapeElement = renderLoopNode(node, x, y, width, height, isActive, commonProps, textElement, cy); break;
-    case 'subroutine': shapeElement = renderSubroutineNode(node, x, y, width, height, isActive, commonProps, textElement); break;
-    default: shapeElement = renderDefaultNode(node, x, y, width, height, isActive, commonProps, textElement); break;
+  if (node.subType === 'io') {
+    shapeElement = renderIoNode(node, x, y, width, height, isActive, commonProps, textElement);
+  } else {
+    switch (node.type) {
+      case 'terminal': shapeElement = renderTerminalNode(node, x, y, width, height, isActive, commonProps, textElement); break;
+      case 'process': shapeElement = renderProcessNode(node, x, y, width, height, isActive, commonProps, textElement); break;
+      case 'decision': shapeElement = renderDecisionNode(node, x, y, width, height, isActive, commonProps, textElement, cx, cy); break;
+      case 'loop': shapeElement = renderLoopNode(node, x, y, width, height, isActive, commonProps, textElement, cy); break;
+      case 'subroutine': shapeElement = renderSubroutineNode(node, x, y, width, height, isActive, commonProps, textElement); break;
+      default: shapeElement = renderDefaultNode(node, x, y, width, height, isActive, commonProps, textElement); break;
+    }
   }
 
   if (!commentElement) return shapeElement;
@@ -397,7 +424,7 @@ function partitionNodeGroups(nodes: FlowchartNode[]): FlowchartNode[][] {
     if (node.id === 'node-start') {
       if (currentGroup.length > 0) groups.push(currentGroup);
       currentGroup = [node];
-    } else if (node.subType === 'function-terminal' && (node.id.includes('def') || (!node.label.startsWith('return') && node.label !== '終了'))) {
+    } else if (node.subType === 'function-terminal' && (node.id.includes('def') || (!node.label.startsWith('return') && node.label !== '終了' && node.label !== 'おわり'))) {
       // 関数開始端子は新規関数グループの開始
       if (currentGroup.length > 0) groups.push(currentGroup);
       currentGroup = [node];
@@ -416,7 +443,7 @@ function calculateGroupColumns(groupNodes: FlowchartNode[], edges?: FlowchartEdg
 
   for (let i = 0; i < groupNodes.length; i++) {
     const node = groupNodes[i]!;
-    if (node.id === 'node-end' || node.id.includes('loop-end') || node.label.includes('終了')) continue;
+    if (node.id === 'node-end' || node.id.includes('loop-end') || node.label.includes('終了') || node.label.includes('おわり')) continue;
 
     // False / No エッジで入ってくるノード (elif または else)
     const inFalse = edges.find(
@@ -437,7 +464,7 @@ function calculateGroupColumns(groupNodes: FlowchartNode[], edges?: FlowchartEdg
 
   for (let i = 1; i < groupNodes.length; i++) {
     const node = groupNodes[i]!;
-    if (cols[i] === 0 && !node.label.includes('終了') && node.id !== 'node-end' && !node.id.includes('loop-end')) {
+    if (cols[i] === 0 && !node.label.includes('終了') && !node.label.includes('おわり') && node.id !== 'node-end' && !node.id.includes('loop-end')) {
       const inTrue = edges.find((e) => e.targetId === node.id && (e.label === 'True' || e.label === 'Yes'));
       if (inTrue) {
         const srcIdx = groupNodes.findIndex((n) => n.id === inTrue.sourceId);
@@ -785,7 +812,7 @@ function computeLayoutDimensions(
 }
 
 /** 各ノードの X, Y 座標と全体のサイズを算出 */
-function calculateNodeLayouts(
+export function calculateNodeLayouts(
   nodes: FlowchartNode[],
   edges?: FlowchartEdge[],
   defaultGap = 14,

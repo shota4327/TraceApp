@@ -25,7 +25,7 @@ for i in range(1, 4):
 
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes[0]!.type).toBe('terminal');
-      expect(nodes[0]!.label).toBe('開始');
+      expect(nodes[0]!.label).toBe('はじめ');
 
       const types = nodes.map((n) => n.type);
       expect(types).toContain('terminal');
@@ -35,7 +35,7 @@ for i in range(1, 4):
       expect(types).toContain('loop');
 
       // 関数の開始端子 (add(a, b)) と終了端子 (return result) の検証
-      const defNode = nodes.find((n) => n.subType === 'function-terminal' && !n.label.startsWith('return') && n.label !== '終了');
+      const defNode = nodes.find((n) => n.subType === 'function-terminal' && !n.label.startsWith('return') && n.label !== '終了' && n.label !== 'おわり');
       expect(defNode).toBeDefined();
       expect(defNode?.label).toBe('add(a, b)');
       expect(defNode?.type).toBe('terminal');

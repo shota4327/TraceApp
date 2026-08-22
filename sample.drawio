@@ -1,0 +1,66 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.2.2 Chrome/134.0.6998.178 Electron/35.1.2 Safari/537.36" scale="4" border="0">
+  <diagram name="ページ1" id="FLz8C0NJjxezcpsWw0LW">
+    <mxGraphModel dx="739" dy="1108" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ITdi0wI_NkcJYdMo9NeD-19" edge="1" parent="1" source="XiTlMRBYrluzGkwfIe_8-1" style="edgeStyle=none;shape=connector;curved=0;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=default;labelBackgroundColor=default;startSize=8;endArrow=none;endFill=0;endSize=8;startFill=0;" target="XiTlMRBYrluzGkwfIe_8-26">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="200" y="150" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="XiTlMRBYrluzGkwfIe_8-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fontFamily=ＭＳ ゴシック;" value="はじめ" vertex="1">
+          <mxGeometry height="40" width="160" x="120" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="XiTlMRBYrluzGkwfIe_8-26" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fontFamily=ＭＳ ゴシック;" value="おわり" vertex="1">
+          <mxGeometry height="40" width="160" x="120" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="ITdi0wI_NkcJYdMo9NeD-14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=ＭＳ ゴシック;fillColor=default;strokeColor=default;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="a = 1" vertex="1">
+          <mxGeometry height="40" width="160" x="120" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ITdi0wI_NkcJYdMo9NeD-18" parent="1" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fontFamily=ＭＳ ゴシック;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="aを表示" vertex="1">
+          <mxGeometry height="40" width="160" x="120" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="ITdi0wI_NkcJYdMo9NeD-23" parent="1" style="shape=loopLimit;whiteSpace=wrap;html=1;size=20;horizontal=1;flipV=0;fontFamily=ＭＳ ゴシック;fillColor=default;strokeColor=default;strokeWidth=1;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="ループ&lt;div&gt;a &amp;lt; 10 の間&lt;/div&gt;" vertex="1">
+          <mxGeometry height="40" width="160" x="120" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="ITdi0wI_NkcJYdMo9NeD-26" parent="1" style="shape=loopLimit;whiteSpace=wrap;html=1;size=20;horizontal=1;flipV=1;fontFamily=ＭＳ ゴシック;fillColor=default;strokeColor=default;strokeWidth=1;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="ループ" vertex="1">
+          <mxGeometry height="40" width="160" x="120" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="EAyTvNYiWHc5obi4RM-N-1" parent="1" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fontFamily=ＭＳ ゴシック;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="aを表示" vertex="1">
+          <mxGeometry height="40" width="160" x="120" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="EAyTvNYiWHc5obi4RM-N-2" parent="1" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fontFamily=ＭＳ ゴシック;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="aを表示" vertex="1">
+          <mxGeometry height="40" width="160" x="120" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="EAyTvNYiWHc5obi4RM-N-8" edge="1" parent="1" source="EAyTvNYiWHc5obi4RM-N-4" style="edgeStyle=none;shape=connector;curved=0;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=default;labelBackgroundColor=default;startSize=8;endArrow=none;endFill=0;endSize=8;startFill=0;" target="EAyTvNYiWHc5obi4RM-N-7">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="360" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EAyTvNYiWHc5obi4RM-N-4" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontFamily=ＭＳ ゴシック;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="a &amp;lt; 10" vertex="1">
+          <mxGeometry height="40" width="160" x="120" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="EAyTvNYiWHc5obi4RM-N-5" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=ＭＳ ゴシック;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="Yes" vertex="1">
+          <mxGeometry height="30" width="50" x="268" y="235" as="geometry" />
+        </mxCell>
+        <mxCell id="EAyTvNYiWHc5obi4RM-N-6" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=ＭＳ ゴシック;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="No" vertex="1">
+          <mxGeometry height="30" width="50" x="189" y="275" as="geometry" />
+        </mxCell>
+        <mxCell id="EAyTvNYiWHc5obi4RM-N-9" edge="1" parent="1" source="EAyTvNYiWHc5obi4RM-N-7" style="edgeStyle=none;shape=connector;curved=0;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=default;labelBackgroundColor=default;startSize=8;endArrow=open;endFill=0;endSize=8;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="360" y="350" />
+            </Array>
+            <mxPoint x="200" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EAyTvNYiWHc5obi4RM-N-7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=ＭＳ ゴシック;fillColor=default;strokeColor=default;fontSize=14;fontColor=default;labelBackgroundColor=default;" value="a = a + 1" vertex="1">
+          <mxGeometry height="40" width="160" x="280" y="290" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

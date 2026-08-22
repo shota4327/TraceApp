@@ -34,22 +34,38 @@ describe('流れ図のdraw.io形式書き出し機能 (Issue #23)', () => {
     window.URL.revokeObjectURL = vi.fn();
   });
 
-  it('generateFullDrawIoXml が完全な mxfile XML を生成すること', () => {
-    const xml = generateFullDrawIoXml(sampleNodes, sampleEdges);
+  it('generateFullDrawIoXml が完全な mxfile XML を生成し、loopLimit や平行四辺形、直線エッジを反映すること', () => {
+    const complexNodes: FlowchartNode[] = [
+      { id: 'node-start', type: 'terminal', label: 'はじめ' },
+      { id: 'node-loop-1', type: 'loop', label: 'ループ\ni < 10の間' },
+      { id: 'node-io-1', type: 'process', subType: 'io', label: 'iを表示' },
+      { id: 'node-loop-end-1', type: 'loop', label: 'ループ' },
+      { id: 'node-end', type: 'terminal', label: 'おわり' },
+    ];
+    const complexEdges: FlowchartEdge[] = [
+      { id: 'edge-1', sourceId: 'node-start', targetId: 'node-loop-1' },
+      { id: 'edge-2', sourceId: 'node-loop-1', targetId: 'node-io-1' },
+      { id: 'edge-3', sourceId: 'node-io-1', targetId: 'node-loop-end-1' },
+      { id: 'edge-4', sourceId: 'node-loop-end-1', targetId: 'node-end' },
+    ];
+
+    const xml = generateFullDrawIoXml(complexNodes, complexEdges);
 
     expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
     expect(xml).toContain('<mxfile host="app.diagrams.net"');
     expect(xml).toContain('<diagram id="flowchart-diagram" name="流れ図">');
-    expect(xml).toContain('<mxGraphModel>');
+    expect(xml).toContain('<mxGraphModel');
     expect(xml).toContain('id="node-start"');
-    expect(xml).toContain('value="開始"');
-    expect(xml).toContain('id="node-1"');
-    expect(xml).toContain('value="x = 5"');
+    expect(xml).toContain('value="はじめ"');
+    expect(xml).toContain('rounded=1;whiteSpace=wrap;html=1;arcSize=50;');
+    expect(xml).toContain('shape=loopLimit;whiteSpace=wrap;html=1;size=20;horizontal=1;flipV=0;');
+    expect(xml).toContain('shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;');
+    expect(xml).toContain('shape=loopLimit;whiteSpace=wrap;html=1;size=20;horizontal=1;flipV=1;');
+    expect(xml).toContain('value="おわり"');
     expect(xml).toContain('id="edge-1"');
     expect(xml).toContain('value=""');
+    expect(xml).toContain('endArrow=none;endFill=0;');
     expect(xml).not.toContain('value="Next"');
-    expect(xml).toContain('source="node-start"');
-    expect(xml).toContain('target="node-1"');
   });
 
   it('saveDrawIoFile で showSaveFilePicker が利用可能な場合、ストリーム書き込みが行われること', async () => {

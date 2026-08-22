@@ -140,23 +140,23 @@ finally:
     it('完全な空文字列の場合に開始・終了の端子ノードのみ返却すること', () => {
       const nodes = generateFlowchartNodes('');
       expect(nodes.length).toBe(2);
-      expect(nodes[0]!.label).toBe('開始');
-      expect(nodes[1]!.label).toBe('終了');
+      expect(nodes[0]!.label).toBe('はじめ');
+      expect(nodes[1]!.label).toBe('おわり');
     });
 
     it('空白・タブ・改行のみの文字列の場合に開始・終了の端子ノードのみ返却すること', () => {
       const nodes = generateFlowchartNodes('   \n\n\t  \n  ');
       expect(nodes.length).toBe(2);
-      expect(nodes[0]!.label).toBe('開始');
-      expect(nodes[1]!.label).toBe('終了');
+      expect(nodes[0]!.label).toBe('はじめ');
+      expect(nodes[1]!.label).toBe('おわり');
     });
 
     it('コメント行のみのコードの場合にコメントが除外され開始・終了ノードのみになること', () => {
       const code = '# Comment 1\n# Comment 2\n   # Indented comment';
       const nodes = generateFlowchartNodes(code);
       expect(nodes.length).toBe(2);
-      expect(nodes[0]!.label).toBe('開始');
-      expect(nodes[1]!.label).toBe('終了');
+      expect(nodes[0]!.label).toBe('はじめ');
+      expect(nodes[1]!.label).toBe('おわり');
     });
   });
 

@@ -121,8 +121,8 @@ describe('Challenger M4 Fix: Comprehensive Edge Case & Stress Verification Suite
     test('Handles empty and whitespace-only code gracefully', () => {
       const nodesEmpty = generateFlowchartNodes('');
       expect(nodesEmpty.length).toBe(2);
-      expect(nodesEmpty[0]?.label).toBe('開始');
-      expect(nodesEmpty[1]?.label).toBe('終了');
+      expect(nodesEmpty[0]?.label).toBe('はじめ');
+      expect(nodesEmpty[1]?.label).toBe('おわり');
 
       const nodesWhitespace = generateFlowchartNodes('   \n\n\t  ');
       expect(nodesWhitespace.length).toBe(2);
