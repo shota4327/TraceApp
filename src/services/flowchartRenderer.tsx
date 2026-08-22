@@ -1,5 +1,20 @@
 import React from 'react';
 import { FlowchartNode, FlowchartEdge } from '../types/flowchart';
+import {
+  calculateNodeLayouts,
+  computeEdgeGeometries,
+  EdgePathGeometry,
+  NodeLayoutResult as GeometryLayoutResult,
+} from './flowchartLayout';
+
+export { calculateNodeLayouts };
+
+interface CachedLayoutResult extends GeometryLayoutResult {
+  inactiveNodes: React.ReactNode[];
+  activeNodes: React.ReactNode[];
+  inactiveConnections: React.ReactNode[];
+  activeConnections: React.ReactNode[];
+}
 
 export interface RenderOptions {
   width?: number;
@@ -411,466 +426,7 @@ function renderSvgDefs(): React.ReactNode {
   );
 }
 
-interface NodeBox { x: number; y: number; w: number; h: number; col: number; index: number }
-
-/** ノード群をメイン処理と各関数ブロックに分割 */
-function partitionNodeGroups(nodes: FlowchartNode[]): FlowchartNode[][] {
-  const groups: FlowchartNode[][] = [];
-  let currentGroup: FlowchartNode[] = [];
-
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i]!;
-    // node-start はメイングループの開始
-    if (node.id === 'node-start') {
-      if (currentGroup.length > 0) groups.push(currentGroup);
-      currentGroup = [node];
-    } else if (node.subType === 'function-terminal' && (node.id.includes('def') || (!node.label.startsWith('return') && node.label !== '終了' && node.label !== 'おわり'))) {
-      // 関数開始端子は新規関数グループの開始
-      if (currentGroup.length > 0) groups.push(currentGroup);
-      currentGroup = [node];
-    } else {
-      currentGroup.push(node);
-    }
-  }
-  if (currentGroup.length > 0) groups.push(currentGroup);
-  return groups;
-}
-
-/** 単一グループ内のノード所属カラムを算出 */
-function calculateGroupColumns(groupNodes: FlowchartNode[], edges?: FlowchartEdge[]): number[] {
-  const cols = new Array(groupNodes.length).fill(0);
-  if (!edges || edges.length === 0) return cols;
-
-  for (let i = 0; i < groupNodes.length; i++) {
-    const node = groupNodes[i]!;
-    if (node.id === 'node-end' || node.id.includes('loop-end') || node.label.includes('終了') || node.label.includes('おわり')) continue;
-
-    // False / No エッジで入ってくるノード (elif または else)
-    const inFalse = edges.find(
-      (e) => e.targetId === node.id && !e.id.includes('loop-exit') && (e.label === 'False' || e.label === 'No' || e.id.includes('edge-false-'))
-    );
-    if (inFalse) {
-      const srcIdx = groupNodes.findIndex((n) => n.id === inFalse.sourceId);
-      if (srcIdx >= 0) {
-        const isMergeTarget = edges.some(
-          (e) => e.targetId === node.id && (e.id.includes('merge') || e.id.includes('join'))
-        );
-        if (!isMergeTarget || node.type === 'decision' || node.label.startsWith('elif ') || node.label.startsWith('else')) {
-          cols[i] = cols[srcIdx]! + 1;
-        }
-      }
-    }
-  }
-
-  for (let i = 1; i < groupNodes.length; i++) {
-    const node = groupNodes[i]!;
-    if (cols[i] === 0 && !node.label.includes('終了') && !node.label.includes('おわり') && node.id !== 'node-end' && !node.id.includes('loop-end')) {
-      const inTrue = edges.find((e) => e.targetId === node.id && (e.label === 'True' || e.label === 'Yes'));
-      if (inTrue) {
-        const srcIdx = groupNodes.findIndex((n) => n.id === inTrue.sourceId);
-        if (srcIdx >= 0 && cols[srcIdx]! > 0) cols[i] = cols[srcIdx]!;
-      } else {
-        const inNext = edges.find(
-          (e) => e.targetId === node.id && (e.label === 'Next' || !e.label) && !e.id.includes('merge') && !e.id.includes('join')
-        );
-        if (inNext) {
-          const srcIdx = groupNodes.findIndex((n) => n.id === inNext.sourceId);
-          if (srcIdx >= 0 && cols[srcIdx]! > 0 && !edges.some((e) => e.id.includes('merge') && e.targetId === node.id)) {
-            cols[i] = cols[srcIdx]!;
-          }
-        }
-      }
-    }
-  }
-
-  return cols;
-}
-
-/** 分岐チェーン内の elif ひし形と各処理ブロックを探索する helper */
-function collectBranchNodes(
-  startDecisionId: string,
-  nodes: FlowchartNode[],
-  nodeCols: number[],
-  edges: FlowchartEdge[] | undefined,
-  nodeYs: number[],
-  decisionY: number,
-  stepY: number
-): { firstProcessIndices: number[]; maxDecisionY: number } {
-  const firstProcessIndices: number[] = [];
-  let currentDecisionId = startDecisionId;
-  let branchDepth = 0;
-  let maxDecisionY = decisionY;
-
-  while (true) {
-    const falseEdge = edges?.find(
-      (e) => e.sourceId === currentDecisionId && (e.label === 'False' || e.label === 'No' || e.id.includes('edge-false-'))
-    );
-    if (!falseEdge) break;
-    const tgtIdx = nodes.findIndex((n) => n.id === falseEdge.targetId);
-    if (tgtIdx < 0 || nodeCols[tgtIdx] === 0) break;
-
-    const tgtNode = nodes[tgtIdx]!;
-    branchDepth++;
-
-    if (tgtNode.type === 'decision') {
-      const thisDecisionY = decisionY + branchDepth * stepY;
-      nodeYs[tgtIdx] = thisDecisionY;
-      maxDecisionY = Math.max(maxDecisionY, thisDecisionY);
-      currentDecisionId = tgtNode.id;
-
-      const elifTrue = edges?.find((e) => e.sourceId === tgtNode.id && (e.label === 'True' || e.label === 'Yes'));
-      if (elifTrue) {
-        const etIdx = nodes.findIndex((n) => n.id === elifTrue.targetId);
-        if (etIdx >= 0) firstProcessIndices.push(etIdx);
-      }
-    } else {
-      firstProcessIndices.push(tgtIdx);
-      break;
-    }
-  }
-
-  return { firstProcessIndices, maxDecisionY };
-}
-
-/** 単一カラム内の 2つ目以降の処理ブロックを縦に順次配置する helper */
-function layoutColumnBlocks(
-  firstIdx: number,
-  col: number,
-  processY: number,
-  nodes: FlowchartNode[],
-  nodeCols: number[],
-  nodeHeights: number[],
-  edges: FlowchartEdge[] | undefined,
-  nodeYs: number[],
-  defaultGap: number
-): number {
-  let currentBlockIdx = firstIdx;
-  let currentY = processY + (nodeHeights[firstIdx] ?? 50);
-
-  while (true) {
-    const nextEdge = edges?.find(
-      (e) =>
-        e.sourceId === nodes[currentBlockIdx]!.id &&
-        (e.label === 'Next' || !e.label) &&
-        !e.id.includes('merge') &&
-        !e.id.includes('join')
-    );
-    if (!nextEdge) break;
-    const nextIdx = nodes.findIndex((n) => n.id === nextEdge.targetId);
-    if (nextIdx < 0) break;
-    if (nodeCols[nextIdx] !== col || edges?.some((e) => e.targetId === nodes[nextIdx]!.id && e.id.includes('merge'))) {
-      break;
-    }
-
-    currentY += defaultGap;
-    nodeYs[nextIdx] = currentY;
-    currentY += (nodeHeights[nextIdx] ?? 50);
-    currentBlockIdx = nextIdx;
-  }
-  return currentY;
-}
-
-/** if-elif-else 分岐チェーンのひし形を階段状にし、各分岐の処理ブロック群を縦に整列する helper */
-function layoutBranchChain(
-  ifIdx: number,
-  nodes: FlowchartNode[],
-  nodeCols: number[],
-  nodeHeights: number[],
-  edges: FlowchartEdge[] | undefined,
-  nodeYs: number[],
-  decisionY: number,
-  decisionGap: number,
-  defaultGap = 12,
-  stepY = 35
-): number {
-  const ifNode = nodes[ifIdx]!;
-  nodeYs[ifIdx] = decisionY;
-
-  const trueEdge = edges?.find((e) => e.sourceId === ifNode.id && (e.label === 'True' || e.label === 'Yes'));
-  const firstProcessIdx = trueEdge ? nodes.findIndex((n) => n.id === trueEdge.targetId) : -1;
-
-  const { firstProcessIndices, maxDecisionY } = collectBranchNodes(
-    ifNode.id,
-    nodes,
-    nodeCols,
-    edges,
-    nodeYs,
-    decisionY,
-    stepY
-  );
-  if (firstProcessIdx >= 0 && nodeCols[firstProcessIdx] === 0) {
-    firstProcessIndices.unshift(firstProcessIdx);
-  }
-
-  const decisionH = nodeHeights[ifIdx] ?? 50;
-  const processY = maxDecisionY + decisionH + decisionGap;
-  let maxBranchBottom = processY;
-
-  for (const pIdx of firstProcessIndices) {
-    nodeYs[pIdx] = processY;
-  }
-
-  for (const pIdx of firstProcessIndices) {
-    const col = nodeCols[pIdx]!;
-    const colBottom = layoutColumnBlocks(pIdx, col, processY, nodes, nodeCols, nodeHeights, edges, nodeYs, defaultGap);
-    if (colBottom > maxBranchBottom) maxBranchBottom = colBottom;
-  }
-
-  return maxBranchBottom;
-}
-
-/** 単一グループのノード Y 座標を上端から順次配置 */
-function populateGroupYPositions(
-  groupNodes: FlowchartNode[],
-  groupIndices: number[],
-  allNodes: FlowchartNode[],
-  nodeCols: number[],
-  nodeHeights: number[],
-  edges: FlowchartEdge[] | undefined,
-  nodeYs: number[],
-  paddingY: number,
-  defaultGap: number,
-  mergeGap: number,
-  decisionGap: number
-): number {
-  let currentY = paddingY;
-
-  for (let localIdx = 0; localIdx < groupNodes.length; localIdx++) {
-    const globalIdx = groupIndices[localIdx]!;
-    if (nodeYs[globalIdx] !== 0) continue;
-
-    const node = groupNodes[localIdx]!;
-    const col = nodeCols[globalIdx]!;
-    const h = nodeHeights[globalIdx] ?? 50;
-
-    if (node.type === 'decision' && col === nodeCols[groupIndices[0]!] && edges?.some((e) => e.sourceId === node.id && (e.label === 'False' || e.id.includes('edge-false-')) && nodeCols[allNodes.findIndex((n) => n.id === e.targetId)]! > col)) {
-      if (localIdx > 0) currentY += defaultGap;
-      currentY = layoutBranchChain(globalIdx, allNodes, nodeCols, nodeHeights, edges, nodeYs, currentY, decisionGap);
-    } else {
-      const isPrevDecision = localIdx > 0 && groupNodes[localIdx - 1]?.type === 'decision';
-      const isMerge =
-        !node.id.includes('loop-end') &&
-        !node.label.includes('ループ終了') &&
-        edges?.some(
-          (e) =>
-            e.targetId === node.id &&
-            !e.id.includes('loop-exit') &&
-            (e.id.includes('merge') || e.id.includes('join') || (e.label === 'False' && !e.id.includes('loop')))
-        );
-      const gap = isMerge ? mergeGap : isPrevDecision ? decisionGap : defaultGap;
-      if (localIdx > 0) currentY += gap;
-      nodeYs[globalIdx] = currentY;
-      currentY += h;
-    }
-  }
-  return currentY;
-}
-
-/** 全ノードグループのカラムおよびY座標を順次レイアウト */
-function layoutAllNodeGroups(
-  nodes: FlowchartNode[],
-  edges: FlowchartEdge[] | undefined,
-  nodeCols: number[],
-  nodeHeights: number[],
-  nodeYs: number[],
-  paddingY: number,
-  defaultGap: number,
-  mergeGap: number,
-  decisionGap: number
-): number {
-  const groups = partitionNodeGroups(nodes);
-  let currentColOffset = 0;
-  let maxGroupHeight = paddingY;
-
-  for (const group of groups) {
-    const groupIndices = group.map((gn) => nodes.findIndex((n) => n.id === gn.id));
-    const localCols = calculateGroupColumns(group, edges);
-    for (let i = 0; i < group.length; i++) {
-      nodeCols[groupIndices[i]!] = currentColOffset + localCols[i]!;
-    }
-
-    const groupFinalY = populateGroupYPositions(
-      group,
-      groupIndices,
-      nodes,
-      nodeCols,
-      nodeHeights,
-      edges,
-      nodeYs,
-      paddingY,
-      defaultGap,
-      mergeGap,
-      decisionGap
-    );
-    maxGroupHeight = Math.max(maxGroupHeight, groupFinalY);
-    const groupMaxLocalCol = Math.max(0, ...localCols);
-    currentColOffset += groupMaxLocalCol + 1;
-  }
-  return maxGroupHeight;
-}
-
-/** コメント文字列の表示幅（px）を概算 */
-function calcCommentWidth(comment?: string): number {
-  if (!comment) return 0;
-  let w = 10;
-  for (let i = 0; i < comment.length; i++) {
-    w += comment.charCodeAt(i) <= 0x7e ? 8 : 14;
-  }
-  return w;
-}
-
-/** 特定カラムとY方向で重なる左側カラムノードの最大コメント幅を算出 */
-function calcOverlapCommentWidth(
-  col: number,
-  nodes: FlowchartNode[],
-  nodeCols: number[],
-  nodeYs: number[],
-  nodeHeights: number[]
-): number {
-  const nodesInCol = nodes.map((_, i) => i).filter((i) => nodeCols[i] === col);
-  let maxOverlapW = 0;
-
-  for (const tgtIdx of nodesInCol) {
-    const tgtY = nodeYs[tgtIdx]!;
-    const tgtH = nodeHeights[tgtIdx] ?? 50;
-
-    for (let srcIdx = 0; srcIdx < nodes.length; srcIdx++) {
-      if (nodeCols[srcIdx] === col - 1) {
-        const srcY = nodeYs[srcIdx]!;
-        const srcH = nodeHeights[srcIdx] ?? 50;
-        if (srcY + srcH >= tgtY - 20 && srcY <= tgtY + tgtH + 20) {
-          const cw = calcCommentWidth(nodes[srcIdx]?.comment);
-          if (cw > maxOverlapW) maxOverlapW = cw;
-        }
-      }
-    }
-  }
-  return maxOverlapW;
-}
-
-/** カラムごとの開始 X 座標配列を算出（Y方向で重なる左側ノードのコメント幅のみを考慮） */
-function computeColumnStartX(
-  nodes: FlowchartNode[],
-  nodeCols: number[],
-  nodeYs: number[],
-  nodeHeights: number[],
-  nodeWidth: number,
-  baseColGap: number,
-  paddingX: number
-): number[] {
-  const maxCol = Math.max(0, ...nodeCols);
-  const colStartX = new Array<number>(maxCol + 1).fill(paddingX);
-
-  for (let c = 1; c <= maxCol; c++) {
-    const maxOverlapW = calcOverlapCommentWidth(c, nodes, nodeCols, nodeYs, nodeHeights);
-    const effectiveGap = Math.max(baseColGap, maxOverlapW + 16);
-    colStartX[c] = colStartX[c - 1]! + nodeWidth + effectiveGap;
-  }
-  return colStartX;
-}
-
-/** 最終的な SVG 幅と高さを計算 */
-function computeLayoutDimensions(
-  nodes: FlowchartNode[],
-  nodeCols: number[],
-  nodeYs: number[],
-  nodeHeights: number[],
-  edges: FlowchartEdge[] | undefined,
-  maxGroupHeight: number,
-  nodeWidth: number,
-  baseNodeHeight: number,
-  colGap: number,
-  paddingX: number,
-  paddingY: number
-): { nodeXs: number[]; totalWidth: number; totalHeight: number } {
-  const colStartX = computeColumnStartX(nodes, nodeCols, nodeYs, nodeHeights, nodeWidth, colGap, paddingX);
-  const nodeXs = nodeCols.map((col) => colStartX[col]!);
-  const maxCol = Math.max(0, ...nodeCols);
-
-  const hasBranchOrMerge = edges?.some(
-    (e) =>
-      !e.id.includes('loop-exit') &&
-      !e.id.includes('loopback') &&
-      e.label !== 'Loop' &&
-      (e.label === 'False' || e.label === 'No' || e.id.includes('merge') || e.id.includes('edge-false-'))
-  );
-  const baseExtraRight = hasBranchOrMerge ? 48 : 16;
-  let maxRightEdge = colStartX[maxCol]! + nodeWidth + baseExtraRight;
-
-  for (let i = 0; i < nodes.length; i++) {
-    const x = nodeXs[i]!;
-    const cw = calcCommentWidth(nodes[i]?.comment);
-    const rightEdge = x + nodeWidth + (cw > 0 ? cw + 24 : 0);
-    if (rightEdge > maxRightEdge) maxRightEdge = rightEdge;
-  }
-
-  const totalWidth = maxRightEdge;
-  const maxYWithHeight = Math.max(...nodeYs.map((y, idx) => y + (nodeHeights[idx] ?? baseNodeHeight)));
-  const totalHeight = Math.max(maxGroupHeight + paddingY, maxYWithHeight + paddingY);
-
-  return { nodeXs, totalWidth, totalHeight };
-}
-
-/** 各ノードの X, Y 座標と全体のサイズを算出 */
-export function calculateNodeLayouts(
-  nodes: FlowchartNode[],
-  edges?: FlowchartEdge[],
-  defaultGap = 14,
-  mergeGap = 45,
-  decisionGap = 24,
-  nodeWidth = 180,
-  baseNodeHeight = 50,
-  colGap = 40,
-  paddingX = 16,
-  paddingY = 40
-): { nodeXs: number[]; nodeYs: number[]; nodeHeights: number[]; nodeCols: number[]; totalWidth: number; totalHeight: number } {
-  const nodeHeights = nodes.map((node) => calculateNodeHeight(node, baseNodeHeight));
-  const nodeCols = new Array<number>(nodes.length).fill(0);
-  const nodeYs = new Array<number>(nodes.length).fill(0);
-
-  const maxGroupHeight = layoutAllNodeGroups(
-    nodes,
-    edges,
-    nodeCols,
-    nodeHeights,
-    nodeYs,
-    paddingY,
-    defaultGap,
-    mergeGap,
-    decisionGap
-  );
-
-  const { nodeXs, totalWidth, totalHeight } = computeLayoutDimensions(
-    nodes,
-    nodeCols,
-    nodeYs,
-    nodeHeights,
-    edges,
-    maxGroupHeight,
-    nodeWidth,
-    baseNodeHeight,
-    colGap,
-    paddingX,
-    paddingY
-  );
-
-  return { nodeXs, nodeYs, nodeHeights, nodeCols, totalWidth, totalHeight };
-}
-
-interface NodeLayoutResult {
-  nodeXs: number[];
-  nodeYs: number[];
-  nodeHeights: number[];
-  nodeCols: number[];
-  totalWidth: number;
-  totalHeight: number;
-  inactiveNodes: React.ReactNode[];
-  activeNodes: React.ReactNode[];
-  inactiveConnections: React.ReactNode[];
-  activeConnections: React.ReactNode[];
-}
-
-const layoutCache = new WeakMap<FlowchartNode[], Map<FlowchartEdge[] | undefined, NodeLayoutResult>>();
+const layoutCache = new WeakMap<FlowchartNode[], Map<FlowchartEdge[] | undefined, CachedLayoutResult>>();
 
 function buildCachedLayoutResult(
   nodes: FlowchartNode[],
@@ -883,7 +439,7 @@ function buildCachedLayoutResult(
   colGap = 40,
   paddingX = 16,
   paddingY = 40
-): NodeLayoutResult {
+): CachedLayoutResult {
   const layout = calculateNodeLayouts(
     nodes,
     edges,
@@ -934,7 +490,7 @@ function getCachedNodeLayouts(
   colGap = 40,
   paddingX = 16,
   paddingY = 40
-): NodeLayoutResult {
+): CachedLayoutResult {
   let edgeMap = layoutCache.get(nodes);
   if (!edgeMap) {
     edgeMap = new Map();
@@ -959,27 +515,6 @@ function getCachedNodeLayouts(
   return cached;
 }
 
-function getNodeBox(
-  nodeId: string,
-  nodes: FlowchartNode[],
-  nodeXs: number[],
-  nodeYs: number[],
-  nodeHeights: number[],
-  nodeCols: number[],
-  nodeWidth: number
-): NodeBox | null {
-  const index = nodes.findIndex((n) => n.id === nodeId);
-  if (index < 0) return null;
-  return {
-    x: nodeXs[index] ?? 0,
-    y: nodeYs[index] ?? 0,
-    w: nodeWidth,
-    h: nodeHeights[index] ?? 50,
-    col: nodeCols[index] ?? 0,
-    index,
-  };
-}
-
 /** エッジの線色を取得 helper */
 function getEdgeStyleProps(label?: string, isActive = false) {
   if (label === 'True' || label === 'Yes') return { stroke: isActive ? '#2563eb' : '#16a34a' };
@@ -988,124 +523,61 @@ function getEdgeStyleProps(label?: string, isActive = false) {
   return { stroke: isActive ? '#2563eb' : '#64748b' };
 }
 
-/** 合流先ノード (tgt) の直前にある全分岐ブロックの最下部 Y 座標を取得 */
-function getBranchMaxBottom(
-  tgtIndex: number,
-  nodeYs: number[],
-  nodeHeights: number[]
-): number {
-  let maxBottom = 0;
-  for (let i = 0; i < tgtIndex; i++) {
-    const b = nodeYs[i]! + (nodeHeights[i] ?? 50);
-    if (b > maxBottom) maxBottom = b;
+/** 始点・ウェイポイント・終点から直交 SVG path d 文字列を生成 */
+function formatSvgOrthogonalPath(
+  start: { x: number; y: number },
+  points: { x: number; y: number }[],
+  end: { x: number; y: number }
+): string {
+  let curr = start;
+  let d = `M ${start.x} ${start.y}`;
+  const allTargets = [...points, end];
+
+  for (const next of allTargets) {
+    if (next.y === curr.y) {
+      d += ` H ${next.x}`;
+    } else if (next.x === curr.x) {
+      d += ` V ${next.y}`;
+    } else {
+      d += ` L ${next.x} ${next.y}`;
+    }
+    curr = next;
   }
-  return maxBottom;
+  return d;
 }
 
-/** False / No 分岐エッジ描画 helper */
-function renderFalseEdgeElement(
-  id: string,
-  src: NodeBox,
-  tgt: NodeBox,
-  nodeYs: number[],
-  nodeHeights: number[],
-  stroke: string,
-  isActive: boolean
+/** 幾何パスデータから SVG エッジ要素を描画 */
+function renderEdgeGeometry(
+  geom: EdgePathGeometry,
+  activeFlags: boolean[],
+  nodes: FlowchartNode[]
 ): React.ReactNode {
-  const startX = src.x + src.w;
-  const startY = src.y + src.h / 2;
+  const srcIdx = nodes.findIndex((n) => n.id === geom.sourceId);
+  const tgtIdx = nodes.findIndex((n) => n.id === geom.targetId);
+  const isActive = srcIdx >= 0 && tgtIdx >= 0 ? activeFlags[srcIdx]! && activeFlags[tgtIdx]! : false;
+  const { stroke } = getEdgeStyleProps(geom.label, isActive);
 
-  // 右カラム (elif) へ分岐する場合
-  if (tgt.col > src.col) {
-    const tgtCenterX = tgt.x + tgt.w / 2;
-    const pathD = `M ${startX} ${startY} H ${tgtCenterX} V ${tgt.y}`;
+  if (geom.type === 'straight') {
+    const isYes = geom.label === 'True' || geom.label === 'Yes';
+    const labelY = geom.start.y + (geom.end.y - geom.start.y) / 2;
     return (
-      <g key={id} className="flowchart-edge edge-false edge-no">
-        <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} />
-        <text x={startX + 8} y={startY - 8} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>No</text>
+      <g key={geom.edgeId} className={`flowchart-edge ${isYes ? 'edge-true edge-yes' : 'edge-next'}`}>
+        <line x1={geom.start.x} y1={geom.start.y} x2={geom.end.x} y2={geom.end.y} stroke={stroke} strokeWidth={isActive ? 3 : 2} />
+        {isYes && <text x={geom.start.x + 8} y={labelY} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>Yes</text>}
       </g>
     );
   }
 
-  // 同一カラムまたはメインラインへの合流の場合（単一 if 等）
-  const rightX = src.x + src.w + 40;
-  const branchBottom = getBranchMaxBottom(tgt.index, nodeYs, nodeHeights);
-  const prevBottom = branchBottom > 0 ? branchBottom : (src.y + src.h);
-  const mergeY = prevBottom + (tgt.y - prevBottom) / 2;
-  const mergeX = tgt.x + tgt.w / 2;
-  const pathD = `M ${startX} ${startY} H ${rightX} V ${mergeY} H ${mergeX}`;
+  const pathD = formatSvgOrthogonalPath(geom.start, geom.points, geom.end);
+  const isBranchNo = geom.type === 'branch-elif' || geom.type === 'branch-merge';
+  const marker = geom.type === 'branch-merge' ? (isActive ? 'url(#arrowhead-active)' : 'url(#arrowhead-false)') : geom.type === 'merge' ? (isActive ? 'url(#arrowhead-active)' : 'url(#arrowhead)') : undefined;
 
   return (
-    <g key={id} className="flowchart-edge edge-false edge-no">
-      <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} markerEnd={isActive ? 'url(#arrowhead-active)' : 'url(#arrowhead-false)'} />
-      <text x={startX + 8} y={startY - 8} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>No</text>
-    </g>
-  );
-}
-
-/** 右カラムからメインラインへの合流エッジ描画 helper */
-function renderMergeEdgeElement(
-  id: string,
-  src: NodeBox,
-  tgt: NodeBox,
-  nodeYs: number[],
-  nodeHeights: number[],
-  stroke: string,
-  isActive: boolean
-): React.ReactNode {
-  const startX = src.x + src.w / 2;
-  const startY = src.y + src.h;
-  const branchBottom = getBranchMaxBottom(tgt.index, nodeYs, nodeHeights);
-  const prevBottom = Math.max(branchBottom, startY);
-  const mergeY = prevBottom + (tgt.y - prevBottom) / 2;
-  const mergeX = tgt.x + tgt.w / 2;
-  const pathD = `M ${startX} ${startY} V ${mergeY} H ${mergeX}`;
-
-  return (
-    <g key={id} className="flowchart-edge edge-merge edge-next">
-      <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} markerEnd={isActive ? 'url(#arrowhead-active)' : 'url(#arrowhead)'} />
-    </g>
-  );
-}
-
-/** 単一エッジ (接続直線・折れ線) の描画 */
-function renderSingleEdge(
-  edge: FlowchartEdge,
-  nodes: FlowchartNode[],
-  nodeXs: number[],
-  nodeYs: number[],
-  nodeHeights: number[],
-  nodeCols: number[],
-  activeFlags: boolean[],
-  nodeWidth: number
-): React.ReactNode {
-  if (edge.label === 'Loop' || edge.id.includes('loopback') || edge.id.includes('loop-exit')) {
-    return null;
-  }
-
-  const src = getNodeBox(edge.sourceId, nodes, nodeXs, nodeYs, nodeHeights, nodeCols, nodeWidth);
-  const tgt = getNodeBox(edge.targetId, nodes, nodeXs, nodeYs, nodeHeights, nodeCols, nodeWidth);
-  if (!src || !tgt) return null;
-
-  const isActive = activeFlags[src.index]! && activeFlags[tgt.index]!;
-  const { stroke } = getEdgeStyleProps(edge.label, isActive);
-
-  if (edge.label === 'False' || edge.label === 'No' || edge.id.includes('edge-false-')) {
-    return renderFalseEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, stroke, isActive);
-  }
-
-  if (src.col > tgt.col || (edge.id.includes('merge') && src.col > 0)) {
-    return renderMergeEdgeElement(edge.id, src, tgt, nodeYs, nodeHeights, stroke, isActive);
-  }
-
-  const isYes = edge.label === 'True' || edge.label === 'Yes';
-  const startX = src.x + src.w / 2;
-  const startY = src.y + src.h;
-  const labelY = startY + (tgt.y - startY) / 2;
-  return (
-    <g key={edge.id} className={`flowchart-edge ${isYes ? 'edge-true edge-yes' : 'edge-next'}`}>
-      <line x1={startX} y1={startY} x2={tgt.x + tgt.w / 2} y2={tgt.y} stroke={stroke} strokeWidth={isActive ? 3 : 2} />
-      {isYes && <text x={startX + 8} y={labelY} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>Yes</text>}
+    <g key={geom.edgeId} className={`flowchart-edge ${isBranchNo ? 'edge-false edge-no' : 'edge-merge edge-next'}`}>
+      <path d={pathD} fill="none" stroke={stroke} strokeWidth={isActive ? 3 : 2} markerEnd={marker} />
+      {geom.label && geom.labelPos && (
+        <text x={geom.labelPos.x} y={geom.labelPos.y} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>{geom.label}</text>
+      )}
     </g>
   );
 }
@@ -1114,21 +586,17 @@ function renderSingleEdge(
 function renderFlowchartEdges(
   edges: FlowchartEdge[],
   nodes: FlowchartNode[],
-  nodeXs: number[],
-  nodeYs: number[],
-  nodeHeights: number[],
-  nodeCols: number[],
+  layout: CachedLayoutResult,
   activeFlags: boolean[],
   nodeWidth: number
 ): React.ReactNode[] {
-  return edges
-    .map((e) => renderSingleEdge(e, nodes, nodeXs, nodeYs, nodeHeights, nodeCols, activeFlags, nodeWidth))
-    .filter(Boolean);
+  const geometries = computeEdgeGeometries(nodes, edges, layout, nodeWidth);
+  return geometries.map((geom) => renderEdgeGeometry(geom, activeFlags, nodes));
 }
 
 /** 接続線（フォールバック）の描画 */
 function renderFlowchartConnections(
-  cachedLayout: NodeLayoutResult,
+  cachedLayout: CachedLayoutResult,
   activeFlags: boolean[]
 ): React.ReactNode[] {
   const elements: React.ReactNode[] = [];
@@ -1142,7 +610,7 @@ function renderFlowchartConnections(
 
 /** ノード群の描画 */
 function renderFlowchartNodeList(
-  cachedLayout: NodeLayoutResult,
+  cachedLayout: CachedLayoutResult,
   activeFlags: boolean[]
 ): React.ReactNode[] {
   return activeFlags.map((isActive, i) => (isActive ? cachedLayout.activeNodes[i] : cachedLayout.inactiveNodes[i]));
@@ -1186,7 +654,7 @@ export function renderFlowchartSvg(
     >
       {renderSvgDefs()}
       {edges && edges.length > 0
-        ? renderFlowchartEdges(edges, nodes, cached.nodeXs, cached.nodeYs, cached.nodeHeights, cached.nodeCols, activeFlags, nodeWidth)
+        ? renderFlowchartEdges(edges, nodes, cached, activeFlags, nodeWidth)
         : renderFlowchartConnections(cached, activeFlags)}
       {renderFlowchartNodeList(cached, activeFlags)}
     </svg>
