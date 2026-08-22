@@ -206,7 +206,7 @@ export const VariableTable: React.FC<VariableTableProps> = ({
         </div>
       </div>
       <div id="locals-table-body" data-testid="locals-table-body" style={tableWrapperStyle}>
-        {allVarNames.length === 0 || displayedSnapshots.length === 0 ? (
+        {allVarNames.length === 0 ? (
           <div style={emptyStyle}>表示する変数の履歴がありません</div>
         ) : (
           <table style={{ ...tableStyle, zoom: `${zoom}%` }}>
