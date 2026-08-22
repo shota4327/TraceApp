@@ -89,6 +89,13 @@ describe('流れ図のdraw.io形式書き出し機能 (Issue #23)', () => {
     expect(xml).toContain('id="edge-false"');
     expect(xml).toContain('<Array as="points">');
     expect(xml).toContain('<mxPoint x="');
+    // 合流線にのみ矢印が付与されること
+    expect(xml).toContain('endArrow=block;endFill=1;');
+    // Yes / No ラベルが独立したテキスト頂点セルとして出力されること
+    expect(xml).toContain('id="label-edge-true"');
+    expect(xml).toContain('value="Yes"');
+    expect(xml).toContain('id="label-edge-false"');
+    expect(xml).toContain('value="No"');
   });
 
   it('saveDrawIoFile で showSaveFilePicker が利用可能な場合、ストリーム書き込みが行われること', async () => {

@@ -44,17 +44,17 @@ function buildDrawIoVertexXmls(nodes: FlowchartNode[], layout: NodeLayoutResult)
   return vertexXmls;
 }
 
-/** 単一エッジの XML セルを生成（幾何経路データからウェイポイント・アンカー・フォント・ラベルを展開） */
+/** 単一エッジの XML セルを生成（幾何経路データからウェイポイント・アンカー・合流矢印を展開） */
 function formatDrawIoEdgeCell(geom: EdgePathGeometry): string {
   const isBranchNo = geom.type === 'branch-elif' || geom.type === 'branch-merge';
   const isYes = geom.label === 'Yes' || geom.label === 'True';
+  const isMergeArrow = geom.type === 'branch-merge' || geom.type === 'merge';
   const exitAnchor = isBranchNo ? 'exitX=1;exitY=0.5;' : 'exitX=0.5;exitY=1;';
 
   const strokeColor = isBranchNo ? '#d97706' : isYes ? '#16a34a' : '#64748b';
-  const fontColor = strokeColor;
-  const labelValue = isBranchNo ? 'No' : isYes ? 'Yes' : '';
+  const arrowStyle = isMergeArrow ? 'endArrow=block;endFill=1;' : 'endArrow=none;endFill=0;';
 
-  const defaultStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeWidth=2;strokeColor=${strokeColor};fontFamily=BIZ UDPGothic,BIZ UDPゴシック,sans-serif;fontSize=13;fontStyle=1;fontColor=${fontColor};`;
+  const defaultStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;${arrowStyle}strokeWidth=2;strokeColor=${strokeColor};`;
 
   let pointsXml = '';
   if (geom.points.length > 0) {
@@ -62,13 +62,32 @@ function formatDrawIoEdgeCell(geom: EdgePathGeometry): string {
     pointsXml = `\n      <Array as="points">\n        ${pointsInner}\n      </Array>`;
   }
 
-  return `<mxCell id="${geom.edgeId}" value="${labelValue}" style="${defaultStyle}" edge="1" parent="1" source="${geom.sourceId}" target="${geom.targetId}"><mxGeometry relative="1" as="geometry">${pointsXml}</mxGeometry></mxCell>`;
+  return `<mxCell id="${geom.edgeId}" value="" style="${defaultStyle}" edge="1" parent="1" source="${geom.sourceId}" target="${geom.targetId}"><mxGeometry relative="1" as="geometry">${pointsXml}</mxGeometry></mxCell>`;
 }
 
-/** 描画に必要なエッジの XML セル配列を生成（共通幾何エンジン computeEdgeGeometries を消費） */
+/** 描画に必要なエッジおよび独立したYes/Noラベルの XML セル配列を生成 */
 function buildDrawIoEdgeXmls(nodes: FlowchartNode[], edges: FlowchartEdge[], layout: NodeLayoutResult): string[] {
   const geometries = computeEdgeGeometries(nodes, edges, layout, 180);
-  return geometries.map(formatDrawIoEdgeCell);
+  const cells: string[] = [];
+
+  for (const geom of geometries) {
+    cells.push(formatDrawIoEdgeCell(geom));
+
+    // 画面の流れ図タブと同様に、Yes / No ラベルを線の横・上に独立したテキストセルとして配置
+    if (geom.label && geom.labelPos) {
+      const isYes = geom.label === 'Yes' || geom.label === 'True';
+      const labelText = isYes ? 'Yes' : geom.label;
+      const fontColor = isYes ? '#16a34a' : '#d97706';
+      const labelX = geom.labelPos.x;
+      const labelY = geom.labelPos.y - 8;
+      const labelStyle = `text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=BIZ UDPGothic,BIZ UDPゴシック,sans-serif;fontSize=13;fontStyle=1;fontColor=${fontColor};`;
+      cells.push(
+        `<mxCell id="label-${geom.edgeId}" value="${labelText}" style="${labelStyle}" vertex="1" parent="1"><mxGeometry x="${labelX}" y="${labelY}" width="30" height="16" as="geometry"/></mxCell>`
+      );
+    }
+  }
+
+  return cells;
 }
 
 /**
