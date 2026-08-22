@@ -15,18 +15,9 @@ function escapeXml(unsafe: string): string {
     .replace(/\n/g, '&#xa;');
 }
 
-/**
- * draw.io (diagrams.net) で直接編集可能な完全な mxfile XML 文字列を生成
- * - 画面レンダラーと完全に一致した X, Y 座標・幅・高さを反映
- * - loopLimit (flipV=0 / flipV=1), 平行四辺形, はじめ/おわり, 直線接続線を反映
- */
-export function generateFullDrawIoXml(
-  nodes: FlowchartNode[],
-  edges: FlowchartEdge[]
-): string {
-  const layout = calculateNodeLayouts(nodes, edges);
+/** 頂点（ノードとコメント）の XML セル配列を生成 */
+function buildDrawIoVertexXmls(nodes: FlowchartNode[], layout: ReturnType<typeof calculateNodeLayouts>): string[] {
   const nodeWidth = 180;
-
   const vertexXmls: string[] = [];
 
   for (let i = 0; i < nodes.length; i++) {
@@ -41,7 +32,6 @@ export function generateFullDrawIoXml(
       `<mxCell id="${node.id}" value="${escapedValue}" style="${style}" vertex="1" parent="1"><mxGeometry x="${x}" y="${y}" width="${nodeWidth}" height="${height}" as="geometry"/></mxCell>`
     );
 
-    // 行末コメント（アノテーション）がある場合は右隣にテキストセルを配置
     if (node.comment) {
       const commentX = x + nodeWidth + 12;
       const commentY = y + (height - 30) / 2;
@@ -51,15 +41,55 @@ export function generateFullDrawIoXml(
       );
     }
   }
+  return vertexXmls;
+}
 
-  const edgeXmls = edges.map((edge) => {
-    const styleStr = edge.style || 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#64748b;';
+/** 描画に必要なエッジの XML セル配列を生成（不要な制御線・重複を除外しアンカー指定） */
+function buildDrawIoEdgeXmls(edges: FlowchartEdge[], nodeMap: Map<string, FlowchartNode>): string[] {
+  const validEdges = edges.filter((e) => !e.id.includes('loop-exit') && !e.id.includes('loopback') && e.label !== 'Loop');
+  const uniqueEdges: FlowchartEdge[] = [];
+  const seenPairs = new Set<string>();
+
+  for (const edge of validEdges) {
+    const pairKey = `${edge.sourceId}->${edge.targetId}`;
+    if (!seenPairs.has(pairKey)) {
+      seenPairs.add(pairKey);
+      uniqueEdges.push(edge);
+    }
+  }
+
+  return uniqueEdges.map((edge) => {
+    const srcNode = nodeMap.get(edge.sourceId);
+    const isFalseBranch = (edge.label === 'False' || edge.label === 'No' || edge.id.includes('edge-false-')) && srcNode?.type === 'decision';
+    const exitAnchor = isFalseBranch ? 'exitX=1;exitY=0.5;' : 'exitX=0.5;exitY=1;';
+    const defaultStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeColor=#64748b;`;
+    const styleStr = edge.style || defaultStyle;
     return `<mxCell id="${edge.id}" value="" style="${styleStr}" edge="1" parent="1" source="${edge.sourceId}" target="${edge.targetId}"><mxGeometry relative="1" as="geometry"/></mxCell>`;
   });
+}
 
-  const allCells = [...vertexXmls, ...edgeXmls].join('\n    ');
+/**
+ * draw.io (diagrams.net) で直接編集可能な完全な mxfile XML 文字列を生成
+ * - 画面レンダラーと完全に一致した X, Y 座標・幅・高さを反映
+ * - loopLimit (flipV=0 / flipV=1), 平行四辺形, はじめ/おわり, 直線接続線を反映
+ * - 重複エッジ・不要なループ内部制御エッジ（loop-exit, loopback）を除外
+ * - アンカーポイント（exitX/exitY, entryX/entryY）を明示し、エッジを先に出力してブロック重なりを解消
+ */
+export function generateFullDrawIoXml(
+  nodes: FlowchartNode[],
+  edges: FlowchartEdge[]
+): string {
+  const layout = calculateNodeLayouts(nodes, edges);
+  const nodeMap = new Map<string, FlowchartNode>();
+  nodes.forEach((n) => nodeMap.set(n.id, n));
 
+  const vertexXmls = buildDrawIoVertexXmls(nodes, layout);
+  const edgeXmls = buildDrawIoEdgeXmls(edges, nodeMap);
+
+  // レイヤー順序: エッジ（線）を先、頂点（ブロック）を後に配置することで、線がブロックを突き抜けないようにする
+  const allCells = [...edgeXmls, ...vertexXmls].join('\n    ');
   const timestamp = new Date().toISOString();
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net" modified="${timestamp}" agent="PyTrace" version="21.0.0" type="device">
   <diagram id="flowchart-diagram" name="流れ図">

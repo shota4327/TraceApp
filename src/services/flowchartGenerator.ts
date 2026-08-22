@@ -812,7 +812,7 @@ export function generateDrawIoXml(
 
   const edgeXmls = edges
     .map((edge) => {
-      const styleStr = edge.style || 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;';
+      const styleStr = edge.style || 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#64748b;';
       return `<mxCell id="${edge.id}" value="" style="${styleStr}" edge="1" parent="1" source="${edge.sourceId}" target="${edge.targetId}"><mxGeometry relative="1" as="geometry"/></mxCell>`;
     })
     .join('\n    ');
