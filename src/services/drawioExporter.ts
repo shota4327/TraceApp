@@ -61,7 +61,7 @@ function formatDrawIoEdgeCell(geom: EdgePathGeometry): string {
 
   if (isMergeArrow) {
     // メインラインの縦線の途中に合流するため、ターゲットノードではなく合流点座標 (geom.end) を targetPoint として指定
-    const mergeStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=${strokeColor};`;
+    const mergeStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;endArrow=open;endFill=0;endSize=6;strokeWidth=2;strokeColor=${strokeColor};`;
     const targetPointXml = `\n      <mxPoint x="${geom.end.x}" y="${geom.end.y}" as="targetPoint"/>`;
     return `<mxCell id="${geom.edgeId}" value="" style="${mergeStyle}" edge="1" parent="1" source="${geom.sourceId}"><mxGeometry relative="1" as="geometry">${targetPointXml}${pointsXml}\n    </mxGeometry></mxCell>`;
   }
