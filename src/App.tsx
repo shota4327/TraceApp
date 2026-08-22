@@ -188,7 +188,32 @@ export const App: React.FC = () => {
     [code, vbaCode, lastConvertedPyCode, lastConvertedVbaCode, lastTracedCode, isInitializing, runTrace]
   );
 
-  const isCodeDirty = !isInitializing && !initError && lastTracedCode !== '' && code !== lastTracedCode;
+  const isPyDirty = lastTracedCode !== '' && code !== lastTracedCode;
+  const isVbaDirty = lastConvertedVbaCode !== '' && vbaCode !== lastConvertedVbaCode;
+  const isCodeDirty = !isInitializing && !initError && (isPyDirty || isVbaDirty);
+
+  // トレース実行ハンドラー（マクロ言語編集時は自動逆変換して実行）
+  const handleRun = useCallback(() => {
+    if (isInitializing || isTracing) return;
+
+    if (activeTab === 'vba' || isVbaDirty) {
+      const pyRes = vbaToPython(vbaCode);
+      const targetPyCode = pyRes.code;
+      setCode(targetPyCode);
+      const reverseRes = pythonToVba(targetPyCode);
+      setPyToVbaLineMap(reverseRes.lineMap);
+      setLastConvertedVbaCode(vbaCode);
+      setLastConvertedPyCode(targetPyCode);
+      runTrace(targetPyCode);
+    } else {
+      const vbaRes = pythonToVba(code);
+      setVbaCode(vbaRes.code);
+      setPyToVbaLineMap(vbaRes.lineMap);
+      setLastConvertedPyCode(code);
+      setLastConvertedVbaCode(vbaRes.code);
+      runTrace(code);
+    }
+  }, [isInitializing, isTracing, activeTab, isVbaDirty, vbaCode, code, runTrace]);
 
   // 実行状態の計算:
   const isEnded = !isCodeDirty && snapshots.length > 0 && currentStep === snapshots.length;
@@ -228,7 +253,7 @@ export const App: React.FC = () => {
         totalSteps={isCodeDirty ? 0 : snapshots.length + 1}
         onStepChange={setCurrentStep}
         onReset={() => setCurrentStep(0)}
-        onRun={() => runTrace(code)}
+        onRun={handleRun}
         onLast={() => snapshots.length > 0 && setCurrentStep(snapshots.length)}
         isTracing={isTracing || isInitializing}
         isCodeDirty={isCodeDirty}
