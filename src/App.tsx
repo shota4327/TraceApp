@@ -296,10 +296,10 @@ export const App: React.FC = () => {
         </div>
         <div style={{ ...rightPanelWrapperStyle, flex: `0 0 ${rightPercent}`, width: rightPercent }}>
           <RightPanel
-            snapshots={snapshots}
+            snapshots={isCodeDirty ? [] : snapshots}
             currentStepIndex={isNotStarted ? -1 : currentStep - 1}
-            stdout={activeSnapshot?.stdoutCumulative ?? ''}
-            code={lastTracedCode || code}
+            stdout={isCodeDirty ? '' : (activeSnapshot?.stdoutCumulative ?? '')}
+            code={isCodeDirty ? '' : (lastTracedCode || code)}
             zoom={tableZoom}
             onZoomChange={setTableZoom}
           />
