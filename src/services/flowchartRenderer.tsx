@@ -468,11 +468,12 @@ function renderEdgeGeometry(
 
   if (geom.type === 'straight') {
     const isYes = geom.label === 'True' || geom.label === 'Yes';
-    const labelY = geom.start.y + (geom.end.y - geom.start.y) / 2;
+    const labelX = geom.labelPos?.x ?? (geom.start.x + 8);
+    const labelY = geom.labelPos?.y ?? (geom.start.y + 10);
     return (
       <g key={geom.edgeId} className={`flowchart-edge ${isYes ? 'edge-true edge-yes' : 'edge-next'}`}>
         <line x1={geom.start.x} y1={geom.start.y} x2={geom.end.x} y2={geom.end.y} stroke={stroke} strokeWidth={isActive ? 3 : 2} />
-        {isYes && <text x={geom.start.x + 8} y={labelY} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>Yes</text>}
+        {isYes && <text x={labelX} y={labelY} textAnchor="start" dominantBaseline="central" fill={stroke} fontSize={13} fontWeight={600}>Yes</text>}
       </g>
     );
   }

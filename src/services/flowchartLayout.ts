@@ -641,15 +641,20 @@ function computeSingleEdgeGeometry(
     };
   }
 
+  const isYes = (edge.label === 'True' || edge.label === 'Yes') && srcNode.type === 'decision';
+  const startX = srcX + nodeWidth / 2;
+  const startY = srcY + srcH;
+
   return {
     edgeId: edge.id,
     sourceId: edge.sourceId,
     targetId: edge.targetId,
     type: 'straight',
-    start: { x: srcX + nodeWidth / 2, y: srcY + srcH },
+    start: { x: startX, y: startY },
     points: [],
     end: { x: tgtX + nodeWidth / 2, y: tgtY },
-    label: edge.label,
+    label: isYes ? 'Yes' : edge.label,
+    labelPos: isYes ? { x: startX + 8, y: startY + 10 } : undefined,
   };
 }
 
