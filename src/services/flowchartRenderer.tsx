@@ -221,29 +221,22 @@ function createNodeTextElement(
   const fill = isActive ? '#1e293b' : '#334155';
   const fontWeight = isActive ? 700 : 500;
 
-  if (node.type === 'process' || node.type === 'loop' || node.subType === 'io' || (node.label && node.label.includes('\n'))) {
-    const lines = wrapProcessLabel(node.label);
-    if (lines.length > 1) {
-      const lineHeight = 20;
-      const startY = cy - ((lines.length - 1) * lineHeight) / 2;
-      return (
-        <text x={cx} y={startY} textAnchor="middle" dominantBaseline="central" fill={fill} fontSize={16} fontWeight={fontWeight} style={fontStyle}>
-          {lines.map((line, idx) => (
-            <tspan key={idx} x={cx} dy={idx === 0 ? 0 : lineHeight}>
-              {line}
-            </tspan>
-          ))}
-        </text>
-      );
-    }
+  const lines = wrapProcessLabel(node.label || '', 9.5);
+  if (lines.length > 1) {
+    const lineHeight = 20;
+    const startY = cy - ((lines.length - 1) * lineHeight) / 2;
     return (
-      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill={fill} fontSize={16} fontWeight={fontWeight} style={fontStyle}>
-        {lines[0] || node.label}
+      <text x={cx} y={startY} textAnchor="middle" dominantBaseline="central" fill={fill} fontSize={16} fontWeight={fontWeight} style={fontStyle}>
+        {lines.map((line, idx) => (
+          <tspan key={idx} x={cx} dy={idx === 0 ? 0 : lineHeight}>
+            {line}
+          </tspan>
+        ))}
       </text>
     );
   }
 
-  const labelText = node.label.length > 24 ? node.label.slice(0, 22) + '...' : node.label;
+  const labelText = node.label && node.label.length > 24 ? node.label.slice(0, 22) + '...' : node.label;
   return (
     <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill={fill} fontSize={16} fontWeight={fontWeight} style={fontStyle}>
       {labelText}

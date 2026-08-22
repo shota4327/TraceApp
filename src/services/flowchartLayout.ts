@@ -104,13 +104,11 @@ export function wrapProcessLabel(text: string, maxUnitsPerLine = 9.5): string[] 
 
 /** ノードの表示高さを文字数・行数から動的計算（複数行や長文の場合は自動拡大） */
 export function calculateNodeHeight(node: FlowchartNode, baseHeight = 50): number {
-  if (node.height && node.height > 0) return node.height;
+  if (node.height && node.height > baseHeight) return node.height;
 
-  if (node.type === 'process' || node.type === 'loop' || node.subType === 'io' || (node.label && node.label.includes('\n'))) {
-    const lines = wrapProcessLabel(node.label || '', 9.5);
-    if (lines.length > 1) {
-      return Math.max(baseHeight, 16 + lines.length * 20);
-    }
+  const lines = wrapProcessLabel(node.label || '', 9.5);
+  if (lines.length > 1) {
+    return Math.max(baseHeight, 16 + lines.length * 20);
   }
   return baseHeight;
 }
