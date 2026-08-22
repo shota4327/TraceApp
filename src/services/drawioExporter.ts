@@ -52,9 +52,6 @@ function formatDrawIoEdgeCell(geom: EdgePathGeometry): string {
   const exitAnchor = isBranchNo ? 'exitX=1;exitY=0.5;' : 'exitX=0.5;exitY=1;';
 
   const strokeColor = isBranchNo ? '#d97706' : isYes ? '#16a34a' : '#64748b';
-  const arrowStyle = isMergeArrow ? 'endArrow=block;endFill=1;' : 'endArrow=none;endFill=0;';
-
-  const defaultStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;${arrowStyle}strokeWidth=2;strokeColor=${strokeColor};`;
 
   let pointsXml = '';
   if (geom.points.length > 0) {
@@ -62,6 +59,14 @@ function formatDrawIoEdgeCell(geom: EdgePathGeometry): string {
     pointsXml = `\n      <Array as="points">\n        ${pointsInner}\n      </Array>`;
   }
 
+  if (isMergeArrow) {
+    // メインラインの縦線の途中に合流するため、ターゲットノードではなく合流点座標 (geom.end) を targetPoint として指定
+    const mergeStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=${strokeColor};`;
+    const targetPointXml = `\n      <mxPoint x="${geom.end.x}" y="${geom.end.y}" as="targetPoint"/>`;
+    return `<mxCell id="${geom.edgeId}" value="" style="${mergeStyle}" edge="1" parent="1" source="${geom.sourceId}"><mxGeometry relative="1" as="geometry">${targetPointXml}${pointsXml}\n    </mxGeometry></mxCell>`;
+  }
+
+  const defaultStyle = `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;${exitAnchor}exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=none;endFill=0;strokeWidth=2;strokeColor=${strokeColor};`;
   return `<mxCell id="${geom.edgeId}" value="" style="${defaultStyle}" edge="1" parent="1" source="${geom.sourceId}" target="${geom.targetId}"><mxGeometry relative="1" as="geometry">${pointsXml}</mxGeometry></mxCell>`;
 }
 

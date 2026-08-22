@@ -89,6 +89,8 @@ describe('流れ図のdraw.io形式書き出し機能 (Issue #23)', () => {
     expect(xml).toContain('id="edge-false"');
     expect(xml).toContain('<Array as="points">');
     expect(xml).toContain('<mxPoint x="');
+    // 合流線の終点がtargetPointとして設定されていること
+    expect(xml).toContain('as="targetPoint"');
     // 合流線にのみ矢印が付与されること
     expect(xml).toContain('endArrow=block;endFill=1;');
     // Yes / No ラベルが独立したテキスト頂点セルとして出力されること
