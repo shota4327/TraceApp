@@ -46,6 +46,8 @@ describe('流れ図のdraw.io形式書き出し機能 (Issue #23)', () => {
     expect(xml).toContain('id="node-1"');
     expect(xml).toContain('value="x = 5"');
     expect(xml).toContain('id="edge-1"');
+    expect(xml).toContain('value=""');
+    expect(xml).not.toContain('value="Next"');
     expect(xml).toContain('source="node-start"');
     expect(xml).toContain('target="node-1"');
   });

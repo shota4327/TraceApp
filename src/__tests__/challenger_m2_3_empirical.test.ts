@@ -161,7 +161,6 @@ print(grade)`;
 
       // draw.io XML の検証
       const xml = generateDrawIoXml(graph);
-      expect(xml).toContain('value="False"');
       expect(xml).toContain(`source="${ifNode!.id}"`);
       expect(xml).toContain(`target="${elifNode!.id}"`);
     });
