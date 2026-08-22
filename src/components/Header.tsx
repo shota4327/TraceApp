@@ -30,7 +30,7 @@ const HeaderTitleGroup: React.FC<{
   const statusBg = isDirty
     ? '#fff7ed'
     : isReady
-    ? '#dcfce7'
+    ? '#eff6ff'
     : isInitializing
     ? '#fef9c3'
     : '#fee2e2';
@@ -38,7 +38,7 @@ const HeaderTitleGroup: React.FC<{
   const statusBorder = isDirty
     ? '#f97316'
     : isReady
-    ? '#86efac'
+    ? '#bfdbfe'
     : isInitializing
     ? '#fde047'
     : '#fca5a5';
@@ -46,7 +46,7 @@ const HeaderTitleGroup: React.FC<{
   const statusColor = isDirty
     ? '#c2410c'
     : isReady
-    ? '#166534'
+    ? '#1d4ed8'
     : isInitializing
     ? '#854d0e'
     : '#991b1b';
@@ -169,15 +169,15 @@ const statusIndicatorStyle: React.CSSProperties = {
   alignItems: 'center',
   padding: '3px 8px',
   borderRadius: '12px',
-  backgroundColor: '#dcfce7',
-  border: '1px solid #86efac',
+  backgroundColor: '#eff6ff',
+  border: '1px solid #bfdbfe',
   whiteSpace: 'nowrap',
 };
 
 const statusTextStyle: React.CSSProperties = {
   fontSize: '0.78rem',
   fontWeight: 500,
-  color: '#166534',
+  color: '#1d4ed8',
 };
 
 const headerNavContainerStyle: React.CSSProperties = {

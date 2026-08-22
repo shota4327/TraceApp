@@ -251,7 +251,7 @@ describe('Challenger M3 UI Edge Cases & Boundary Verification', () => {
       expect(statusText.style.fontWeight).toBe('600');
     });
 
-    it('5.2. 「準備完了 (ready)」のときに緑色スタイルが適用されること', () => {
+    it('5.2. 「準備完了 (ready)」のときに青色スタイルが適用されること', () => {
       const { container } = render(
         <Header
           selectedSampleId="seq"
@@ -266,9 +266,9 @@ describe('Challenger M3 UI Edge Cases & Boundary Verification', () => {
 
       expect(statusBar).not.toBeNull();
       expect(statusBar.className).toContain('ready');
-      expect(statusBar.style.backgroundColor).toBe('rgb(220, 252, 231)'); // #dcfce7
-      expect(statusBar.style.borderColor).toBe('rgb(134, 239, 172)'); // #86efac
-      expect(statusText.style.color).toBe('rgb(22, 101, 52)'); // #166534
+      expect(statusBar.style.backgroundColor).toBe('rgb(239, 246, 255)'); // #eff6ff
+      expect(statusBar.style.borderColor).toBe('rgb(191, 219, 254)'); // #bfdbfe
+      expect(statusText.style.color).toBe('rgb(29, 78, 216)'); // #1d4ed8
     });
   });
 });
