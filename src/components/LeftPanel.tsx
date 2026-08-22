@@ -4,6 +4,7 @@ import { FlowchartViewer } from './FlowchartViewer';
 import { ZoomSlider } from './ZoomSlider';
 import { FlowchartNode, FlowchartEdge } from '../types/flowchart';
 import { generateFlowchartGraph } from '../services/flowchartGenerator';
+import { generateFullDrawIoXml, saveDrawIoFile } from '../services/drawioExporter';
 import { SAMPLE_PROGRAMS } from '../services/samplePrograms';
 
 export type LeftPanelTab = 'code' | 'vba' | 'flowchart';
@@ -426,7 +427,20 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         </div>
 
         {/* 流れ図ビューアパネル */}
-        <div style={{ height: '100%', display: activeTab === 'flowchart' ? 'block' : 'none' }}>
+        <div
+          id="panel-flowchart"
+          data-testid="panel-flowchart"
+          style={{ height: '100%', position: 'relative', display: activeTab === 'flowchart' ? 'block' : 'none' }}
+        >
+          <button
+            id="btn-export-drawio"
+            data-testid="btn-export-drawio"
+            onClick={() => saveDrawIoFile(generateFullDrawIoXml(memoizedGraph.nodes, memoizedGraph.edges))}
+            style={floatingExportButtonStyle}
+            title="現在の流れ図をdraw.io形式(.drawio)で書き出します"
+          >
+            💾 draw.io形式で書き出し
+          </button>
           <FlowchartViewer
             nodes={memoizedGraph.nodes}
             edges={memoizedGraph.edges}
@@ -659,6 +673,27 @@ const floatingUploadButtonStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '4px',
+  userSelect: 'none',
+  transition: 'all 0.15s ease',
+};
+
+const floatingExportButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  bottom: '20px',
+  right: '20px',
+  zIndex: 10,
+  padding: '6px 14px',
+  fontSize: '0.80rem',
+  fontWeight: 600,
+  color: '#ffffff',
+  backgroundColor: '#2563eb',
+  border: '1px solid #1d4ed8',
+  borderRadius: '6px',
+  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.28)',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
   userSelect: 'none',
   transition: 'all 0.15s ease',
 };

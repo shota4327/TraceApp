@@ -2,22 +2,58 @@ import { FlowchartNode, FlowchartNodeType, FlowchartEdge, FlowchartGraph } from 
 import { splitLineComment } from './commentExtractor';
 
 /**
- * ノード種別ごとの draw.io mxGraph スタイル文字列を返却
+ * ノードごとの draw.io mxGraph スタイル文字列を返却（画面のSVG描画スタイルと完全同期）
+ */
+export function getMxStyleForNode(node: FlowchartNode): string {
+  const baseFont = 'fontFamily=BIZ UDPGothic,BIZ UDPゴシック,sans-serif;fontSize=16;fontColor=#334155;align=center;verticalAlign=middle;strokeWidth=2;html=1;whiteSpace=wrap;';
+
+  if (node.type === 'loop') {
+    const isLoopEnd = node.id.includes('loop-end') || node.label.includes('ループ終了');
+    const flipV = isLoopEnd ? '1' : '0';
+    return `shape=loopLimit;size=14;horizontal=1;flipV=${flipV};fillColor=#faf5ff;strokeColor=#a855f7;${baseFont}`;
+  }
+  if (node.subType === 'io' || node.label.includes('表示')) {
+    return `shape=parallelogram;perimeter=parallelogramPerimeter;fixedSize=1;size=14;fillColor=#ffffff;strokeColor=#3b82f6;${baseFont}`;
+  }
+  switch (node.type) {
+    case 'terminal': {
+      const isFuncTerminal = node.subType === 'function-terminal' || node.label.startsWith('def ') || node.label.startsWith('return');
+      const fillColor = isFuncTerminal ? '#ecfdf5' : '#f1f5f9';
+      const strokeColor = isFuncTerminal ? '#059669' : '#64748b';
+      return `rounded=1;arcSize=50;fillColor=${fillColor};strokeColor=${strokeColor};${baseFont}`;
+    }
+    case 'process': {
+      const isFuncCallReturn = node.subType === 'function-call-return';
+      const strokeColor = isFuncCallReturn ? '#059669' : '#3b82f6';
+      return `rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=${strokeColor};${baseFont}`;
+    }
+    case 'decision':
+      return `rhombus;fillColor=#fffbeb;strokeColor=#f59e0b;${baseFont}`;
+    case 'subroutine':
+      return `shape=process;backgroundOutline=1;fillColor=#f0fdf4;strokeColor=#10b981;${baseFont}`;
+    default:
+      return `rounded=0;fillColor=#ffffff;strokeColor=#94a3b8;${baseFont}`;
+  }
+}
+
+/**
+ * ノード種別ごとの draw.io mxGraph スタイル文字列を返却 (後方互換用)
  */
 function getMxStyleForType(type: FlowchartNodeType): string {
+  const baseFont = 'fontFamily=BIZ UDPGothic,BIZ UDPゴシック,sans-serif;fontSize=16;fontColor=#334155;align=center;verticalAlign=middle;strokeWidth=2;html=1;whiteSpace=wrap;';
   switch (type) {
     case 'terminal':
-      return 'rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#e2e8f0;strokeColor=#475569;';
+      return `rounded=1;arcSize=50;fillColor=#f1f5f9;strokeColor=#64748b;${baseFont}`;
     case 'process':
-      return 'rounded=0;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#2563eb;';
+      return `rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=#3b82f6;${baseFont}`;
     case 'decision':
-      return 'rhombus;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d97706;';
+      return `rhombus;fillColor=#fffbeb;strokeColor=#f59e0b;${baseFont}`;
     case 'loop':
-      return 'shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#f3e8ff;strokeColor=#9333ea;';
+      return `shape=loopLimit;size=14;horizontal=1;flipV=0;fillColor=#faf5ff;strokeColor=#a855f7;${baseFont}`;
     case 'subroutine':
-      return 'shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#ecfdf5;strokeColor=#059669;';
+      return `shape=process;backgroundOutline=1;fillColor=#f0fdf4;strokeColor=#10b981;${baseFont}`;
     default:
-      return 'whiteSpace=wrap;html=1;';
+      return `whiteSpace=wrap;html=1;${baseFont}`;
   }
 }
 
@@ -438,8 +474,8 @@ function processLineNodeEdge(
 
 /** 空のコード時のデフォルトグラフレイアウト */
 function buildDefaultGraph(): FlowchartGraph {
-  const startNode = createTerminalNode('node-start', '開始', 1, 20);
-  const endNode = createTerminalNode('node-end', '終了', 1, 80);
+  const startNode = createTerminalNode('node-start', 'はじめ', 1, 20);
+  const endNode = createTerminalNode('node-end', 'おわり', 1, 80);
   const defaultEdge: FlowchartEdge = {
     id: 'edge-start-end',
     sourceId: 'node-start',
@@ -580,7 +616,7 @@ function classifyLine(
   loopNumber?: number,
   totalLoops = 1,
   definedFuncNames?: Set<string>
-): { type: FlowchartNodeType; label: string; subType?: 'function-terminal' | 'function-call-return' } {
+): { type: FlowchartNodeType; label: string; subType?: 'function-terminal' | 'function-call-return' | 'io' } {
   if (trimmed.startsWith('def ')) {
     return { type: 'terminal', subType: 'function-terminal', label: trimmed.replace(/^def\s+/, '').replace(/:$/, '').trim() };
   }
@@ -601,6 +637,11 @@ function classifyLine(
   }
   const callResult = classifyFunctionCall(trimmed, definedFuncNames);
   if (callResult) return callResult;
+
+  const printLabel = formatPrintLabel(trimmed);
+  if (printLabel !== null) {
+    return { type: 'process', subType: 'io', label: printLabel };
+  }
 
   return { type: 'process', label: formatProcessLabel(trimmed) };
 }
@@ -712,7 +753,7 @@ function buildFunctionGraphs(
         id: `node-func-end-${fn.defLine.lineNo}`,
         type: 'terminal',
         subType: 'function-terminal',
-        label: '終了',
+        label: 'おわり',
         lineRange: [endLineNo, endLineNo],
         x: 100,
         y: 80,
@@ -731,8 +772,8 @@ function buildFunctionGraphs(
 
 /**
  * Pythonコードから FlowchartGraph (ノード・エッジ構造) を自動生成
- * - メイン処理: 「開始」から「終了」
- * - 関数: 右側に独立した列として「def ...」から「return ...」（または「終了」）
+ * - メイン処理: 「はじめ」から「おわり」
+ * - 関数: 右側に独立した列として「def ...」から「return ...」（または「おわり」）
  */
 export function generateFlowchartGraph(code: string): FlowchartGraph {
   if (!code || !code.trim()) return buildDefaultGraph();
@@ -741,8 +782,8 @@ export function generateFlowchartGraph(code: string): FlowchartGraph {
   const { totalLoops, loopNumberByLine } = analyzeLoopInfo(validLines);
   const { functionBlocks, mainLines, definedFuncNames } = partitionCodeLines(validLines);
 
-  const mainStartNode = createTerminalNode('node-start', '開始', mainLines[0]?.lineNo || 1, 20);
-  const mainEndNode = createTerminalNode('node-end', '終了', validLines[validLines.length - 1]?.lineNo || 1, 80);
+  const mainStartNode = createTerminalNode('node-start', 'はじめ', mainLines[0]?.lineNo || 1, 20);
+  const mainEndNode = createTerminalNode('node-end', 'おわり', validLines[validLines.length - 1]?.lineNo || 1, 80);
   const mainGraph = buildLinearGraph(mainLines, mainStartNode, mainEndNode, loopNumberByLine, totalLoops, definedFuncNames);
 
   const funcGraphs = buildFunctionGraphs(functionBlocks, loopNumberByLine, totalLoops, definedFuncNames);
@@ -770,8 +811,8 @@ export function generateDrawIoXml(
     .map(
       (node) =>
         node.xmlSnippet ||
-        `<mxCell id="${node.id}" value="${escapeXml(node.label)}" style="${getMxStyleForType(
-          node.type
+        `<mxCell id="${node.id}" value="${escapeXml(node.label)}" style="${getMxStyleForNode(
+          node
         )}" vertex="1" parent="1"><mxGeometry x="${node.x || 100}" y="${node.y || 20}" width="${
           node.width || 180
         }" height="${node.height || 50}" as="geometry"/></mxCell>`
@@ -780,9 +821,8 @@ export function generateDrawIoXml(
 
   const edgeXmls = edges
     .map((edge) => {
-      const valStr = edge.label ? ` value="${escapeXml(edge.label)}"` : '';
-      const styleStr = edge.style || 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;';
-      return `<mxCell id="${edge.id}"${valStr} style="${styleStr}" edge="1" parent="1" source="${edge.sourceId}" target="${edge.targetId}"><mxGeometry relative="1" as="geometry"/></mxCell>`;
+      const styleStr = edge.style || 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#64748b;';
+      return `<mxCell id="${edge.id}" value="" style="${styleStr}" edge="1" parent="1" source="${edge.sourceId}" target="${edge.targetId}"><mxGeometry relative="1" as="geometry"/></mxCell>`;
     })
     .join('\n    ');
 

@@ -49,7 +49,7 @@ print(f"Result: {result} & completed!")
 
       expect(nodes.length).toBeGreaterThan(15);
       expect(nodes[0]!.type).toBe('terminal');
-      expect(nodes[0]!.label).toBe('開始');
+      expect(nodes[0]!.label).toBe('はじめ');
 
       // ノード種別の存在確認
       const types = new Set(nodes.map((n) => n.type));

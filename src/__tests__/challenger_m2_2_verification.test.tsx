@@ -72,7 +72,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
 
       // ノード種別の検証
       expect(graph.nodes[0]!.type).toBe('terminal');
-      expect(graph.nodes[0]!.label).toBe('開始');
+      expect(graph.nodes[0]!.label).toBe('はじめ');
 
       expect(graph.nodes[1]!.type).toBe('process');
       expect(graph.nodes[1]!.label).toBe('5 → x');
@@ -87,7 +87,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(graph.nodes[4]!.label).toBe('totalを表示');
 
       expect(graph.nodes[5]!.type).toBe('terminal');
-      expect(graph.nodes[5]!.label).toBe('終了');
+      expect(graph.nodes[5]!.label).toBe('おわり');
 
       // エッジの検証 (すべてのエッジが Next ラベルで順次接続)
       expect(graph.edges.length).toBe(5);
@@ -97,8 +97,8 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
 
       // draw.io XML 生成検証
       const xml = generateDrawIoXml(graph);
-      expect(xml).toContain('rounded=1;whiteSpace=wrap;html=1;arcSize=50'); // terminal スタイル
-      expect(xml).toContain('rounded=0;whiteSpace=wrap;html=1;'); // process スタイル
+      expect(xml).toContain('rounded=1;arcSize=50;'); // terminal スタイル
+      expect(xml).toContain('rounded=1;arcSize=8;'); // process スタイル
     });
 
     it('1.2 条件分岐プログラム: decision(ひし形) と分岐エッジ(True/Next)が正しく生成されること', () => {
@@ -120,7 +120,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
 
       // draw.io XML に rhombus スタイルが含まれること
       const xml = generateDrawIoXml(graph);
-      expect(xml).toContain('rhombus;whiteSpace=wrap;html=1');
+      expect(xml).toContain('rhombus;');
     });
 
     it('1.3 ループと関数プログラム: 関数端子(def/return) と loop(六角形) および Loop/False エッジが生成されること', () => {
@@ -159,7 +159,7 @@ describe('challenger_m2_2: 流れ図生成・描画・Pyodide ASTの対立的検
       expect(edgeLabels).toContain('False');
 
       const xml = generateDrawIoXml(graph);
-      expect(xml).toContain('shape=hexagon');
+      expect(xml).toContain('shape=loopLimit');
     });
   });
 
