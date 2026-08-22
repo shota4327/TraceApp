@@ -16,7 +16,8 @@ interface VariableTableProps {
 const VariableTableHeader: React.FC<{
   varNames: string[];
   changedVars: string[];
-}> = ({ varNames, changedVars }) => (
+  currentSnapshot?: StepSnapshot;
+}> = ({ varNames, changedVars, currentSnapshot }) => (
   <thead>
     <tr>
       <th style={metaThStyle}>Step</th>
@@ -26,6 +27,33 @@ const VariableTableHeader: React.FC<{
           {name}
         </th>
       ))}
+    </tr>
+    <tr data-testid="current-values-row">
+      <th colSpan={2} style={currentValLabelThStyle}>
+        現在の値
+      </th>
+      {varNames.map((name) => {
+        const isLocal = currentSnapshot ? currentSnapshot.locals[name] !== undefined : false;
+        const val = currentSnapshot ? (isLocal ? currentSnapshot.locals[name] : currentSnapshot.globals[name]) : undefined;
+        const isChanged = changedVars.includes(name);
+
+        return (
+          <th
+            key={name}
+            style={isChanged ? currentValChangedThStyle : currentValThStyle}
+            title={val !== undefined ? (isLocal ? `${name} (ローカル変数: ${val})` : `${name} (グローバル変数: ${val})`) : undefined}
+          >
+            {val !== undefined ? (
+              <span style={cellContentWrapperStyle}>
+                <span>{String(val)}</span>
+                {isLocal ? <span style={localBadgeStyle}>L</span> : null}
+              </span>
+            ) : (
+              ''
+            )}
+          </th>
+        );
+      })}
     </tr>
   </thead>
 );
@@ -178,11 +206,11 @@ export const VariableTable: React.FC<VariableTableProps> = ({
         </div>
       </div>
       <div id="locals-table-body" data-testid="locals-table-body" style={tableWrapperStyle}>
-        {allVarNames.length === 0 || displayedSnapshots.length === 0 ? (
+        {allVarNames.length === 0 ? (
           <div style={emptyStyle}>表示する変数の履歴がありません</div>
         ) : (
           <table style={{ ...tableStyle, zoom: `${zoom}%` }}>
-            <VariableTableHeader varNames={allVarNames} changedVars={currentChangedVars} />
+            <VariableTableHeader varNames={allVarNames} changedVars={currentChangedVars} currentSnapshot={currentSnapshot} />
             <tbody>
               {displayedSnapshots.map((s, idx) => {
                 const stepNo = s.stepIndex + 1;
@@ -333,6 +361,47 @@ const thChangedColStyle: React.CSSProperties = {
   ...thStyle,
   backgroundColor: '#fefce8',
   color: '#854d0e',
+  fontWeight: 700,
+};
+
+const currentValLabelThStyle: React.CSSProperties = {
+  position: 'sticky',
+  top: '29px',
+  zIndex: 10,
+  borderTop: 'none',
+  borderBottom: '2px solid #94a3b8',
+  borderLeft: '1px solid #cbd5e1',
+  borderRight: '4px double #64748b',
+  padding: '4px 8px',
+  backgroundColor: '#e2e8f0',
+  color: '#334155',
+  textAlign: 'center',
+  whiteSpace: 'nowrap',
+  fontSize: '0.75rem',
+  fontWeight: 600,
+};
+
+const currentValThStyle: React.CSSProperties = {
+  position: 'sticky',
+  top: '29px',
+  zIndex: 10,
+  borderTop: 'none',
+  borderBottom: '2px solid #94a3b8',
+  borderLeft: 'none',
+  borderRight: '1px solid #cbd5e1',
+  padding: '4px 12px',
+  backgroundColor: '#f8fafc',
+  color: '#0f172a',
+  textAlign: 'center',
+  whiteSpace: 'nowrap',
+  fontWeight: 600,
+  fontSize: '0.85rem',
+};
+
+const currentValChangedThStyle: React.CSSProperties = {
+  ...currentValThStyle,
+  backgroundColor: '#fef08a',
+  color: '#713f12',
   fontWeight: 700,
 };
 

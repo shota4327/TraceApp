@@ -81,11 +81,17 @@ describe('Challenger M3 UI Edge Cases & Boundary Verification', () => {
         <VariableTable snapshots={snapshots} currentStepIndex={0} />
       );
 
-      const thElements = container.querySelectorAll('th');
+      const thElements = container.querySelectorAll<HTMLElement>('thead tr:first-child th');
       expect(thElements.length).toBeGreaterThan(0);
       thElements.forEach((th) => {
         expect(th.style.position).toBe('sticky');
         expect(th.style.top).toBe('0px');
+      });
+      const currentValThElements = container.querySelectorAll<HTMLElement>('thead tr[data-testid="current-values-row"] th');
+      expect(currentValThElements.length).toBeGreaterThan(0);
+      currentValThElements.forEach((th) => {
+        expect(th.style.position).toBe('sticky');
+        expect(th.style.top).toBe('29px');
       });
     });
   });
